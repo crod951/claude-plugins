@@ -9,6 +9,8 @@ argument-hint: "<ISSUE-ID> [--auto] [--no-confirm]"
 - Beads status: !`bd status 2>/dev/null || echo "BEADS_NOT_INITIALIZED"`
 - Existing plans: !`ls docs/plans/ 2>/dev/null || echo "NO_PLANS_DIR"`
 - Project directory name: !`basename $(pwd)`
+- Local branches: !`git branch --list`
+- Remote branches: !`git branch -r --list 2>/dev/null`
 
 ## Instructions
 
@@ -57,7 +59,32 @@ Common reasons to ask:
 
 **If you have questions:** Ask them using `AskUserQuestion` (prefer multiple-choice options when possible). Wait for answers before proceeding. You may ask follow-up questions if the answers surface new ambiguities.
 
-### Step 5: Write the plan document
+### Step 5: Create or checkout the feature branch
+
+Determine the branch prefix from the Linear issue labels:
+- "Feature" → `feat/`
+- "Bug" → `fix/`
+- "Improvement" or "Chore" → `chore/`
+- "Documentation" → `docs/`
+- Default (no matching label) → `feat/`
+
+Branch format: `<prefix>/<issue-id-lowercase>-<slug-from-linear-title>`
+
+Example: For ONC-5 "Add Audit Trail" with label "Feature" → `feat/onc-5-add-audit-trail`
+
+**Check if the branch already exists** using the local and remote branch context above:
+
+- **If it exists locally:** `git checkout <branch-name>` — note "Switched to existing branch"
+- **If it exists on remote but not locally:** `git checkout <branch-name>` (git will auto-track the remote) — note "Checked out existing remote branch"
+- **If it does not exist:** `git checkout -b <branch-name>` — note "Created new branch"
+
+Track whether the branch was pre-existing — this affects later steps.
+
+### Step 6: Write the plan document (or detect existing)
+
+Check if `docs/plans/<ISSUE-ID>.md` already exists.
+
+**If the plan does NOT exist:**
 
 Create the directory `docs/plans/` if it doesn't exist, then write the plan to `docs/plans/<ISSUE-ID>.md` (e.g., `docs/plans/ONC-5.md`).
 
@@ -67,7 +94,7 @@ Plan format:
 # <Issue Title> — <ISSUE-ID>
 
 > **Linear:** <issue URL>
-> **Branch:** <branch name (determined in step 9)>
+> **Branch:** <branch name from step 5>
 > **Date:** <today's date>
 > **Status:** In Progress
 
@@ -98,7 +125,18 @@ Plan format:
 <Gotchas, risks, decisions, alternative approaches considered>
 ```
 
-### Step 6: Present the plan for review
+Proceed to Step 7 for review.
+
+**If the plan already exists:**
+
+- **If `--no-confirm` is set:** Keep existing plan, skip to Step 8 (Beads init).
+- **Otherwise:** Inform the user and ask using `AskUserQuestion`:
+  - "Existing plan found at `docs/plans/<ISSUE-ID>.md`. Would you like to re-create it or keep the existing one?"
+  - Options: "Re-create plan" (delete old plan, write new one, proceed to Step 7 for review; also triggers Beads task re-creation in Step 9), "Keep existing plan" (skip to Step 8)
+
+### Step 7: Present the plan for review
+
+**This step only runs if a new plan was written in Step 6.** If the user chose "Keep existing plan", skip to Step 8.
 
 Show the user a summary of the plan:
 
@@ -119,19 +157,19 @@ Show the user a summary of the plan:
 ------------------------------------
 ```
 
-**If `--no-confirm` flag is set (requires `--auto`):** Skip this approval step entirely — auto-approve the plan and continue directly to Step 7.
+**If `--no-confirm` flag is set (requires `--auto`):** Skip this approval step entirely — auto-approve the plan and continue directly to Step 8.
 
 **Otherwise**, present the plan for review:
 
 Then use `AskUserQuestion` to ask the user:
-- Question: "Does the plan look good? Ready to create Beads tasks and start the branch?"
-- Options: "Approve plan" (proceed to step 7), "I have changes" (wait for user to discuss edits)
+- Question: "Does the plan look good? Ready to create Beads tasks?"
+- Options: "Approve plan" (proceed to step 8), "I have changes" (wait for user to discuss edits)
 
-**If the user selects "I have changes":** Stop and wait. Let them discuss modifications. After they are satisfied and confirm, resume from Step 7.
+**If the user selects "I have changes":** Stop and wait. Let them discuss modifications. After they are satisfied and confirm, resume from Step 8.
 
-**If the user selects "Approve plan":** Continue to Step 7.
+**If the user selects "Approve plan":** Continue to Step 8.
 
-### Step 7: Initialize Beads (if needed)
+### Step 8: Initialize Beads (if needed)
 
 If the context above shows "BEADS_NOT_INITIALIZED", initialize Beads using the project directory name as the prefix:
 
@@ -141,7 +179,30 @@ bd init --prefix <project-directory-name> --skip-hooks
 
 For example, if the project directory is `oncuria`, run `bd init --prefix onc --skip-hooks`. Use a short, recognizable abbreviation of the project name (3-4 characters).
 
-### Step 8: Create Beads tasks
+### Step 9: Create Beads tasks (or detect existing)
+
+Check if Beads tasks with label `<ISSUE-ID>` already exist:
+```bash
+bd list -l "<ISSUE-ID>" --limit 50 2>/dev/null
+```
+
+**If the user chose "Re-create plan" in Step 6:**
+
+Delete all existing Beads tasks for this issue. List them first:
+```bash
+bd list -l "<ISSUE-ID>" --limit 50 --format json 2>/dev/null
+```
+For each task found, delete it:
+```bash
+bd delete <task-id>
+```
+Then create new tasks from the plan (same as fresh creation below).
+
+**If tasks already exist (and plan was kept):**
+
+Skip creation. Print "Existing Beads tasks found for <ISSUE-ID> — skipping creation."
+
+**If no tasks exist (fresh creation):**
 
 For each task in the plan, create a Beads task:
 ```bash
@@ -157,24 +218,6 @@ bd dep add <child-id> <parent-id>
 
 Where `<child-id>` depends on `<parent-id>` completing first.
 
-### Step 9: Create and checkout the feature branch
-
-Determine the branch prefix from the Linear issue labels:
-- "Feature" → `feat/`
-- "Bug" → `fix/`
-- "Improvement" or "Chore" → `chore/`
-- "Documentation" → `docs/`
-- Default (no matching label) → `feat/`
-
-Branch format: `<prefix>/<issue-id-lowercase>-<slug-from-linear-title>`
-
-Example: For ONC-5 "Add Audit Trail" with label "Feature" → `feat/onc-5-add-audit-trail`
-
-Create the branch:
-```bash
-git checkout -b <branch-name>
-```
-
 ### Step 10: Update Linear status to In Progress
 
 Use `mcp__plugin_linear_linear__update_issue` with:
@@ -183,16 +226,16 @@ Use `mcp__plugin_linear_linear__update_issue` with:
 
 ### Step 11: Present summary
 
-Show the user:
+Show the user (use "Resumed" in the header if the branch, plan, or Beads tasks were pre-existing):
 
 ```
---- Issue Lifecycle Started ---
+--- Issue Lifecycle Started [/ Resumed] ---
 
   Issue:    <ISSUE-ID> — <Title>
   Plan:     docs/plans/<ISSUE-ID>.md
   Branch:   <branch-name>
   Linear:   In Progress
-  Tasks:    <count> created
+  Tasks:    <count> [created / existing]
 
   Beads Tasks:
     <id>  <title>
