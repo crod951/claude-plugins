@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# pre-commit hook — auto-sync plugin versions before each commit.
+# Always exits 0 so commits are never blocked.
+#
+# Install: git config core.hooksPath bin/hooks
+
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+SYNC_SCRIPT="$REPO_ROOT/bin/sync-versions.sh"
+
+# Silently skip if sync script doesn't exist
+if [ ! -x "$SYNC_SCRIPT" ]; then
+  exit 0
+fi
+
+echo "[pre-commit] Syncing plugin versions..."
+
+if "$SYNC_SCRIPT"; then
+  # Auto-stage only the two target files if they changed
+  cd "$REPO_ROOT"
+  git diff --quiet .claude-plugin/marketplace.json 2>/dev/null || git add .claude-plugin/marketplace.json
+  git diff --quiet README.md 2>/dev/null || git add README.md
+else
+  echo "[pre-commit] Version sync failed (continuing anyway)"
+fi
+
+exit 0

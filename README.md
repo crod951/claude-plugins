@@ -181,6 +181,18 @@ See the [full step-by-step guide](./plugins/issue-lifecycle/README.md) for a det
 
 ---
 
+## Developer Setup
+
+After cloning the repo, configure Git to use the version-controlled hooks:
+
+```bash
+git config core.hooksPath bin/hooks
+```
+
+This enables a pre-commit hook that automatically syncs plugin versions from each `plugin.json` (source of truth) into `marketplace.json` and `README.md`.
+
+---
+
 ## Contributing: Adding Plugins, Commands, and Agents
 
 This section is a comprehensive reference for adding new plugins, slash commands, or agents to this repo. You can paste these instructions into Claude Code to have it build new components for you.
