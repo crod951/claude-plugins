@@ -15,7 +15,7 @@ Run these commands **inside a Claude Code session** (they start with `/`):
 
 ## Available Plugins
 
-### stackgen (v1.0.0)
+### stackgen (v2.0.0)
 
 Analyzes codebases and generates tailored Claude Code skills. **11 specialized agents** with optimized context passing.
 
@@ -72,7 +72,7 @@ Analyzes codebases and generates tailored Claude Code skills. **11 specialized a
 
 ---
 
-### issue-lifecycle (v1.0.0)
+### issue-lifecycle (v2.1.0)
 
 Automates the full lifecycle of working on Linear issues — from planning through PR creation. Integrates **Linear**, **Beads task tracking**, and **GitHub PRs** with Conventional Commits.
 
