@@ -65,3 +65,15 @@ Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative
 
 - Re-invoking lifecycle on the closed asana-176679: sweep saw the Closed stamp and did not re-close; guards found all work complete; run reported done and pushed a straggler closing commit.
 - Note: the run never reached memory resolution because every guard short-circuited on the closed issue, so the beads-without-binary stop-guard test moves to an open issue.
+
+### Combo 3 (Kiro + Asana + checklist, formatPrice): PARTIAL PASS
+
+Working: sweep idempotency; URL parse + asana-945428 ref; adopt path (4 subtasks); checklist file created with sub-issue links and final states; V2 section moves (In Progress, In Review); mid-run debugging (negative currency format) with 24/24 tests; PR #3 with done-on-merge note; final closing commit (fix-3 behavior exercised).
+
+Deviations (all prose-adherence, Kiro model):
+- Stop-guard bypassed: .beads present + bd hidden should stop; agent reasoned per-issue and used checklist. Guard text confirmed readable via symlink.
+- Checklist format improvised: check marks and em dashes instead of the spec marker legend; statuses recorded only at the end, not cycled per claim/close.
+- Tasks batched: 4 tasks in 2 commits despite the per-task commit rule in step 9.
+- Merge-closer ask never fired despite the profile lacking a merge-closer line (fix 43354c2 was live).
+
+Response: inline the highest-value invariants directly in SKILL.md (backend stop rule, no-batching prohibition, profile-load checks pointer); accept that prose adherence varies by model and document it. bd restored to PATH after the run.
