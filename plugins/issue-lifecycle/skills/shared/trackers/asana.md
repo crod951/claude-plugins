@@ -52,11 +52,14 @@ The sweep skips any checklist file that already carries a Closed line, so the me
 
 ## Merge closer (optional)
 
-During first-run profile setup, after the state mapping is confirmed, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on PR merge.
-Ask this at most once per repository; never ask again once an answer is on record.
-When the answer is yes, write `.github/workflows/issue-lifecycle-close.yml` from the template below and commit it together with the profile.
+Run this check whenever the tracker profile is loaded or created for this repository, not only during first-run setup.
+First-run setup triggers the same load-time check as part of creating the profile; it does not run a separate ask.
+When the tracker is Asana, check the profile for a `merge-closer:` line.
+When that line is absent, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on PR merge, then record the answer in the profile right away.
+Ask whenever no `merge-closer:` line is on record; once one is recorded, never ask again for this repository.
+When the answer is yes, write `.github/workflows/issue-lifecycle-close.yml` from the template below, record `merge-closer: installed` in the tracker profile, and commit both together.
 Tell the user to add an `ASANA_TOKEN` repository secret, an Asana personal access token, since the workflow cannot post to the Asana API without it.
-When the answer is no, record `merge-closer: declined` in the tracker profile and never ask again.
+When the answer is no, record `merge-closer: declined` in the tracker profile.
 The passive sweep and the on-demand cleanup trigger described in the issue-lifecycle skill keep working either way; this Action is an additive fast path, not a replacement.
 
 ```yaml
