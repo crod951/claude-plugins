@@ -52,3 +52,11 @@ Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative
 - New Kiro conversation, "work on asana-176679": guards read repo state (beads + checklist + open PR), skipped all completed work, executed only the finish steps (remaining closes, completion comment, overlay sync).
 - No duplicate commits, no re-implementation. PR: il-test-app #2, 16/16 tests.
 - Section move to In Review again blocked by V1 MCP (no section tool); degraded to comment consistently. Combo 4 verdict: PASS with the known adapter gap.
+
+### Done-on-merge sweep + V2 server (formatPrice intake): PASS
+
+- Sweep fired first, found no Closed stamp, verified PR merged via gh, applied done.
+- V2 MCP enabled the real section move: task moved to Done section AND completed flag set (V1 could only comment).
+- Closed stamp appended and committed (fa57582); idempotency in place for future runs.
+- Intake continued with destination from saved profile, zero prompts; draft gated with type inferred.
+- Kiro V2 config via mcp-remote proxy worked (registered app, localhost:3334 OAuth).
