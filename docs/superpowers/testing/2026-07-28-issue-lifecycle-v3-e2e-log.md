@@ -46,3 +46,9 @@ Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative
 - Branch and ref scheme correct: asana-176679.
 - FINDING (adapter gap): the V1 Asana MCP exposes no section-move tool, so updateState's mapped section move cannot execute; agent degraded to a comment. asana.md needs an explicit fallback chain for MCP builds without a section tool. V2 server migration may also resolve this.
 - Run interrupted by Kiro model rate limit at PR-open. Cross-session resume test follows: new conversation, "work on asana-176679", expect guards to skip to finish (PR, inReview, completion comment) with no duplicate work.
+
+### Cross-session resume (combo 4): PASS
+
+- New Kiro conversation, "work on asana-176679": guards read repo state (beads + checklist + open PR), skipped all completed work, executed only the finish steps (remaining closes, completion comment, overlay sync).
+- No duplicate commits, no re-implementation. PR: il-test-app #2, 16/16 tests.
+- Section move to In Review again blocked by V1 MCP (no section tool); degraded to comment consistently. Combo 4 verdict: PASS with the known adapter gap.
