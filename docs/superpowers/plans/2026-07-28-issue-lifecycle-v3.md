@@ -214,6 +214,7 @@ Contents (fresh text, sentence per line):
 5. `## Done on merge` - Asana has no PR-merge integration:
    - At PR open, move the main task to the mapped `inReview` state and post a comment stating the task will be closed by the next skill run after the PR merges.
    - Every skill invocation in a repo first checks: does any `.issue-lifecycle/tasks/*.md` reference an Asana task whose PR has since merged (check with `gh pr view <branch> --json state,mergedAt`)? If yes, apply the mapped `done` state and completed flag before proceeding.
+   - Idempotency: after closing, append a `- Closed: <date>` line to that checklist file (committed to the default branch); the sweep skips files that already carry a Closed line, so the check runs at most once per issue.
 
 - [ ] **Step 2: Verify**
 
@@ -251,10 +252,12 @@ Contents (fresh, sentence per line):
    - `close(taskId)` - mark done.
    - `status()` - open/done counts and the current in-progress task.
    - `parentTask(issueRef)` - create/fetch the parent task representing the overarching issue.
-3. `## Resolution` - probe once per run:
-   - `bd --version` succeeds: use the beads adapter.
-   - Otherwise: use the markdown checklist adapter.
+3. `## Resolution` - probe once per run, existing state wins over capability:
+   - `.beads/` exists in the repo: use the beads adapter.
+   - `.issue-lifecycle/tasks/<ref>.md` exists and contains task checkboxes: use the checklist adapter (even if `bd` is installed - never switch backends mid-issue).
+   - Neither (fresh run): `bd --version` succeeds means beads, otherwise checklist.
    - State the durability rationale in one line: both backends live in the repo, so any later session on any machine resumes by reading the repo.
+   - Resume reads the working tree, not the last commit: an in-progress marker may be uncommitted when a session dies, and the file on disk is the truth.
 4. `## Display overlay` - if the agent exposes built-in task-list tools, mirror tasks into them for live progress UI; rebuild the overlay from the durable backend on resume; NEVER read the overlay as the source of truth; skip silently when no such tools exist.
 5. `## No dual truth` - when beads is active the checklist file contains the plan only (no checkboxes); in checklist mode the file holds plan and statuses; task status never lives in two places.
 
@@ -470,6 +473,8 @@ git commit -m "feat(issue-lifecycle): add issue-intake skill"
 ---
 
 ### Task 10: Agent notes (`shared/agents.md`)
+
+Execution order note: run this task BEFORE Tasks 8-9; both core skills reference this file.
 
 **Files:**
 - Create: `plugins/issue-lifecycle/skills/shared/agents.md`
