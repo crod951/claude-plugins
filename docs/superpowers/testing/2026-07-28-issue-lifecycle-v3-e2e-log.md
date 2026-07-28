@@ -60,3 +60,8 @@ Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative
 - Closed stamp appended and committed (fa57582); idempotency in place for future runs.
 - Intake continued with destination from saved profile, zero prompts; draft gated with type inferred.
 - Kiro V2 config via mcp-remote proxy worked (registered app, localhost:3334 OAuth).
+
+### Sweep idempotency + already-closed issue (combo 4): PASS
+
+- Re-invoking lifecycle on the closed asana-176679: sweep saw the Closed stamp and did not re-close; guards found all work complete; run reported done and pushed a straggler closing commit.
+- Note: the run never reached memory resolution because every guard short-circuited on the closed issue, so the beads-without-binary stop-guard test moves to an open issue.
