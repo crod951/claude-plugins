@@ -1,6 +1,6 @@
 ---
 name: issue-lifecycle
-description: This skill should be used when the user asks to "work on an issue", "start an issue", "implement this Asana/Linear issue", "take this issue to a PR", pastes an Asana task URL to build, or names a Linear issue key like ONC-5. Drives the issue from breakdown through implementation to an open PR with resumable task tracking.
+description: This skill should be used when the user asks to "work on an issue", "start an issue", "implement this Asana/Linear issue", "take this issue to a PR", pastes an Asana task URL to build, or names a Linear issue key like ONC-5. Also use when the user says something like "the PR for <issue> merged", "clean up merged issues", or "close out merged work", to run the done-on-merge sweep on demand. Drives the issue from breakdown through implementation to an open PR with resumable task tracking.
 version: 3.0.0
 ---
 
@@ -33,6 +33,7 @@ If any of these files cannot be found and read, stop immediately and report whic
 ## Procedure
 
 1. Run the Asana done-on-merge sweep described in `../shared/trackers/asana.md` before any other tracker work in this repository.
+   When the invocation itself was a cleanup phrase such as "the PR for <issue> merged", "clean up merged issues", or "close out merged work", run only this sweep, report what was closed, then stop; do not continue into the rest of this procedure.
 2. Resolve which tracker owns this issue and which memory backend owns its task state, following `trackers.md` and `memory.md`; load the existing `.issue-lifecycle/config.md` tracker profile, or run first-run setup when none exists.
 3. Determine the issue ref from the invocation argument, a pasted issue URL, or the current branch name, in that order of preference; when the argument and the branch name name different issues, stop and ask the user which one to use.
 4. Call `getIssue` for that ref and save its title, description, type, URL, and existing children for the rest of this run.

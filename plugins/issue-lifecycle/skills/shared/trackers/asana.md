@@ -49,3 +49,61 @@ The sweep checks whether any `.issue-lifecycle/tasks/*.md` file references an As
 When the sweep finds a merged PR for an Asana task, apply the mapped `done` state and set the completed flag before proceeding with the rest of the run.
 For idempotency, append a `- Closed: <date>` line to that checklist file immediately after closing the task, and commit the file to the default branch.
 The sweep skips any checklist file that already carries a Closed line, so the merge check runs at most once per issue.
+
+## Merge closer (optional)
+
+During first-run profile setup, after the state mapping is confirmed, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on PR merge.
+Ask this at most once per repository; never ask again once an answer is on record.
+When the answer is yes, write `.github/workflows/issue-lifecycle-close.yml` from the template below and commit it together with the profile.
+Tell the user to add an `ASANA_TOKEN` repository secret, an Asana personal access token, since the workflow cannot post to the Asana API without it.
+When the answer is no, record `merge-closer: declined` in the tracker profile and never ask again.
+The passive sweep and the on-demand cleanup trigger described in the issue-lifecycle skill keep working either way; this Action is an additive fast path, not a replacement.
+
+```yaml
+name: issue-lifecycle-close
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  close-asana-task:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Close Asana task for merged branch
+        env:
+          ASANA_TOKEN: ${{ secrets.ASANA_TOKEN }}
+        run: |
+          if [ -z "$ASANA_TOKEN" ]; then
+            echo "No ASANA_TOKEN secret set, skipping."
+            exit 0
+          fi
+
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          TASK_FILE=$(grep -rl "$BRANCH" .issue-lifecycle/tasks/ 2>/dev/null | head -n 1)
+
+          if [ -z "$TASK_FILE" ]; then
+            echo "No checklist file references branch $BRANCH, skipping."
+            exit 0
+          fi
+
+          TASK_URL=$(grep -oE 'https://app\.asana\.com/[0-9]+/[0-9]+/[0-9]+' "$TASK_FILE" | head -n 1)
+
+          if [ -z "$TASK_URL" ]; then
+            echo "No Asana task URL found in $TASK_FILE, skipping."
+            exit 0
+          fi
+
+          TASK_GID=$(echo "$TASK_URL" | sed -E 's#.*/([0-9]+)$#\1#')
+
+          curl -s -X PUT "https://app.asana.com/api/1.0/tasks/$TASK_GID" \
+            -H "Authorization: Bearer $ASANA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"data":{"completed":true}}'
+```
+
+The Action closes the task by setting the completed flag directly through the Asana API.
+Section moves at other phases still follow the `updateState` fallback chain described above; this Action only ever sets completed on merge, it never moves sections.
