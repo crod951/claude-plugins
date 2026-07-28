@@ -30,3 +30,10 @@ Downstream deviations, all traceable to the root cause:
 What still worked from SKILL.md alone: trigger, branch prefix, implementation quality (13/13 tests), PR body (Closes URL, completed tasks, HEROC-ish test plan), Asana subtask completion, In Review claim, completion comment (per Kiro transcript; Asana API verification pending - V1 MCP call hung).
 
 Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative to the SKILL.md file's own directory; ~/.kiro/skills/shared/ for Kiro global installs) plus a stop-if-unreadable guard forbidding improvised contracts. Rerun follows.
+
+### Intake rerun after fix ff4cc5e (applyDiscount): PASS
+
+- Shared docs read this time; tool-name discovery and section inspection followed trackers.md.
+- First-run profile proposed in exact spec format (state-mapping block) and gated on approval together with the draft.
+- 4 sub-issues (within 3-7), type inferred, draft shown before any creation.
+- The stop-guard/path-anchor fix resolved the improvisation failure end to end at the intake phase.
