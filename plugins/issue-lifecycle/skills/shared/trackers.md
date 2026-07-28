@@ -29,6 +29,8 @@ Treat an Asana URL or a bare numeric GID as Asana.
 When the reference's shape does not clearly indicate a tracker, check which tracker MCP is connected.
 When exactly one tracker MCP is connected, use that tracker.
 When both tracker MCPs are connected and the reference is still ambiguous, ask the user once which tracker they mean; do not guess.
+When the reference is ambiguous and neither tracker MCP is connected, stop immediately and report a clear message naming both supported trackers, Asana and Linear, and telling the user to connect one before retrying.
+Never guess a tracker for an ambiguous reference when no tracker MCP is connected, and never proceed as if one were resolved.
 Once a tracker is chosen, discover that connected MCP's actual tool names at runtime rather than assuming fixed names.
 Adapter files list the typical tool names for each tracker, but real builds vary, so treat those names as a starting hint, not a guarantee.
 When the resolved tracker's MCP is not connected, stop immediately and report a clear message naming the specific missing MCP.
