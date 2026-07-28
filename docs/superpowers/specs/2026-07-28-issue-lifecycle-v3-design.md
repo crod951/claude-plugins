@@ -101,6 +101,10 @@ Because the profile is committed, teammates who clone the repo inherit the mappi
 Subsequent runs read the profile silently, preserving zero mid-run confirmation.
 If a mapped state no longer exists, or the user asks to remap, re-run setup.
 
+Propagation caveat: the profile is first written on a feature branch and only reaches the default branch when that PR merges.
+A run started from the default branch before then will not find the profile; the skill first checks other local branches for a newer `.issue-lifecycle/config.md` and reuses it, and only prompts if none exists.
+Profile merge conflicts are resolved by re-running setup.
+
 ### Linear adapter
 
 Direct mapping to the Linear MCP: issue fetch, sub-issue creation via parent linkage, state transitions using the profile's state names, comments.
@@ -114,6 +118,19 @@ Asana has no workflow states and no human-readable issue keys, which drives two 
 - Invocation is by pasted task URL (natural for designers living in the Asana UI), with name search as a fallback.
 
 Sub-issues are native Asana subtasks (tasks with a parent).
+Subtasks do not appear in the project's board sections unless explicitly added, so sub-issue state transitions degrade to the completed flag: In Progress is a no-op (optionally a comment), Done marks the subtask complete.
+Section and status-field mapping applies to the main issue only.
+
+Asana has no equivalent of Linear's done-on-merge GitHub integration.
+At PR open the main task moves to the mapped In Review state; after the PR merges, the next invocation of any skill in the repo detects the merged PR and applies the mapped done state and completed flag.
+The completion comment posted at PR open states this explicitly so the team knows the task closes on the next run rather than instantly at merge.
+
+### Issue reference scheme
+
+Every issue gets a short stable ref used in branch names, checklist filenames, commit messages, and the PR body.
+Linear: the native key, lowercased for branches (`feat/onc-5-add-login`).
+Asana: `asana-<last 6 digits of the task GID>` plus a title slug (`feat/asana-482913-add-login`), with the full task URL recorded in the checklist file, the tracker profile, and the PR body.
+The ref-to-URL mapping in the checklist file is what lets a resumed session find the Asana task again without a human-readable key.
 
 ## Section 4: Memory adapter axis
 
@@ -135,6 +152,7 @@ Agent built-in task tools (Claude Code TaskCreate family, Kiro's equivalent) are
 State lives at `.issue-lifecycle/tasks/<ISSUE-KEY>.md`, committed on the feature branch.
 One file holds the plan summary up top (issue link, approach, testing notes) and the task checklist below (checkboxes with sub-issue links and status markers).
 Every claim and close edits the file, and each per-task commit carries it, so resume from any session or machine is: check out the branch, read the file.
+Checklist files merge to the default branch with the PR and are kept permanently as the human-readable record of the breakdown and plan; there is no cleanup step.
 
 ### No dual truth
 
@@ -186,6 +204,7 @@ Fixtures: a throwaway test repo with real passing and failing tests, a free Asan
 - Resume: kill the session mid-loop at task N; a fresh session re-invoke must continue from task N.
 - First-run setup: the state-mapping prompt appears exactly once, `.issue-lifecycle/config.md` is written, the second run is silent, and a fresh clone inherits the mapping without prompting.
 - Failure paths: tracker MCP disconnected produces a clean stop; an unfixable test produces stop-and-hold with a report.
+- Post-merge close (Asana combos): merge the PR, invoke any skill in the repo, and verify the main task receives the mapped done state and completed flag.
 
 ## Out of scope for v1
 
