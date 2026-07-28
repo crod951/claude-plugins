@@ -90,14 +90,19 @@ jobs:
             exit 0
           fi
 
-          TASK_URL=$(grep -oE 'https://app\.asana\.com/[0-9]+/[0-9]+/[0-9]+' "$TASK_FILE" | head -n 1)
+          TASK_URL=$(grep -oE 'https://app\.asana\.com/[^ )>]+' "$TASK_FILE" | head -n 1)
 
           if [ -z "$TASK_URL" ]; then
             echo "No Asana task URL found in $TASK_FILE, skipping."
             exit 0
           fi
 
-          TASK_GID=$(echo "$TASK_URL" | sed -E 's#.*/([0-9]+)$#\1#')
+          TASK_GID=$(echo "$TASK_URL" | grep -oE '[0-9]+$')
+
+          if [ -z "$TASK_GID" ]; then
+            echo "Could not extract a task GID from $TASK_URL, skipping."
+            exit 0
+          fi
 
           curl -s -X PUT "https://app.asana.com/api/1.0/tasks/$TASK_GID" \
             -H "Authorization: Bearer $ASANA_TOKEN" \
