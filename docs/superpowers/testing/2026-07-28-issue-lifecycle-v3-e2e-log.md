@@ -37,3 +37,12 @@ Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative
 - First-run profile proposed in exact spec format (state-mapping block) and gated on approval together with the draft.
 - 4 sub-issues (within 3-7), type inferred, draft shown before any creation.
 - The stop-guard/path-anchor fix resolved the improvisation failure end to end at the intake phase.
+
+### Lifecycle rerun (applyDiscount, combo 4): implementation phase PASS, interrupted at PR open
+
+- Memory resolution correct: fresh run + bd available -> beads adapter, bd init, parent task created.
+- Adopt path exercised live: 4 existing Asana sub-issues adopted into beads tasks (the review-cycle Critical fix verified end to end).
+- Per-task loop correct: claim -> implement -> test -> commit -> close, one commit per task (615.1-615.4), 16/16 tests passing.
+- Branch and ref scheme correct: asana-176679.
+- FINDING (adapter gap): the V1 Asana MCP exposes no section-move tool, so updateState's mapped section move cannot execute; agent degraded to a comment. asana.md needs an explicit fallback chain for MCP builds without a section tool. V2 server migration may also resolve this.
+- Run interrupted by Kiro model rate limit at PR-open. Cross-session resume test follows: new conversation, "work on asana-176679", expect guards to skip to finish (PR, inReview, completion comment) with no duplicate work.
