@@ -1,7 +1,7 @@
 {
   "name": "issue-lifecycle",
-  "version": "2.1.0",
-  "description": "Automates the full lifecycle of working on Linear issues — from planning through PR creation. Integrates Linear, Beads task tracking, and GitHub PRs with Conventional Commits.",
+  "version": "3.0.0",
+  "description": "Drive a tracker issue (Asana or Linear) from requirements to an open PR. Agent-portable skills for Claude Code and Kiro with resumable, task-tracked implementation runs.",
   "author": {
     "name": "crod951",
     "email": "crod951@gmail.com"
