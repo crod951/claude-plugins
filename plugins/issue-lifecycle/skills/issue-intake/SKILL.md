@@ -1,5 +1,5 @@
 ---
-name: Issue Intake
+name: issue-intake
 description: This skill should be used when the user asks to "turn these requirements into an issue", "create an issue and sub-issues", "scaffold an issue from this PRD or spec", or "break these requirements into tickets" for Asana or Linear. Creates a main issue plus linked sub-issues, then offers to hand off to the issue-lifecycle skill.
 version: 3.0.0
 ---

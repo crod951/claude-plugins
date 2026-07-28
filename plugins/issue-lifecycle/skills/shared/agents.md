@@ -12,7 +12,7 @@ Kiro: copy or symlink this plugin's `skills/` directory into `.kiro/skills/` for
 ## Task display overlay
 
 The shared memory contract defines a durable backend as the only source of truth for task state, plus an optional display overlay for a live progress UI.
-Read `shared/memory.md` before this section; do not treat what follows as a replacement for its display-overlay rule.
+Read `memory.md` before this section; do not treat what follows as a replacement for its display-overlay rule.
 
 Claude Code: mirror tasks into the TaskCreate/TaskUpdate/TaskList/TaskGet tool family.
 Kiro: use its built-in todo/task tools when the workspace exposes them; when it does not expose such tools, skip the overlay silently.
