@@ -49,7 +49,13 @@ cp -r plugins/issue-lifecycle/skills/. ~/.kiro/skills/
    brew install beads
    bd version
    ```
-3. **First run asks once about state mapping.**
+3. **Install and authenticate the GitHub CLI (`gh`).**
+   The issue-lifecycle skill opens pull requests with `gh`, so it must be installed and authenticated before your first run.
+   ```bash
+   brew install gh
+   gh auth login
+   ```
+4. **First run asks once about state mapping.**
    The first time either skill runs in a repository, it inspects your tracker's actual states and proposes a mapping to the three phases it needs: `inProgress`, `inReview`, and `done`.
    You confirm or correct that mapping, and it is saved to `.issue-lifecycle/config.md` so every later run uses it silently.
 
