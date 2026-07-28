@@ -21,9 +21,14 @@ Every run begins by reading durable state from the repository and the tracker, n
 
 Before doing any tracker or memory work, read:
 
+These paths are relative to the directory containing this SKILL.md file, not the current workspace.
+In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.kiro/skills/shared/trackers.md`); in a Claude Code plugin install they resolve inside the plugin's `skills/` directory.
+
 - `../shared/trackers.md` for the tracker contract, phase names, and first-run profile setup.
 - `../shared/memory.md` for the memory contract and backend resolution rules.
 - `../shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
+
+If any of these files cannot be found and read, stop immediately and report which paths were tried - never improvise their contracts from memory or proceed without them.
 
 ## Procedure
 
