@@ -149,3 +149,16 @@ Two things that did work: within a single repo the stamp prevented repeats, and 
 Fix 296081f: the sweep now pushes the stamp commit to the default branch, states that an unpushed stamp does not propagate, tolerates a failed push by reporting and continuing without aborting or retry-looping, and formalizes the skip-the-write-when-already-complete behavior.
 
 Fixture reconciled: stamps pushed to origin and pulled into the clone, both checkouts now agree.
+
+### Test A, explicit destination override: PASS with 3 findings (all fixed)
+
+Invocation named "the Test 2 project" while the profile default was "Issue Lifecycle Test". The main issue and all 4 sub-issues were created in Test 2, so override resolution works.
+
+Findings:
+1. Intake used the full GID as the ref (asana-1216989301861372) instead of the adapter's asana-<last six> scheme, in both the checklist filename and the handoff instruction. The ref scheme lived only in the adapter, and intake never referenced it.
+2. Intake created a checklist file at all, which is the lifecycle skill's job via the memory contract's init operation. Scope creep that could confuse lifecycle guards later.
+3. The profile's default-destination was left pointing at the old project. This contradicted a claim made during planning, but the observed behavior is the better design: a one-off override should not silently repoint a repo's default. The ambiguous spec line was tightened toward the observed behavior rather than away from it.
+
+Fix a59cdca: intake now reports and hands off using the tracker's ref scheme, is explicitly forbidden from creating task-memory files, and only writes default-destination when none exists or the user asks. trackers.md states the same rule for per-invocation hints.
+
+Fixture cleaned: the misnamed checklist file was removed from main.
