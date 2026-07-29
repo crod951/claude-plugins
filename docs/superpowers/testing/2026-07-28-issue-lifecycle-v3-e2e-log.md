@@ -137,3 +137,15 @@ Fresh clone of il-test-app opened in Kiro, intake invoked with new requirements.
 PR 4 (clearCart) squash-merged after a manual conflict resolution against main; the Action completed the Asana task automatically. Two independent live fires now recorded.
 
 Fixture note: removing .beads left stale beads git hooks in .git/hooks (pre-commit, post-merge) that blocked a push until deleted. Worth a README caveat for anyone switching a repo off beads.
+
+### Sweep stamp propagation bug (user-reported): FIXED
+
+Symptom the user noticed: the same two merged tasks were being re-stamped on run after run.
+
+Cause: the sweep committed the "- Closed:" stamp but never pushed it. The clone stamped and committed locally, that commit never reached origin, and the other checkout's main had no stamps (the PR merges delivered the task files without them), so its sweep legitimately repeated the verification and stamped again. Every fresh clone would repeat this forever.
+
+Two things that did work: within a single repo the stamp prevented repeats, and the sweep read tracker state first, saw the Action had already completed both tasks, and skipped redundant writes.
+
+Fix 296081f: the sweep now pushes the stamp commit to the default branch, states that an unpushed stamp does not propagate, tolerates a failed push by reporting and continuing without aborting or retry-looping, and formalizes the skip-the-write-when-already-complete behavior.
+
+Fixture reconciled: stamps pushed to origin and pulled into the clone, both checkouts now agree.
