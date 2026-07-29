@@ -78,6 +78,8 @@ Before prompting the user, check other local branches for a newer `.issue-lifecy
 
 When no existing profile is found anywhere, the agent must run these three steps in order and must not skip any of them.
 Each step must get the user's answer before the next step starts, and the profile must not be written until every step has an answer.
+Ask one question at a time; never present a later step's question, or any other pending question such as the issue draft, alongside an unanswered step from this sequence.
+When a user's reply could answer more than one pending question, or its target is unclear, stop and ask which question it answered; never guess, and never treat an ambiguous or negative reply as approval to create anything.
 
 1. Confirm the destination.
    Call `listDestinations`, list the available destinations to the user, and let them pick the one to save as the profile's default.
