@@ -46,8 +46,15 @@ Asana has no PR-merge integration comparable to Linear's GitHub integration.
 At PR open, move the main task to the mapped `inReview` state and post a comment stating that the task will be closed by the next skill run after the PR merges.
 Every skill invocation in a repo must run a merge sweep before doing any other tracker work.
 The sweep checks whether any `.issue-lifecycle/tasks/*.md` file references an Asana task whose PR has since merged, using `gh pr view <branch> --json state,mergedAt`.
-When the sweep finds a merged PR for an Asana task, apply the mapped `done` state and set the completed flag before proceeding with the rest of the run.
-For idempotency, append a `- Closed: <date>` line to that checklist file immediately after closing the task, and commit the file to the default branch.
+When the sweep finds a merged PR for an Asana task, read the task's current state before writing to the tracker.
+When the task is already complete, for example because the merge-closer Action already closed it, skip the tracker write and apply only the stamp described below.
+Otherwise apply the mapped `done` state and set the completed flag before proceeding with the rest of the run.
+For idempotency, append a `- Closed: <date>` line to that checklist file immediately after closing the task, commit the file, and push that commit to the repo's default branch, the branch the merged PR targeted.
+A stamp commit that is only made locally does not propagate: it never reaches the default branch, so a merge check runs at most once per issue only when the commit is pushed there.
+When the current checkout is on a feature branch, the stamp still belongs to the checklist file for the merged issue, and it still must land on the default branch, not on the feature branch.
+Commit and push it there directly, or via whatever mechanism the repo requires to update the default branch.
+When the push fails, for example because of missing permission, a protected branch, or being offline, report the failure to the user and continue the run.
+A failed stamp push must not abort the sweep, and it must not be retried silently in a loop.
 The sweep skips any checklist file that already carries a Closed line, so the merge check runs at most once per issue.
 
 ## Merge closer (optional)
