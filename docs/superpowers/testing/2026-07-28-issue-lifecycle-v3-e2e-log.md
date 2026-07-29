@@ -123,3 +123,17 @@ No environment greps, no token cache reads, no config edit attempt, no direct AP
 Why this worked where prohibitions did not: the gate gives the agent a helpful, complete action to perform when the MCP is unverified (deliver setup instructions) instead of only forbidding the unhelpful one. Aligning the helpful path with the safe path held where three rounds of stronger prohibitions did not.
 
 The known limitation stays documented in the README, since prose still cannot guarantee adherence; the gate substantially reduces the chance of reaching that state.
+
+### Clone-inherit (designer day one): PASS
+
+Fresh clone of il-test-app opened in Kiro, intake invoked with new requirements.
+
+- Preflight verified Asana, then zero setup questions: tracker, destination, state mapping, and merge-closer decision all inherited from the committed profile.
+- Straight to draft approval, which is the only interactive step by design.
+- Bonus: the sweep found both merged PRs, recognized the Action had already completed those tasks, and stamped the Closed lines, so the passive sweep and the Action cooperate rather than conflict.
+
+### Merge-closer second fire: PASS
+
+PR 4 (clearCart) squash-merged after a manual conflict resolution against main; the Action completed the Asana task automatically. Two independent live fires now recorded.
+
+Fixture note: removing .beads left stale beads git hooks in .git/hooks (pre-commit, post-merge) that blocked a push until deleted. Worth a README caveat for anyone switching a repo off beads.
