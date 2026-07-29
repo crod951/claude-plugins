@@ -45,7 +45,7 @@ Sub-issue state transitions degrade to the completed flag instead: moving a subt
 Asana has no PR-merge integration comparable to Linear's GitHub integration.
 At PR open, move the main task to the mapped `inReview` state and post a comment stating that the task will be closed by the next skill run after the PR merges.
 Every skill invocation in a repo must run a merge sweep before doing any other tracker work.
-The sweep checks whether any `.issue-lifecycle/tasks/*.md` file references an Asana task whose PR has since merged, using `gh pr view <branch> --json state,mergedAt`.
+The sweep checks whether any `.workbench/tasks/*.md` file references an Asana task whose PR has since merged, using `gh pr view <branch> --json state,mergedAt`.
 When the sweep finds a merged PR for an Asana task, read the task's current state before writing to the tracker.
 When the task is already complete, for example because the merge-closer Action already closed it, skip the tracker write and apply only the stamp described below.
 Otherwise apply the mapped `done` state and set the completed flag before proceeding with the rest of the run.
@@ -64,7 +64,7 @@ First-run setup triggers the same load-time check as part of creating the profil
 When the tracker is Asana, check the profile for a `merge-closer:` line.
 When that line is absent, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on PR merge, then record the answer in the profile right away.
 Ask whenever no `merge-closer:` line is on record; once one is recorded, never ask again for this repository.
-When the answer is yes, write `.github/workflows/issue-lifecycle-close.yml` from the template below, record `merge-closer: installed` in the tracker profile, and commit both together.
+When the answer is yes, write `.github/workflows/workbench-close.yml` from the template below, record `merge-closer: installed` in the tracker profile, and commit both together.
 Tell the user to add an `ASANA_TOKEN` repository secret, an Asana personal access token, since the workflow cannot post to the Asana API without it.
 When the answer is no, record `merge-closer: declined` in the tracker profile.
 The passive sweep and the on-demand cleanup trigger described in the execute skill keep working either way; this Action is an additive fast path, not a replacement.
@@ -73,7 +73,7 @@ The agent must never run that curl call, or any other direct call to the Asana A
 The agent must never borrow the `ASANA_TOKEN` secret or any other token from disk to reach the Asana API itself; the connected Asana MCP is the only channel the agent uses at runtime.
 
 ```yaml
-name: issue-lifecycle-close
+name: workbench-close
 
 on:
   pull_request:
@@ -96,7 +96,7 @@ jobs:
           fi
 
           BRANCH="${{ github.event.pull_request.head.ref }}"
-          TASK_FILE=$(grep -rl "$BRANCH" .issue-lifecycle/tasks/ 2>/dev/null | head -n 1)
+          TASK_FILE=$(grep -rl "$BRANCH" .workbench/tasks/ 2>/dev/null | head -n 1)
 
           if [ -z "$TASK_FILE" ]; then
             echo "No checklist file references branch $BRANCH, skipping."

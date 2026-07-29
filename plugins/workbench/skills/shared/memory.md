@@ -29,7 +29,7 @@ Use the beads adapter when it does.
 When it does not, stop and tell the user that this repo's task state lives in beads but the `bd` binary is not available on this machine.
 Ask them to install beads or continue on a machine that has it.
 Do not fall back to the checklist adapter in this case: task status must never fork across two backends, per the no-dual-truth rule below.
-When `.issue-lifecycle/tasks/<ISSUE-REF>.md` exists and contains task checkboxes, use the checklist adapter, even when `bd` is installed; never switch backends mid-issue.
+When `.workbench/tasks/<ISSUE-REF>.md` exists and contains task checkboxes, use the checklist adapter, even when `bd` is installed; never switch backends mid-issue.
 When neither exists (a fresh run for this issue), check whether `bd --version` succeeds; use the beads adapter if it does, otherwise use the checklist adapter.
 
 Both backends store their state inside the repo, so any later session on any machine resumes correctly by reading the repo.
@@ -46,5 +46,5 @@ Skip the overlay silently when the agent exposes no such tools.
 ## No dual truth
 
 Task status never lives in two places.
-When the beads adapter is active, the checklist file at `.issue-lifecycle/tasks/<ISSUE-REF>.md` contains the plan only, with no checkboxes.
+When the beads adapter is active, the checklist file at `.workbench/tasks/<ISSUE-REF>.md` contains the plan only, with no checkboxes.
 When the checklist adapter is active, that same file holds both the plan and the statuses.

@@ -57,7 +57,7 @@ cp -r plugins/workbench/skills/. ~/.kiro/skills/
    ```
 4. **First run asks once about state mapping.**
    The first time either skill runs in a repository, it inspects your tracker's actual states and proposes a mapping to the three phases it needs: `inProgress`, `inReview`, and `done`.
-   You confirm or correct that mapping, and it is saved to `.issue-lifecycle/config.md` so every later run uses it silently.
+   You confirm or correct that mapping, and it is saved to `.workbench/config.md` so every later run uses it silently.
 
 ## Usage examples
 
@@ -77,13 +77,13 @@ Task state for an issue lives in exactly one durable backend, chosen automatical
 | Tier | Role |
 | --- | --- |
 | beads (`bd`) | Preferred backend when the `bd` CLI is available. Stores tasks with dependencies in `.beads/` inside your repo. |
-| checklist file | Fallback backend used when beads is not installed. The plan and every task's status live together in `.issue-lifecycle/tasks/<ref>.md`. |
+| checklist file | Fallback backend used when beads is not installed. The plan and every task's status live together in `.workbench/tasks/<ref>.md`. |
 | built-in display overlay | Optional live progress view mirrored into the running agent's own task-list tools (for example Claude Code's task list). Always rebuilt from whichever backend above is active; never treated as the source of truth. |
 
 ## What lands in your repo
 
-- `.issue-lifecycle/config.md` - the committed tracker profile: which tracker, which default destination, and the state mapping confirmed on first run.
-- `.issue-lifecycle/tasks/<ref>.md` - the per-issue plan and checklist.
+- `.workbench/config.md` - the committed tracker profile: which tracker, which default destination, and the state mapping confirmed on first run.
+- `.workbench/tasks/<ref>.md` - the per-issue plan and checklist.
   This file is a permanent record and stays in the repo after the pull request merges.
 
 ## Security boundary
@@ -117,3 +117,8 @@ A normal run, with the MCP connected, never reaches any of this.
 Version 3 removes the v2 slash commands: `/issue-start`, `/issue-task`, `/commit`, and `/issue-finish`.
 In their place, the execute skill covers the same ground with one instruction: "execute ONC-5" (or "work on ONC-5") now does what used to take `/issue-start`, then `/issue-task` and `/commit` repeated per task, then `/issue-finish`.
 v2 remains available in this repository's git history if you need to reference it.
+
+## Upgrading from earlier versions
+
+Repos that already have a `.issue-lifecycle/` directory from a previous version should rename it to `.workbench/`.
+If you installed the merge-closer GitHub Action, also rename `.github/workflows/issue-lifecycle-close.yml` to `.github/workflows/workbench-close.yml` and update the `grep -rl "$BRANCH" .issue-lifecycle/tasks/` line inside it to point at `.workbench/tasks/`.
