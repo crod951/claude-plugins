@@ -176,3 +176,23 @@ Finding 3 (surfaced by an accidental user reply) - question bundling. The draft 
 Confirmed working in the same run: short ref reporting (asana-504710 and siblings), so fix a59cdca held.
 
 Fixture: merge-closer record corrected to installed, since the Action is present in this repo and has fired twice.
+
+### Headless Kiro CLI driving: WORKS (new capability)
+
+kiro-cli shares the IDE's global MCP config, and `kiro-cli chat "<prompt>" --no-interactive --trust-tools=fs_read,fs_write,@asana,shell` drives both skills unattended. Note the shell tool is named `shell`, not execute_bash; a wrong name causes an approval wall in non-interactive mode. Non-interactive mode denies untrusted tools by default, which is a good safety default.
+
+Headless intake created a correct scaffold with short refs (asana-066224 and siblings), confirming the ref-scheme fix again.
+
+### Stop-and-hold: BLOCKED, still untested
+
+Fixture built as intended: a chore issue that touches cartTotal, branched from the broken-assertion branch, with the issue description forbidding test modification, so the only honest outcome is stop and hold.
+
+The headless lifecycle run correctly resolved beads on a fresh branch, completed task 1, claimed task 2, and then died on Kiro's monthly request limit (resets 08/01).
+
+Incidental positive: the interrupted state was clean and resumable, with task j6g.2 left in_progress, the branch and its commit intact, and no partial corruption. That is the resumability guarantee holding under an unplanned kill.
+
+### Sequenced first-run setup: unverified
+
+A dedicated single-branch clone with no profile anywhere local was prepared at ~/Desktop/Projects/il-test-setup so nothing can supply a profile. The run needs the IDE and is blocked by the same quota.
+
+Note for the future: an earlier attempt at this test accidentally verified a different fix instead, since deleting config.md on main left copies on old feature branches and the cross-branch profile check correctly found one.
