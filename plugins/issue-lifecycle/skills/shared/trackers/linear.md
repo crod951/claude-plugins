@@ -33,3 +33,17 @@ During first-run tracker profile setup, list the target team's workflow states u
 Propose the closest matching state name for each of the three phases, `inProgress`, `inReview`, and `done`.
 Favor states whose names or categories obviously correspond, for example a state named "In Progress" or categorized as started for the `inProgress` phase, a state named "In Review" for the `inReview` phase, and a state named "Done" or categorized as completed for the `done` phase.
 Show the proposed mapping to the user and let them confirm or correct it before saving the profile, following the procedure in `trackers.md`.
+
+## Setup instructions
+
+Use the current-user tool as the preflight verification call for Linear.
+A successful, error-free response from that call is what confirms the MCP is connected and usable; anything else, including no matching tool being available, counts as unverified.
+
+Linear's MCP is installed as a connector or plugin in the agent, not configured by hand with a raw server URL.
+Do not invent a specific Linear MCP endpoint; point the user at Linear's own official MCP documentation for the current endpoint and setup steps, since that detail changes over time and an invented URL would be worse than no URL.
+
+For Claude Code, tell the user to install the Linear MCP connector or plugin and authenticate through it.
+For Kiro, tell the user to add a Linear MCP server entry to `mcp.json`, using the endpoint from Linear's documented setup for that agent.
+
+Either way, tell the user to check for a `disabled` flag on an existing entry before assuming the server needs to be added from scratch; a disabled server presents to preflight the same as a missing one.
+The current-user verification call above, not the setup steps themselves, is what confirms the connection actually succeeded.

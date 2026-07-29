@@ -118,3 +118,45 @@ jobs:
 
 The Action closes the task by setting the completed flag directly through the Asana API.
 Section moves at other phases still follow the `updateState` fallback chain described above; this Action only ever sets completed on merge, it never moves sections.
+
+## Setup instructions
+
+Use the workspace-list or current-user tool as the preflight verification call for Asana.
+A successful, error-free response from that call is what confirms the MCP is connected and usable; anything else, including no matching tool being available, counts as unverified.
+
+The V1 server (`https://mcp.asana.com/sse`) is deprecated, with shutdown scheduled for 2026-11-05.
+Point new setups at the V2 server, `https://mcp.asana.com/v2/mcp`.
+V2 requires an app registered at `app.asana.com/0/my-apps`, which provides a client id and a client secret.
+
+For Claude Code, run:
+
+```bash
+claude mcp add --transport http --client-id YOUR_CLIENT_ID --client-secret --callback-port 8080 asana https://mcp.asana.com/v2/mcp
+```
+
+Register the redirect URL `http://localhost:8080/callback` in the Asana app before running this command.
+
+For Kiro, add an entry to `~/.kiro/settings/mcp.json` (user level) or `.kiro/settings/mcp.json` (workspace level) that runs the `mcp-remote` proxy:
+
+```json
+{
+  "mcpServers": {
+    "asana": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote@latest",
+        "https://mcp.asana.com/v2/mcp",
+        "3334",
+        "--static-oauth-client-info",
+        "{\"client_id\":\"YOUR_CLIENT_ID\",\"client_secret\":\"YOUR_CLIENT_SECRET\"}"
+      ]
+    }
+  }
+}
+```
+
+Register the redirect URL `http://localhost:3334/oauth/callback` in the Asana app before running this command.
+Note that `mcp-remote` is community software, not an official Asana or Anthropic package.
+
+Either way, tell the user to check for a `disabled` flag on an existing entry before assuming the server needs to be added from scratch; a disabled server presents to preflight the same as a missing one.

@@ -20,6 +20,25 @@ Adapter files implement each one against a specific tracker's tools; treat the o
 | `updateState(ref, phase)` | Move an issue to the given phase, where phase is one of `inProgress`, `inReview`, or `done`; apply it through the tracker profile's state mapping rather than a hardcoded status name. |
 | `comment(ref, body)` | Post a comment on an issue. |
 
+## Preflight verification
+
+Run this before any other tracker operation, on every invocation.
+Do not skip it because a previous run in this session already verified the MCP; verify again each time.
+
+Infer the intended tracker first.
+When a reference already exists, infer it from the reference shape: a Linear key like `ABC-123`, or an Asana URL or GID.
+When there is no reference yet, as during intake, infer it from the tracker profile's `tracker` field first, then from which tracker MCPs are connected.
+
+Verify the inferred tracker's MCP with one cheap read-only call, the current-user or workspace-list operation that tracker's adapter file names.
+Treat any failure, any absence of the expected tools, or a disabled server the same way: unverified.
+
+When verification fails, do not start tracker work and do not attempt any workaround.
+Instead, output the setup instructions from that tracker's adapter file, tell the user to connect the MCP and re-invoke the skill, then stop.
+When the MCP is unverified, delivering setup instructions is the task; that is a genuinely helpful, complete action, not a fallback, and it is what keeps this procedure from improvising a bypass.
+
+On re-invocation, run preflight again from the top.
+Only a verified MCP allows tracker work to begin.
+
 ## Runtime resolution
 
 Follow this procedure to decide which tracker owns a given reference, and to fail safely when that cannot be determined.

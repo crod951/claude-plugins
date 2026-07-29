@@ -36,8 +36,9 @@ If any of these files cannot be found and read, stop immediately and report whic
 
 ## Procedure
 
-1. Run the Asana done-on-merge sweep described in `../shared/trackers/asana.md` before any other tracker work in this repository.
-2. Resolve the tracker, then the destination.
+1. Run preflight verification as described in `../shared/trackers.md` before any other step; stop there when the tracker's MCP does not verify.
+2. Run the Asana done-on-merge sweep described in `../shared/trackers/asana.md`; this sweep is itself tracker work, so it only runs once preflight has verified the MCP.
+3. Resolve the tracker, then the destination.
    - There is no existing issue ref to infer the tracker from, so resolve it explicitly before anything else.
    - When the invocation names a tracker, use that tracker.
    - Otherwise, when the tracker profile records a tracker, use that tracker.
@@ -48,17 +49,17 @@ If any of these files cannot be found and read, stop immediately and report whic
    - Once the tracker is resolved, when the user gave an explicit destination hint, resolve it with `resolveDestination`.
    - Otherwise resolve the tracker profile's configured default destination.
    - When there is no hint and no configured default, call `listDestinations` and ask the user once which one to use.
-3. Draft the scaffold from the requirements text.
+4. Draft the scaffold from the requirements text.
    - Write a main issue title and a description that summarizes the requirements.
    - Infer the main issue's type from the requirements, one of feature, bug, chore, or docs, defaulting to feature when the requirements do not indicate one.
    - Break the requirements into three to seven sub-issue drafts, each sized as an independently implementable unit of work.
    - Show the full draft, main issue title, type, description, and every sub-issue, to the user and wait for approval before creating anything.
    - Apply any edits the user requests, then show the revised draft again until it is approved.
-4. Create the approved scaffold.
+5. Create the approved scaffold.
    - Call `createIssue` for the main issue using the approved title, description, type, and resolved destination.
    - Call `createSubIssue` once per approved sub-issue draft, linking each to the newly created main issue.
    - Report the URL for the main issue and for every sub-issue that was created.
-5. When the resolved destination differs from the tracker profile's configured default, save the new destination to the tracker profile.
-6. Offer the handoff: ask "run issue-lifecycle on <ref> now?", where `<ref>` is the main issue just created.
+6. When the resolved destination differs from the tracker profile's configured default, save the new destination to the tracker profile.
+7. Offer the handoff: ask "run issue-lifecycle on <ref> now?", where `<ref>` is the main issue just created.
    - When the user says yes, invoke the issue-lifecycle skill on that ref.
    - When the user says no, stop here and leave the issue in the tracker for a later run.
