@@ -290,3 +290,23 @@ Medium severity
 Deliberately not adopted: the earlier create-immediately intake behavior, since testing showed an agent creating unwanted work from an ambiguous reply, and the earlier no-configuration stance, since a committed profile is what makes state mapping explicit and inheritable.
 
 All new content lives in a new shared reference, conventions.md, so both skill bodies stayed within their line ceilings (execute 77 of 120, scaffold 76 of 80). Capability-language greps clean, all shared references resolve, workflow template still parses.
+
+## Verification run after adopting the eight audit items
+
+Beads mode in Claude Code, fresh issue asana-475400, two tasks.
+
+Verified working
+- New beads init flags: no git hooks installed (only git's own .sample files remain, so the branch-switching failure is gone) and the short prefix produced readable ids such as cart-bth instead of il-test-app-j6g.
+- Tag-based task lookup: all three items for the issue retrieved by issue-ref tag, retiring the substring title matching that caused the earlier prefix-collision bug.
+- Parent blocked by children: bd blocked reported the parent blocked by both children, and it became ready only after the last child closed, making "no open children" a real signal.
+- Staging safety: named-path staging only, and beads' own ignore rules kept the database, WAL, and daemon files out with nothing unintended staged.
+- Conventional commits with issue scope and the task named in the body.
+- Plan document written at .workbench/plans/asana-475400.md with all seven sections and no status.
+- Per-task progress lines after each close.
+
+Three defects found and fixed
+1. claimNext used the wrong command. The adapter said `bd list --ready` filters to tasks whose dependencies are closed; it does not. That flag only filters stored status, and beads never rewrites status when a dependency is added, so it returned every task including blocked ones and would have claimed work out of order. The correct command is `bd ready`, which computes blocking from the graph at query time; verified with a two-task chain plus a blocked parent where `bd list --ready` returned all three and `bd ready` returned one. Fixed, with `bd blocked` documented for explaining why nothing is claimable.
+2. My earlier beads gitignore guidance was redundant and partly wrong. `bd init` writes .beads/.gitignore itself, covering every runtime file, and configures the .gitattributes merge driver. My hand-written repo-level block duplicated that and wrongly ignored metadata.json, which beads intends to be tracked. The real cause of the original dirty-tree failure was blanket staging having committed runtime files before any ignore rule existed, which no ignore rule can undo. Guidance now says to verify what the tooling wrote, never duplicate it, and untrack anything a previous version committed.
+3. The plan document broke the merge-closer. The Action and the sweep both searched only .workbench/tasks/, but a beads-mode issue records its branch in the plan document under .workbench/plans/ with no checklist file, so the Action ran, found nothing, and skipped. Both now search all of .workbench/. The Action was additionally hardened to take the issue URL from a line labeled Tracker or Issue rather than blindly taking the first Asana URL in the file, so a reordered file cannot make it close a sub-issue; verified that every per-issue file in the fixture resolves to its main issue under the new rule.
+
+The no-dual-truth section now states the file roles explicitly: the plan document always holds the plan and never status, beads mode writes no tasks file, checklist mode writes statuses there, and at least one file under .workbench/ must record the branch and tracker URL so both closure paths can find the issue.

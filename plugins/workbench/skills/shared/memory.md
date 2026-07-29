@@ -57,5 +57,7 @@ Skip the overlay silently when the agent exposes no such tools.
 ## No dual truth
 
 Task status never lives in two places.
-When the beads adapter is active, the checklist file at `.workbench/tasks/<ISSUE-REF>.md` contains the plan only, with no checkboxes.
-When the checklist adapter is active, that same file holds both the plan and the statuses.
+The human-readable plan always lives in the plan document at `.workbench/plans/<ISSUE-REF>.md` described in `conventions.md`, and that document never carries status.
+When the beads adapter is active, statuses live in beads and no file is written under `.workbench/tasks/` for that issue.
+When the checklist adapter is active, `.workbench/tasks/<ISSUE-REF>.md` holds the checkbox statuses for that issue, and the plan still lives in the plan document.
+Whichever backend is active, at least one file under `.workbench/` must record the issue's branch and tracker URL, because the merge sweep and the merge-closer Action both find an issue by searching that directory for the branch name.

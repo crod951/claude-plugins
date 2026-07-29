@@ -123,4 +123,4 @@ v2 remains available in this repository's git history if you need to reference i
 Repos that already have a `.issue-lifecycle/` directory from a previous version should rename it to `.workbench/`.
 If you installed the merge-closer GitHub Action, also rename `.github/workflows/issue-lifecycle-close.yml` to `.github/workflows/workbench-close.yml` and update the `grep -rl "$BRANCH" .issue-lifecycle/tasks/` line inside it to point at `.workbench/tasks/`.
 Update the profile's first line from the old `# issue-lifecycle tracker profile` heading to `# workbench tracker profile`.
-If the repo uses beads for task memory, add the runtime-file gitignore block documented in the beads adapter; that block is what keeps branch switching working once beads starts writing its database and logs.
+If the repo uses beads for task memory, confirm that `.beads/.gitignore` and `.gitattributes` exist, since the beads tooling writes both, and untrack any beads runtime files that an earlier version committed, because ignore rules never apply to files that are already tracked.

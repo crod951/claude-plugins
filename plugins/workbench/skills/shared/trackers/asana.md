@@ -55,7 +55,8 @@ Sub-issue state transitions degrade to the completed flag instead: moving a subt
 Asana has no PR-merge integration comparable to Linear's GitHub integration.
 At PR open, move the main task to the mapped `inReview` state and post a comment stating that the task will be closed by the next skill run after the PR merges.
 Every skill invocation in a repo must run a merge sweep before doing any other tracker work.
-The sweep checks whether any `.workbench/tasks/*.md` file references an Asana task whose PR has since merged, using `gh pr view <branch> --json state,mergedAt`.
+The sweep checks whether any file under `.workbench/` references an Asana task whose PR has since merged, using `gh pr view <branch> --json state,mergedAt`.
+Search the whole directory rather than only `tasks/`: depending on the resolved memory backend the per-issue record may be a plan document under `plans/` with no checklist file at all, and narrowing the search to `tasks/` silently skips those issues.
 When the sweep finds a merged PR for an Asana task, read the task's current state before writing to the tracker.
 When the task is already complete, for example because the merge-closer Action already closed it, skip the tracker write and apply only the stamp described below.
 Otherwise apply the mapped `done` state and set the completed flag before proceeding with the rest of the run.
@@ -106,14 +107,20 @@ jobs:
           fi
 
           BRANCH="${{ github.event.pull_request.head.ref }}"
-          TASK_FILE=$(grep -rl "$BRANCH" .workbench/tasks/ 2>/dev/null | head -n 1)
+          TASK_FILE=$(grep -rl "$BRANCH" .workbench/ 2>/dev/null | head -n 1)
 
           if [ -z "$TASK_FILE" ]; then
-            echo "No checklist file references branch $BRANCH, skipping."
+            echo "No file under .workbench/ references branch $BRANCH, skipping."
             exit 0
           fi
 
-          TASK_URL=$(grep -oE 'https://app\.asana\.com/[^ )>]+' "$TASK_FILE" | head -n 1)
+          # Prefer a URL on a line that labels it as the issue, so a reordered
+          # file cannot make this close a sub-issue by accident.
+          TASK_URL=$(grep -iE '^[-* ]*(tracker|issue):' "$TASK_FILE" \
+            | grep -oE 'https://app\.asana\.com/[^ )>]+' | head -n 1)
+          if [ -z "$TASK_URL" ]; then
+            TASK_URL=$(grep -oE 'https://app\.asana\.com/[^ )>]+' "$TASK_FILE" | head -n 1)
+          fi
 
           if [ -z "$TASK_URL" ]; then
             echo "No Asana task URL found in $TASK_FILE, skipping."
