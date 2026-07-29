@@ -47,3 +47,8 @@ Right after `init` creates `.beads/`, ensure the repository's `.gitignore` exclu
 ```
 
 Without this, the working tree stays permanently dirty, `git checkout` between branches fails because the database and log files would be overwritten, and later runs trip over uncommitted database churn that has nothing to do with their own work.
+
+Long-lived parallel branches that both write task state will conflict on the JSONL export.
+Beads installs a `.gitattributes` merge driver to handle exactly that, so keep that file when beads creates it.
+Resolve a JSONL conflict by letting beads regenerate the export from its database rather than hand-merging the JSON lines.
+A hand-edited `.gitignore` can also conflict when two branches add the same runtime-file rules independently; resolve that by keeping one deduplicated copy of the rules, never both copies.

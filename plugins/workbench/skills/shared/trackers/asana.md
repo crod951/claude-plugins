@@ -14,7 +14,7 @@ When an assumed tool name below does not exist on the connected server, list the
 | --- | --- |
 | `getIssue(ref)` | Fetch the task by its GID, parsed from a pasted task URL, using a get-task-style tool. When no URL or GID is available, fall back to a name-search tool and confirm the single best match with the user before proceeding. Save the task's GID, its permalink URL, its completed flag, and its memberships (the project and section it currently sits in) from the response; later operations that need the native id should reuse the saved GID rather than re-fetching. |
 | `listSubIssues(ref)` | List the task's subtasks using a list-subtasks-style tool scoped to the parent GID. Return each subtask's GID, title, and completed flag. |
-| `listDestinations()` | List the projects in the workspace that the user can access, using a list-projects-style tool. Return each project as its GID paired with its display name. |
+| `listDestinations()` | Prefer the per-team path: resolve the viewer's teams with a teams-for-user style tool, then list projects per team, and return each project as its GID paired with its display name. Treat a workspace-wide project listing as a fallback only, because on at least one connected build it never returns. |
 | `resolveDestination(hint?)` | Match a given hint against a project's name or GID to resolve its native GID. When no hint is given, resolve the tracker profile's configured default destination the same way. Return null when the hint matches more than one project ambiguously. |
 | `createIssue(title, description, type, destination)` | Create the task with the resolved project GID, the title, and the description. Capture the created task's GID and its permalink URL from the tool response, and return both to the caller. |
 | `createSubIssue(parentRef, title, description)` | Create the task with the parent's GID set as its parent; do not pass a project, since Asana inherits project membership from the parent task. Capture the created subtask's GID and its permalink URL from the tool response, and return both to the caller. |
@@ -22,6 +22,16 @@ When an assumed tool name below does not exist on the connected server, list the
 | `comment(ref, body)` | Post a story (comment) on the task using its GID and the comment body. |
 
 The deprecated V1 server (mcp.asana.com/sse, shutdown 2026-11-05) lacks a section-move tool, so the V2 server (mcp.asana.com/v2/mcp) is recommended for full section-move support.
+
+Two listing tools stalled rather than errored on one connected build: a workspace-wide project listing and a typeahead search each returned nothing for 300 seconds before being aborted, while listing projects per team returned instantly.
+When a listing call stalls instead of failing, stop waiting on it, tell the user which call stalled, and use the per-team path instead.
+Argument names differ across builds: some expect GID-suffixed names such as `user_gid` and `team_gid` rather than `user_id` and `team_id`, so treat an argument-validation error as a signal to retry with the other spelling rather than abandoning the tool.
+
+Section-move fidelity depends on which Asana MCP the agent has connected.
+A V2 server reached through the mcp-remote proxy exposed a section-move tool and really moved the task between board sections.
+A different build exposed no section-move tool at all, so `updateState` correctly fell through to the phase comment.
+Both outcomes are expected and already covered by the fallback chain; never treat the missing tool as an error.
+A team that wants true section moves should connect a server that exposes one.
 
 ## Issue references
 

@@ -239,3 +239,22 @@ scaffold created asana-553983 plus four sub-issues with short refs. execute then
 2. Claude Code's Asana MCP exposes no section-move tool, so `updateState` correctly degraded to the fallback comment. Kiro's V2 mcp-remote server does expose one and moved sections. Same profile mapping, different fidelity per agent, and the fallback chain handled it without failing.
 3. Two Asana MCP tools on this build reliably time out after 300s: `asana_get_projects_for_workspace` and `asana_typeahead_search`. The per-team path (`asana_get_teams_for_user` then `asana_get_projects_for_team`) returns instantly and should be preferred for listDestinations.
 4. Beads JSONL and .gitignore both conflict across long-lived branches. Beads installs a .gitattributes merge driver for the JSONL; the gitignore conflict was manual. Worth a caveat for teams running several workbench branches at once.
+
+### Checklist mode (markdown task memory), Claude Code: PASS
+
+Fixture: fresh clone with `.beads/` removed and `bd` hidden, so resolution had to land on the checklist adapter, with the tracker profile inherited from the repo.
+
+- Resolution chose the checklist adapter correctly for a fresh run with no beads state and no bd binary.
+- Checklist file was written in the spec format with plan and statuses in one file, since checklist mode owns both.
+- Markers cycled properly: open to `[>]` at claim, `[>]` to `[x]` with a done date at close.
+- The marker flip rode the same commit as its implementation, verified by inspecting the commit contents rather than trusting the report; each of the two tasks produced exactly one commit.
+- Sub-issues completed in Asana per task, phase recorded by comment (no section-move tool on this build), PR #6 opened with the tracker URL and the PR link written back into the checklist file.
+- On merge the workbench-close Action completed the Asana task within seconds, proving the Action works for checklist-mode repos too since it greps `.workbench/tasks/` regardless of which backend wrote the file.
+
+This closes the last untested scenario. Checklist mode is the path Ryan's designers will use, since it needs no beads install.
+
+### Three findings folded into the docs
+
+`trackers/asana.md` now prefers the per-team path for listDestinations, records that a workspace-wide listing and typeahead both stalled for 300s on one build, tells the agent to stop waiting on a stalled call, notes the GID-suffixed argument-name variation, and documents per-build section-move fidelity.
+`agents.md` notes that tool coverage varies per build, not only tool names.
+`memory/beads.md` documents the JSONL merge driver, how to resolve a JSONL conflict by regenerating, and the deduplicate rule for conflicting gitignore additions.

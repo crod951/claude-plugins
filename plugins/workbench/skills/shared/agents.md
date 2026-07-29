@@ -27,6 +27,10 @@ Tool name prefixes for a connected tracker MCP server differ per agent and per M
 Do not hardcode any tracker tool name in any skill, script, or note.
 Discover the connected tracker server's actual tool names at runtime, every run, before calling any of them.
 
+Tool coverage also differs, not just tool names.
+One Asana build exposed a section-move tool and moved tasks between board sections, while another exposed none and correctly degraded to a phase comment through the adapter's fallback chain.
+Expect that variation, and see `trackers/asana.md` for the details.
+
 ## Permissions
 
 For smooth autonomous runs, pre-approve these command families ahead of time: `git`, `gh`, `bd`, and whichever tool names the runtime discovery step in the previous section resolves for the connected tracker MCP server.
