@@ -77,3 +77,10 @@ Deviations (all prose-adherence, Kiro model):
 - Merge-closer ask never fired despite the profile lacking a merge-closer line (fix 43354c2 was live).
 
 Response: inline the highest-value invariants directly in SKILL.md (backend stop rule, no-batching prohibition, profile-load checks pointer); accept that prose adherence varies by model and document it. bd restored to PATH after the run.
+
+### Merge-closer Action end-to-end (tier 1): PASS
+
+- Merge-closer ask fired at profile load (fix 43354c2 + inline profile-check invariant verified live); user accepted; intake committed workflow + merge-closer: installed to main.
+- ASANA_TOKEN secret set via gh; PAT validated read-only first.
+- PR #3 (formatPrice) squash-merged: Action ran green and set completed: true on the Asana task within seconds, no agent involved.
+- URL-regex fix (b04cbf6) validated in production: extraction worked against the current Asana URL format.
