@@ -8,9 +8,9 @@ Both skills follow the open Agent Skills standard, so they run unchanged on Clau
 
 ## What it is
 
-- **issue-lifecycle** - drives one tracker issue through a single resumable pass: breakdown, implementation, tests, commits, and an open PR.
+- **execute** - drives one tracker issue through a single resumable pass: breakdown, implementation, tests, commits, and an open PR.
   Re-invoke it on the same issue to resume wherever the last run left off; it never relies on memory of a previous run, only on what is saved to disk and in the tracker.
-- **issue-intake** - turns requirements text (a PRD, a spec, a paragraph) into a scaffolded main issue plus linked sub-issues, then offers to hand off to issue-lifecycle.
+- **scaffold** - turns requirements text (a PRD, a spec, a paragraph) into a scaffolded main issue plus linked sub-issues, then offers to hand off to execute.
 
 **Trackers supported:** Asana, Linear.
 **Agents supported:** Claude Code, Kiro.
@@ -29,7 +29,7 @@ Run these commands inside a Claude Code session (they start with `/`):
 ### Kiro
 
 Copy or symlink this plugin's `skills/` directory contents into `.kiro/skills/` for a workspace install, or into `~/.kiro/skills/` for a global install.
-Keep `issue-lifecycle/`, `issue-intake/`, and `shared/` as siblings at the top level of that destination, since each skill references `../shared/` files by relative path.
+Keep `execute/`, `scaffold/`, and `shared/` as siblings at the top level of that destination, since each skill references `../shared/` files by relative path.
 
 ```bash
 cp -r plugins/issue-lifecycle/skills/. ~/.kiro/skills/
@@ -50,7 +50,7 @@ cp -r plugins/issue-lifecycle/skills/. ~/.kiro/skills/
    bd version
    ```
 3. **Install and authenticate the GitHub CLI (`gh`).**
-   The issue-lifecycle skill opens pull requests with `gh`, so it must be installed and authenticated before your first run.
+   The execute skill opens pull requests with `gh`, so it must be installed and authenticated before your first run.
    ```bash
    brew install gh
    gh auth login
@@ -61,10 +61,13 @@ cp -r plugins/issue-lifecycle/skills/. ~/.kiro/skills/
 
 ## Usage examples
 
-Talk to either skill in plain language; there are no slash commands to memorize.
+Talk to either skill in plain language, or name it directly; there are no slash commands to memorize.
 
+- `execute ONC-5`
+- `run execute on this issue`
 - `work on ONC-5`
 - `work on <asana task url>`
+- `scaffold these requirements`
 - `turn these requirements into an issue`
 
 ## How task memory works
@@ -112,5 +115,5 @@ A normal run, with the MCP connected, never reaches any of this.
 ## Migrating from v2
 
 Version 3 removes the v2 slash commands: `/issue-start`, `/issue-task`, `/commit`, and `/issue-finish`.
-In their place, the issue-lifecycle skill covers the same ground with one instruction: "work on ONC-5" now does what used to take `/issue-start`, then `/issue-task` and `/commit` repeated per task, then `/issue-finish`.
+In their place, the execute skill covers the same ground with one instruction: "execute ONC-5" (or "work on ONC-5") now does what used to take `/issue-start`, then `/issue-task` and `/commit` repeated per task, then `/issue-finish`.
 v2 remains available in this repository's git history if you need to reference it.

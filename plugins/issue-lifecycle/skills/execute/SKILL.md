@@ -1,10 +1,10 @@
 ---
-name: issue-lifecycle
-description: This skill should be used when the user asks to "work on an issue", "start an issue", "implement this Asana/Linear issue", "take this issue to a PR", pastes an Asana task URL to build, or names a Linear issue key like ONC-5. Also use when the user says something like "the PR for <issue> merged", "clean up merged issues", or "close out merged work", to run the done-on-merge sweep on demand. Drives the issue from breakdown through implementation to an open PR with resumable task tracking.
+name: execute
+description: This skill should be used when the user asks to "execute ONC-5", "run execute on this issue", "work on an issue", "start an issue", "implement this Asana/Linear issue", "take this issue to a PR", pastes an Asana task URL to build, or names a Linear issue key like ONC-5. Also use when the user says something like "the PR for <issue> merged", "clean up merged issues", or "close out merged work", to run the done-on-merge sweep on demand. Drives an existing tracker issue from breakdown through implementation to an open PR with resumable task tracking.
 version: 3.0.0
 ---
 
-# Issue Lifecycle
+# Execute
 
 ## Absolute boundary
 

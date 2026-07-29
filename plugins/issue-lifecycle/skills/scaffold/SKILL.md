@@ -1,10 +1,10 @@
 ---
-name: issue-intake
-description: This skill should be used when the user asks to "turn these requirements into an issue", "create an issue and sub-issues", "scaffold an issue from this PRD or spec", or "break these requirements into tickets" for Asana or Linear. Creates a main issue plus linked sub-issues, then offers to hand off to the issue-lifecycle skill.
+name: scaffold
+description: This skill should be used when the user asks to "scaffold these requirements", "scaffold an issue from this PRD or spec", "turn these requirements into an issue", "create an issue and sub-issues", or "break these requirements into tickets" for Asana or Linear. Creates a main issue plus linked sub-issues, then offers to hand off to the execute skill.
 version: 3.0.0
 ---
 
-# Issue Intake
+# Scaffold
 
 ## Absolute boundary
 
@@ -22,7 +22,7 @@ Requirements text goes in; a main issue and its linked sub-issues come out.
 Nothing is created in the tracker before the user approves the draft.
 Tracker access goes only through the connected tracker MCP; when it is missing, stop and say so; never hunt for credentials on disk or call tracker APIs directly.
 This skill does not create or write any task-memory or checklist files.
-The issue-lifecycle skill creates task memory itself when it runs its breakdown.
+The execute skill creates task memory itself when it runs its breakdown.
 
 ## Read first
 
@@ -70,6 +70,6 @@ If any of these files cannot be found and read, stop immediately and report whic
    - Report each issue's ref using that tracker's issue ref scheme, as defined in that tracker's adapter file, and hand off using that ref; for Asana this is the short `asana-<last six digits of the GID>` form, never the full GID.
 6. A per-invocation destination hint applies only to the issue just created; do not overwrite the tracker profile's saved default because of it.
    Write `default-destination` into the tracker profile only when the profile currently has none, or when the user explicitly asks to change the default.
-7. Offer the handoff: ask "run issue-lifecycle on <ref> now?", where `<ref>` is the main issue just created.
-   - When the user says yes, invoke the issue-lifecycle skill on that ref.
+7. Offer the handoff: ask "run execute on <ref> now?", where `<ref>` is the main issue just created.
+   - When the user says yes, invoke the execute skill on that ref.
    - When the user says no, stop here and leave the issue in the tracker for a later run.

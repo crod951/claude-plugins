@@ -67,7 +67,7 @@ Ask whenever no `merge-closer:` line is on record; once one is recorded, never a
 When the answer is yes, write `.github/workflows/issue-lifecycle-close.yml` from the template below, record `merge-closer: installed` in the tracker profile, and commit both together.
 Tell the user to add an `ASANA_TOKEN` repository secret, an Asana personal access token, since the workflow cannot post to the Asana API without it.
 When the answer is no, record `merge-closer: declined` in the tracker profile.
-The passive sweep and the on-demand cleanup trigger described in the issue-lifecycle skill keep working either way; this Action is an additive fast path, not a replacement.
+The passive sweep and the on-demand cleanup trigger described in the execute skill keep working either way; this Action is an additive fast path, not a replacement.
 The curl call to the Asana API in the template below exists exclusively for this GitHub Action running in CI, authenticated with its own repository secret.
 The agent must never run that curl call, or any other direct call to the Asana API, interactively.
 The agent must never borrow the `ASANA_TOKEN` secret or any other token from disk to reach the Asana API itself; the connected Asana MCP is the only channel the agent uses at runtime.
