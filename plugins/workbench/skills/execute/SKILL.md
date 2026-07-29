@@ -39,6 +39,7 @@ In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.k
 - `../shared/trackers.md` for the tracker contract, phase names, and first-run profile setup.
 - `../shared/memory.md` for the memory contract and backend resolution rules.
 - `../shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
+- `../shared/conventions.md` for staging safety, commit messages, the plan document, and progress reporting.
 
 If any of these files cannot be found and read, stop immediately and report which paths were tried - never improvise their contracts from memory or proceed without them.
 
@@ -61,9 +62,12 @@ If any of these files cannot be found and read, stop immediately and report whic
    - When the issue has no existing children, plan the units of work; for each one, call `createSubIssue` first, then call `createTask` with the newly created sub-issue's ref as `subIssueRef`, setting `deps` to the id of the task it builds on so tasks chain sequentially by default whenever order matters.
    - When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown; for each adopted sub-issue, still call `createTask`, passing that sub-issue's existing ref as `subIssueRef` and skipping `createSubIssue` since the sub-issue already exists, and setting `deps` the same way.
    - Either way, write the resulting plan into the checklist file at `.workbench/tasks/<ISSUE-REF>.md`.
+   - Also write the plan document described in `conventions.md` and commit it with the breakdown.
 9. Call `updateState` to move the issue to the `inProgress` phase.
 10. Run the implementation loop until it stops naturally: call `claimNext`, record the claim in the memory backend's own format at claim time, move the claimed task's linked sub-issue to `inProgress`, implement that unit of work following the codebase patterns found in step 5, then run the tests related to that unit; on a passing run, commit the change with a message referencing the issue ref and the task, call `close` on the task, record the close in the memory backend's own format at close time, and move its sub-issue to `done`; on a failure that cannot be fixed, stop and hold, leaving the change uncommitted or committed as-is, the task still in progress, and report the failure before exiting.
+    Stage and word every commit per `conventions.md`; never stage with a blanket pattern and never stage a file that could carry a secret.
     Never combine multiple tasks into one commit, even when they touch the same file; each task gets its own claim, commit, and close.
+    Print the per-task progress line from `conventions.md` after each close.
     Record status changes as they happen rather than summarizing them at the end of the loop.
 11. Once `claimNext` returns none remaining, finish the issue: commit any leftover uncommitted change, close the parent task, push the branch, and open the pull request with the `gh` command-line tool unless one already exists, with a body containing `Closes <ref>` for a Linear issue or the task's URL for an Asana task, plus a summary, the list of completed tasks, and a test plan; call `updateState` to move the issue to the `inReview` phase; then post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push any changed or new task-state files under `.beads/` (including files its own tooling creates) and `.workbench/` as a final closing commit so the branch carries the completed state.
 12. Report a final summary: the issue, the pull request URL, the tracker's current phase, and the task counts from `status()`.

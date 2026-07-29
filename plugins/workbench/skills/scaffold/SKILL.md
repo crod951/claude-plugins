@@ -33,6 +33,7 @@ In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.k
 
 - `../shared/trackers.md` for the tracker contract and the tracker profile default destination.
 - `../shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
+- `../shared/agents.md` also names the structured question mechanism to prefer when asking the user anything in this procedure.
 
 If any of these files cannot be found and read, stop immediately and report which paths were tried - never improvise their contracts from memory or proceed without them.
 
@@ -66,7 +67,7 @@ If any of these files cannot be found and read, stop immediately and report whic
 5. Create the approved scaffold.
    - Call `createIssue` for the main issue using the approved title, description, type, and resolved destination.
    - Call `createSubIssue` once per approved sub-issue draft, linking each to the newly created main issue.
-   - Report the URL for the main issue and for every sub-issue that was created.
+   - Report the result as a compact block listing the tracker, the main issue ref, title and URL, then one line per sub-issue with its ref and URL, so the scaffold is scannable at a glance.
    - Report each issue's ref using that tracker's issue ref scheme, as defined in that tracker's adapter file, and hand off using that ref; for Asana this is the short `asana-<last six digits of the GID>` form, never the full GID.
 6. A per-invocation destination hint applies only to the issue just created; do not overwrite the tracker profile's saved default because of it.
    Write `default-destination` into the tracker profile only when the profile currently has none, or when the user explicitly asks to change the default.

@@ -31,6 +31,14 @@ Tool coverage also differs, not just tool names.
 One Asana build exposed a section-move tool and moved tasks between board sections, while another exposed none and correctly degraded to a phase comment through the adapter's fallback chain.
 Expect that variation, and see `trackers/asana.md` for the details.
 
+## Structured questions
+
+Prefer a structured, multiple-choice question over free prose whenever this plugin asks the user to choose something, such as the tracker, the destination, the state mapping, or a one-time offer.
+Concrete options are easier to answer unambiguously, which matters because an ambiguous reply must never be treated as approval.
+
+Claude Code: use its built-in question tool that renders selectable options.
+Kiro: use an equivalent structured prompt when the workspace exposes one; otherwise ask in prose, numbering the options so the reply can name one.
+
 ## Permissions
 
 For smooth autonomous runs, pre-approve these command families ahead of time: `git`, `gh`, `bd`, and whichever tool names the runtime discovery step in the previous section resolves for the connected tracker MCP server.

@@ -11,11 +11,11 @@ Adapter files implement each one against a specific backend; treat the operation
 | Operation | Purpose |
 | --- | --- |
 | `init(issueRef)` | Prepare the backend for this issue's task set. |
-| `createTask(title, description, subIssueRef, deps)` | Create a task and return its task id. |
+| `createTask(title, description, subIssueRef, deps)` | Create a task, tag it with the issue ref so all tasks for one issue can be listed directly, record `subIssueRef` on the task, and return its task id. |
 | `claimNext()` | Return and mark in-progress the first open task whose deps are all closed; return null when none remain. |
 | `close(taskId)` | Mark a task done. |
 | `status()` | Return open/done counts and the current in-progress task. |
-| `parentTask(issueRef)` | Create or fetch the parent task representing the overarching issue. |
+| `parentTask(issueRef)` | Create or fetch the parent task representing the overarching issue, and make it depend on every child task so it cannot close before they do. |
 
 ## Resolution
 

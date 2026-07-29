@@ -16,7 +16,7 @@ Adapter files implement each one against a specific tracker's tools; treat the o
 | `listDestinations()` | List where a new top-level issue can be created (Asana projects, Linear teams), each as a stable id paired with a display name. |
 | `resolveDestination(hint?)` | Turn a caller-supplied hint, or the tracker profile's configured default when no hint is given, into one native destination id; return null when the result is ambiguous. |
 | `createIssue(title, description, type, destination)` | Create a new top-level issue in the given destination; return its ref and URL. |
-| `createSubIssue(parentRef, title, description)` | Create a new child issue under an existing parent; return its ref and URL. |
+| `createSubIssue(parentRef, title, description)` | Create a new child issue under an existing parent; return its ref and URL. Include the paired task id in the description so the link reads in both directions, since a sub-issue that names its task lets anyone in the tracker find the work item without searching task memory. When an existing sub-issue is adopted rather than created, add that marker by editing the description when the tracker allows it, or by posting a comment when it does not. |
 | `updateState(ref, phase)` | Move an issue to the given phase, where phase is one of `inProgress`, `inReview`, or `done`; apply it through the tracker profile's state mapping rather than a hardcoded status name. |
 | `comment(ref, body)` | Post a comment on an issue. |
 
@@ -79,6 +79,7 @@ Before prompting the user, check other local branches for a newer `.workbench/co
 When no existing profile is found anywhere, the agent must run these three steps in order and must not skip any of them.
 Each step must get the user's answer before the next step starts, and the profile must not be written until every step has an answer.
 Ask one question at a time; never present a later step's question, or any other pending question such as the issue draft, alongside an unanswered step from this sequence.
+Prefer the agent's structured question mechanism named in `agents.md` over free prose for each of these questions, since a list of concrete choices is harder to answer ambiguously.
 When a user's reply could answer more than one pending question, or its target is unclear, stop and ask which question it answered; never guess, and never treat an ambiguous or negative reply as approval to create anything.
 
 1. Confirm the destination.

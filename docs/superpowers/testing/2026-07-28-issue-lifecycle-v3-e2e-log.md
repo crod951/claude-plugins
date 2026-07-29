@@ -268,3 +268,25 @@ Reading the resolution order exposed a real defect: the `.beads/` check came bef
 Fix: the per-issue checklist check now runs first, so an issue whose statuses live in checkboxes keeps that backend for its whole life regardless of what the repository gains later. Repository-level beads only claims issues started after it appears, which makes a mixed-backend period the expected behavior rather than a corruption path.
 
 Also specified: resolution stays a silent probe and never asks the user to choose a backend, but the run summary must state the resolved backend whenever it differs from what other open issues in the repo are using, so a mixed period is visible.
+
+## Capability gap audit against the earlier independent implementation
+
+The user authorized reading the earlier Slickage implementation for a capability-level comparison, with no implementation text copied. sync-digest was excluded by decision. Full audit at .superpowers/sdd/2026-07-28-issue-lifecycle-v3/capability-gap-audit.md.
+
+Adopted, all designed fresh rather than ported:
+
+High severity
+1. Staging safety: a named list of never-stage paths (env files, credential and secret names, keys and certificates, framework credential stores) plus a ban on blanket staging with add -A, add ., or add --all, and a pre-commit check that every staged path belongs to the current task. This project's own runs used blanket staging repeatedly and swept beads runtime files into commits, so the gap was already proven.
+2. Beads init now passes a short three-to-four character prefix and the flag that skips git hook installation. Plain init is what installed the hooks that blocked branch switching during testing and what produced long task ids.
+3. Bidirectional linking: tasks are tagged with the issue ref so all tasks for one issue list directly, parentTask fetches by that tag instead of substring title matching, and createSubIssue records the paired task id in the sub-issue description with a comment fallback for adopted sub-issues.
+
+Medium severity
+4. A plan document at .workbench/plans/<ISSUE-REF>.md with defined sections (issue, description, codebase context, approach, tasks, testing strategy, notes), written during breakdown and explicitly not resume state.
+5. A conventional-commit convention: type(<issue-ref>) subject, an enumerated type table with tie-breaking guidance, lowercase imperative summaries under 72 characters with no trailing period, and the task named in the body.
+6. The parent task now depends on every child, making "no open children" a machine-checkable rollup instead of an inference from the loop ending, with the reverse edge explicitly forbidden to avoid deadlock.
+7. A per-task progress line after each close, plus a start-of-run report of the resolved tracker and backend.
+8. Structured multiple-choice questions preferred over prose for every user choice, with the per-agent mechanism named in agents.md and a numbered-prose fallback.
+
+Deliberately not adopted: the earlier create-immediately intake behavior, since testing showed an agent creating unwanted work from an ambiguous reply, and the earlier no-configuration stance, since a committed profile is what makes state mapping explicit and inheritable.
+
+All new content lives in a new shared reference, conventions.md, so both skill bodies stayed within their line ceilings (execute 77 of 120, scaffold 76 of 80). Capability-language greps clean, all shared references resolve, workflow template still parses.
