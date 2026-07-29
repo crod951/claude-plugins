@@ -1,6 +1,6 @@
-# Issue Lifecycle
+# Workbench
 
-Issue Lifecycle is a pair of agent skills that carry a tracker issue from intake through an open pull request.
+Workbench is a pair of agent skills, execute and scaffold, that carry a tracker issue from intake through an open pull request.
 It works with Asana or Linear as your issue tracker.
 Both skills follow the open Agent Skills standard, so they run unchanged on Claude Code and Kiro.
 
@@ -23,7 +23,7 @@ Run these commands inside a Claude Code session (they start with `/`):
 
 ```
 /plugin marketplace add crod951/claude-plugins
-/plugin install issue-lifecycle@crod951
+/plugin install workbench@crod951
 ```
 
 ### Kiro
@@ -32,7 +32,7 @@ Copy or symlink this plugin's `skills/` directory contents into `.kiro/skills/` 
 Keep `execute/`, `scaffold/`, and `shared/` as siblings at the top level of that destination, since each skill references `../shared/` files by relative path.
 
 ```bash
-cp -r plugins/issue-lifecycle/skills/. ~/.kiro/skills/
+cp -r plugins/workbench/skills/. ~/.kiro/skills/
 ```
 
 ## Setup

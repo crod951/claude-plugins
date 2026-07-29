@@ -1,7 +1,7 @@
 {
-  "name": "issue-lifecycle",
+  "name": "workbench",
   "version": "3.0.0",
-  "description": "Drive a tracker issue (Asana or Linear) from requirements to an open PR. Agent-portable skills for Claude Code and Kiro with resumable, task-tracked implementation runs.",
+  "description": "Workbench provides the execute and scaffold skills for driving Asana or Linear tracker issues from requirements to an open PR. Agent-portable skills for Claude Code and Kiro with resumable, task-tracked implementation runs.",
   "author": {
     "name": "crod951",
     "email": "crod951@gmail.com"
@@ -11,12 +11,14 @@
   "license": "MIT",
   "keywords": [
     "linear",
+    "asana",
     "beads",
     "github",
     "issue-tracking",
     "conventional-commits",
     "pull-requests",
     "workflow",
-    "automation"
+    "automation",
+    "kiro"
   ]
 }

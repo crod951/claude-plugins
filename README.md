@@ -72,93 +72,53 @@ Analyzes codebases and generates tailored Claude Code skills. **11 specialized a
 
 ---
 
-### issue-lifecycle (v2.1.0)
+### workbench (v3.0.0)
 
-Automates the full lifecycle of working on Linear issues — from planning through PR creation. Integrates **Linear**, **Beads task tracking**, and **GitHub PRs** with Conventional Commits.
+Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from intake through an open pull request.
+It works with Asana or Linear as your issue tracker, and both skills run unchanged on Claude Code and Kiro.
 
 #### Prerequisites
 
-- [Linear MCP plugin](https://github.com/anthropics/claude-code-plugins) installed and configured
-- [Beads CLI](https://github.com/steveyegge/beads) installed (`bd` command available)
+- An Asana or Linear MCP plugin installed and authenticated
+- [Beads CLI](https://github.com/steveyegge/beads) installed (`bd` command available); optional, but recommended for the richest task memory
 - [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available)
 
 #### Install
 
 ```bash
-/plugin install issue-lifecycle@crod951
+/plugin install workbench@crod951
 ```
 
-#### Commands
+#### Skills
 
-| Command | Description |
-|---------|-------------|
-| `/issue-start <ID>` | Fetch issue, create plan, Beads tasks, branch, update Linear |
-| `/issue-task [ID]` | Work on next unblocked task, present for review |
-| `/commit` | Semantic commit + close Beads task |
-| `/issue-finish [ID]` | Push, create PR, update Linear, post completion comment |
+| Skill | Description |
+|-------|-------------|
+| `execute` | Drives one tracker issue through a single resumable pass: breakdown, implementation, tests, commits, and an open PR. |
+| `scaffold` | Turns requirements text into a scaffolded main issue plus linked sub-issues, then offers to hand off to execute. |
 
-#### Auto-Loop Flags
-
-| Flag | Command | Description |
-|------|---------|-------------|
-| `--auto` | `/issue-task` | Loop through all tasks: implement, commit, next — automatically |
-| `--finish` | `/issue-task` | Also push + PR + Linear update after last task. Requires `--auto` |
-| `--on-failure=stop\|skip` | `/issue-task` | Halt on failure (default) or skip and continue. Requires `--auto` |
-| `--auto` | `/issue-start` | Chain into auto-loop after plan approval and setup |
-| `--no-confirm` | `/issue-start` | Skip plan approval pause. Requires `--auto` |
-| `--base <branch>` | `/issue-finish` | Target branch for the PR. Auto-detects repo default if omitted |
+Talk to either skill in plain language; there are no slash commands to memorize.
 
 ```bash
-# Fully autonomous, zero pauses
-/issue-start ONC-5 --auto --no-confirm
-
-# Auto-loop tasks only (manual start/finish)
-/issue-task --auto
-
-# Auto-loop + auto-finish
-/issue-task --auto --finish --on-failure=skip
+execute ONC-5
+work on <asana task url>
+scaffold these requirements
 ```
 
 #### Features
 
-- **Plan-first workflow** — researches your codebase and writes a plan document before any code changes
-- **Review checkpoints** — pauses for your approval after planning and after each task implementation
-- **Auto-loop mode** — `--auto` implements all tasks continuously with inline commits, no manual steps between tasks
-- **Fully autonomous option** — `/issue-start --auto --no-confirm` runs the entire lifecycle with zero pauses
-- **Branch naming** — auto-generates semantic branches from Linear labels (`feat/`, `fix/`, `chore/`, `docs/`)
-- **Conventional Commits** — auto-detects commit type and formats as `type(ISSUE-ID): description`
-- **Safety rails** — warns on uncommitted changes, incomplete tasks, and issue ID mismatches
-- **Linear integration** — updates status to In Progress / In Review and posts completion comments
+- **Resumable pass** - execute reads durable state from disk and the tracker on every invocation, never from memory of a previous run
+- **Scaffold-to-execute handoff** - scaffold drafts a main issue plus sub-issues, then offers to hand straight into execute
+- **Task memory** - beads-backed when available, with a plain checklist file fallback
+- **Conventional Commits** - one commit per task, referencing the issue ref
+- **Tracker-only access** - tracker work only happens through the connected tracker MCP; when it is missing, the skill refuses and stops
 
-#### Workflow
-
-**Manual (default):**
+#### Tracker Status Lifecycle
 
 ```
-/issue-start ONC-5       # Fetch issue → research → plan → review → branch
-    ↓
-/issue-task               # Claim next task → implement → present for review
-    ↓
-/commit                   # Stage → commit → close Beads task
-    ↓
-  (repeat /issue-task + /commit for each task)
-    ↓
-/issue-finish             # Pre-flight checks → push → PR → update Linear
+Todo → In Progress (execute starts) → In Review (PR opened) → Done (PR merge)
 ```
 
-**Autonomous:**
-
-```
-/issue-start ONC-5 --auto --no-confirm    # Everything, zero pauses
-```
-
-#### Linear Status Lifecycle
-
-```
-Todo → In Progress (/issue-start) → In Review (/issue-finish) → Done (PR merge)
-```
-
-See the [full step-by-step guide](./plugins/issue-lifecycle/README.md) for a detailed walkthrough.
+See the [full guide](./plugins/workbench/README.md) for setup, task memory, and the security boundary.
 
 ---
 
@@ -170,14 +130,10 @@ See the [full step-by-step guide](./plugins/issue-lifecycle/README.md) for a det
 3. **After upgrades**: `/stackgen:refresh`
 4. **Maintenance**: `/stackgen:check`
 
-**issue-lifecycle (manual):**
-1. **Start issue**: `/issue-start ONC-5`
-2. **Work on tasks**: `/issue-task` (repeat)
-3. **Commit work**: `/commit` (after review)
-4. **Finish issue**: `/issue-finish`
-
-**issue-lifecycle (autonomous):**
-1. **Everything**: `/issue-start ONC-5 --auto --no-confirm`
+**workbench:**
+1. **Scaffold requirements**: talk to the scaffold skill, for example "scaffold these requirements"
+2. **Execute the issue**: talk to the execute skill, for example "execute ONC-5"
+3. **Resume if interrupted**: re-invoke execute on the same issue; it picks up where the last run left off
 
 ---
 
