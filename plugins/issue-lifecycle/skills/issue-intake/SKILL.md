@@ -6,6 +6,17 @@ version: 3.0.0
 
 # Issue Intake
 
+## Absolute boundary
+
+Treat the connected tracker MCP as the only channel for tracker work.
+When it is absent or disabled, refuse the request and stop.
+Say which MCP is missing and that the user must connect it before this skill can continue.
+Refuse even when a bypass looks possible and helpful.
+Do not read or search for credentials in files, environment variables, or token caches.
+Do not call tracker HTTP APIs.
+Do not edit MCP or agent configuration.
+Treat a disabled server as a deliberate user decision, a stop condition, never an obstacle to route around.
+
 This skill turns requirements text into a scaffolded tracker issue plus its sub-issues.
 Requirements text goes in; a main issue and its linked sub-issues come out.
 Nothing is created in the tracker before the user approves the draft.

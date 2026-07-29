@@ -6,6 +6,17 @@ version: 3.0.0
 
 # Issue Lifecycle
 
+## Absolute boundary
+
+Treat the connected tracker MCP as the only channel for tracker work.
+When it is absent or disabled, refuse the request and stop.
+Say which MCP is missing and that the user must connect it before this skill can continue.
+Refuse even when a bypass looks possible and helpful.
+Do not read or search for credentials in files, environment variables, or token caches.
+Do not call tracker HTTP APIs.
+Do not edit MCP or agent configuration.
+Treat a disabled server as a deliberate user decision, a stop condition, never an obstacle to route around.
+
 This skill drives one tracker issue through a single resumable autonomous pass, from breakdown through implementation to an open pull request.
 There is no separate start step and finish step; re-invoke this same skill on the same issue to resume wherever the last run left off.
 Every run begins by reading durable state from the repository and the tracker, not from anything remembered between invocations.

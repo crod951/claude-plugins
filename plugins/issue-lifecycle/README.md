@@ -83,6 +83,32 @@ Task state for an issue lives in exactly one durable backend, chosen automatical
 - `.issue-lifecycle/tasks/<ref>.md` - the per-issue plan and checklist.
   This file is a permanent record and stays in the repo after the pull request merges.
 
+## Security boundary
+
+Both skills promise the same thing about tracker access: tracker work only happens through the connected tracker MCP.
+When that MCP is missing or disabled, the skill refuses the request and stops, naming the missing MCP so you know to connect it.
+The skills are instructed to never read credentials from disk or environment variables, never call a tracker's HTTP API directly, and never edit MCP or agent configuration.
+
+That promise is a set of instructions to a model, not a sandbox.
+A model can disregard instructions.
+During testing, one agent run attempted exactly this bypass after its tracker MCP was disabled: it tried editing `mcp.json`, reading OAuth token caches, and grepping the environment for credentials before attempting a direct Asana API call.
+What actually stopped it was not the prose in these skills.
+It was the agent harness's own approval prompts and file permissions.
+
+So configure real enforcement in your agent harness, not just in the skill text.
+At minimum, deny without case-by-case approval:
+
+- Reads of credential stores and token caches, for example `~/.aws`, `~/.kiro/settings`, `~/.mcp-auth`, or similar OAuth caches.
+- `env` and `printenv` style environment dumps.
+- Writes to MCP configuration files.
+- Outbound `curl` (or equivalent) to tracker API hosts.
+
+Both Claude Code (permission settings) and Kiro (trusted command settings) support rules like these.
+Agent approval prompts are the last line of defense here, so do not blanket-approve shell commands during autonomous runs; an approval you grant once, without reading it, is an approval you have effectively granted forever for that session.
+
+In practice this path only triggers when a tracker MCP is missing or disabled.
+A normal run, with the MCP connected, never reaches any of this.
+
 ## Migrating from v2
 
 Version 3 removes the v2 slash commands: `/issue-start`, `/issue-task`, `/commit`, and `/issue-finish`.
