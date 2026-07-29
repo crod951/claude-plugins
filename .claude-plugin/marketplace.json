@@ -31,7 +31,7 @@
       "name": "workbench",
       "source": "./plugins/workbench",
       "description": "Automates the full lifecycle of working on Linear issues — from planning through PR creation. Integrates Linear, Beads task tracking, and GitHub PRs with Conventional Commits.",
-      "version": "2.1.0",
+      "version": "3.0.0",
       "author": {
         "name": "crod951"
       },
