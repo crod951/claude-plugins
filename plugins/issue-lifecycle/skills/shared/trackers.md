@@ -70,6 +70,7 @@ When no existing profile is found anywhere, inspect what the connected tracker a
 Propose a mapping from those tracker-specific states to the three phases (`inProgress`, `inReview`, `done`).
 Show the proposed mapping to the user and let them confirm it or correct it before saving anything.
 Save the confirmed profile to `.issue-lifecycle/config.md` and commit that file; include the default destination to use for intake when no explicit destination is given.
+A per-invocation destination hint applies only to that invocation; change the profile's `default-destination` only when it is absent or when the user explicitly asks to change it.
 
 Use this format for the profile:
 
