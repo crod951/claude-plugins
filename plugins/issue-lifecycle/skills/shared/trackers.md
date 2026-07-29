@@ -20,6 +20,15 @@ Adapter files implement each one against a specific tracker's tools; treat the o
 | `updateState(ref, phase)` | Move an issue to the given phase, where phase is one of `inProgress`, `inReview`, or `done`; apply it through the tracker profile's state mapping rather than a hardcoded status name. |
 | `comment(ref, body)` | Post a comment on an issue. |
 
+### Destination resolution
+
+Resolve a destination for a new top-level issue from only two sources: the caller-supplied hint for this invocation, or the tracker profile's configured default when no hint is given.
+When neither a hint nor a profile default exists, the agent must call `listDestinations`, list the destinations to the user, and ask once which one to use.
+Do not substitute any other source of truth for that question.
+In particular, never infer a destination from tracker URLs found inside existing `.issue-lifecycle/tasks/*.md` files, from prior issues in the repository, or from any other guess; a wrong inference silently files work in the wrong place, and even a right one takes the choice away from a user who may have several valid destinations.
+The agent may inspect existing task files or prior issues to offer a suggested default inside that same question, for example "previous issues in this repo used X, use that again?".
+Offering a suggestion does not replace asking; still ask the question and wait for the user's answer before creating anything.
+
 ## Preflight verification
 
 Run this before any other tracker operation, on every invocation.
@@ -66,10 +75,23 @@ Run this setup procedure once per repository, then reuse its output on every lat
 
 Trigger setup when the repository has no `.issue-lifecycle/config.md`.
 Before prompting the user, check other local branches for a newer `.issue-lifecycle/config.md` and offer to reuse it instead of starting over.
-When no existing profile is found anywhere, inspect what the connected tracker actually offers: for Linear, list the team's workflow states; for Asana, list the project's board sections and any status custom fields.
-Propose a mapping from those tracker-specific states to the three phases (`inProgress`, `inReview`, `done`).
-Show the proposed mapping to the user and let them confirm it or correct it before saving anything.
-Save the confirmed profile to `.issue-lifecycle/config.md` and commit that file; include the default destination to use for intake when no explicit destination is given.
+
+When no existing profile is found anywhere, the agent must run these three steps in order and must not skip any of them.
+Each step must get the user's answer before the next step starts, and the profile must not be written until every step has an answer.
+
+1. Confirm the destination.
+   Call `listDestinations`, list the available destinations to the user, and let them pick the one to save as the profile's default.
+2. Confirm the three-phase state mapping.
+   Inspect what the connected tracker actually offers: for Linear, list the team's workflow states; for Asana, list the project's board sections and any status custom fields.
+   Propose a mapping from those tracker-specific states to the three phases (`inProgress`, `inReview`, `done`).
+   Show the proposed mapping to the user and let them confirm it or correct it.
+3. Run the tracker adapter's profile-load offers.
+   For Asana, this is the merge-closer question described in that tracker's adapter file.
+   Ask it and record the answer in the profile.
+
+Save the confirmed profile to `.issue-lifecycle/config.md` and commit that file only once all three steps above have an answer; include the confirmed default destination.
+Never announce that setup will happen and then write a profile without having asked each of these questions.
+A profile written without confirmed answers for every step is a defect, not a shortcut.
 A per-invocation destination hint applies only to that invocation; change the profile's `default-destination` only when it is absent or when the user explicitly asks to change it.
 
 Use this format for the profile:

@@ -50,7 +50,9 @@ If any of these files cannot be found and read, stop immediately and report whic
    - When neither tracker MCP is connected, stop and report a clear message naming both supported trackers, Asana and Linear.
    - Once the tracker is resolved, when the user gave an explicit destination hint, resolve it with `resolveDestination`.
    - Otherwise resolve the tracker profile's configured default destination.
-   - When there is no hint and no configured default, call `listDestinations` and ask the user once which one to use.
+   - When there is no hint and no configured default, call `listDestinations`, list them to the user, and ask once which one to use; do not infer a destination from any other source.
+   - A suggestion drawn from prior issues in the repo may accompany that question, but the question must still be asked and answered before anything is created.
+   - When the repository has no tracker profile at all, run first-run setup from `../shared/trackers.md` to completion before creating any issue: confirm the destination, confirm the state mapping, then run the adapter's profile-load offers.
 4. Draft the scaffold from the requirements text.
    - Write a main issue title and a description that summarizes the requirements.
    - Infer the main issue's type from the requirements, one of feature, bug, chore, or docs, defaulting to feature when the requirements do not indicate one.
