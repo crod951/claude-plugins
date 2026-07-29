@@ -162,3 +162,17 @@ Findings:
 Fix a59cdca: intake now reports and hands off using the tracker's ref scheme, is explicitly forbidden from creating task-memory files, and only writes default-destination when none exists or the user asks. trackers.md states the same rule for per-invocation hints.
 
 Fixture cleaned: the misnamed checklist file was removed from main.
+
+### Test B, cold destination resolution with two projects: FAIL on two counts (both fixed)
+
+Setup: tracker profile removed from the repo, two Asana projects present in the workspace, intake invoked with no destination named.
+
+Finding 1 - destination chosen without asking. The agent inferred the project from tracker URLs inside existing .issue-lifecycle/tasks files ("the same project used by all previous issues in this repo"), an undocumented fourth resolution source. It was correct here by luck; with several projects the user gets no say, and a wrong inference files work silently in the wrong place. Fix 92f02fd: the ask is now mandatory when there is no hint and no profile default, with prior-issue inference allowed only as a suggested default inside the question.
+
+Finding 2 - first-run setup announced but not performed. The state mapping was never proposed for confirmation and the merge-closer question was not asked before the profile was written. Fix 92f02fd: the setup sequence is explicit, each step needs a user answer, and writing a profile without confirmed answers is called a defect.
+
+Finding 3 (surfaced by an accidental user reply) - question bundling. The draft approval and the merge-closer offer were both pending in the same turn. The user replied "decline" meaning the draft; the agent applied it to the merge-closer question, recorded merge-closer: declined, and created all the issues anyway. Fix 2ce59b5: setup questions must be asked and answered before the draft is shown, only one question may be open at a time, and an ambiguous or negative reply is never an approval to create.
+
+Confirmed working in the same run: short ref reporting (asana-504710 and siblings), so fix a59cdca held.
+
+Fixture: merge-closer record corrected to installed, since the Action is present in this repo and has fired twice.
