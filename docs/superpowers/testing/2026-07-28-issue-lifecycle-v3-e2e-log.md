@@ -336,3 +336,13 @@ Fixed
 Deferred minors: task priorities are not set on parent or child tasks, pull request test plans have no prescribed format, and execute's invent path lacks the sub-issue sizing guidance that scaffold states as three to seven.
 
 Plan deviation recorded: scaffold's line ceiling was raised from 80 to 120, matching execute. The 80 was an arbitrary number chosen when scaffold only drafted and created; it now also gathers requirements, researches the codebase, and judges input sufficiency. Redundant lines were trimmed first, taking it from 89 to 83, and the remaining content is all load-bearing rules, so the ceiling moved rather than the rules being cut.
+
+### Finding: local marketplace installs snapshot rather than live-link
+
+Attempting the verification run for the six second-audit fixes revealed that the skill content the agent loaded was stale: 75 lines against 83 in the working tree, missing every fix made since install time.
+
+Cause: `/plugin install` from a local-path marketplace copies the plugin into the agent's plugin cache. The cached copy is frozen at install time, so working-tree edits never reach a running agent until it is reinstalled. Kiro behaved differently in this project only because its skills were symlinked, which is why fixes appeared there immediately.
+
+Consequence for testing: any verification run after an edit must confirm which copy is live, or it silently tests the previous version and reports a false pass.
+
+Recorded in the plugin README as a development note, with both workflows: reinstall after each change, or symlink the skill directories for live edits, plus the line-count comparison as the check for which copy is live.

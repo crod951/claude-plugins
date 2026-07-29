@@ -35,6 +35,22 @@ Keep `execute/`, `scaffold/`, and `shared/` as siblings at the top level of that
 cp -r plugins/workbench/skills/. ~/.kiro/skills/
 ```
 
+## Developing or editing this plugin
+
+Installing from a marketplace copies the plugin into the agent's plugin cache; it does not live-link your working tree.
+That means edits to `plugins/workbench/` do not reach a running agent until you reinstall, and an agent will keep loading the snapshot it installed earlier.
+
+When iterating on the skills, either reinstall after each change (`/plugin uninstall workbench` then `/plugin install workbench@<marketplace>`, followed by `/reload-plugins`), or point the agent at the working tree directly.
+Kiro reads whatever `~/.kiro/skills/` contains, so symlinking the skill directories there gives live edits with no reinstall step:
+
+```bash
+ln -s "$PWD/plugins/workbench/skills/execute"  ~/.kiro/skills/execute
+ln -s "$PWD/plugins/workbench/skills/scaffold" ~/.kiro/skills/scaffold
+ln -s "$PWD/plugins/workbench/skills/shared"   ~/.kiro/skills/shared
+```
+
+Confirm which copy is live before trusting a test run: compare the line count of the installed `SKILL.md` against your working tree.
+
 ## Setup
 
 1. **Connect your tracker's MCP.**
