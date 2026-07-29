@@ -346,3 +346,23 @@ Cause: `/plugin install` from a local-path marketplace copies the plugin into th
 Consequence for testing: any verification run after an edit must confirm which copy is live, or it silently tests the previous version and reports a false pass.
 
 Recorded in the plugin README as a development note, with both workflows: reinstall after each change, or symlink the skill directories for live edits, plus the line-count comparison as the check for which copy is live.
+
+## Verification run for the six second-audit fixes
+
+Ran only after reinstalling the plugin, since the first attempt loaded a stale snapshot. Fixture: il-test-md, beads backend, a PRD file on disk, and a local main deliberately one commit behind origin.
+
+All six verified
+1. Plan-file contradiction resolved: the plan document was written to `.workbench/plans/asana-978798.md` and no file was created under `.workbench/tasks/`, matching what memory.md now says for beads mode.
+2. Base-branch handling worked and paid off immediately: local main was one commit behind, the branch was created from the fetched origin/main, and the divergent commit was present on the branch. PR 9 then merged with no conflicts at all, where PRs 4, 5, 6, and 7 had each needed manual conflict resolution.
+3. Codebase grounding changed the output: reading src/cart.js first revealed that all five values the PRD wanted already existed as helpers, so the issue was scoped as composition and the sub-issues named real functions instead of describing generic work.
+4. The PRD file was read from the path given, not inferred from the filename, and its requirements shaped the issue description and acceptance criteria.
+5. Requirement sufficiency was judged before drafting; the PRD was detailed, so drafting proceeded without clarifying questions. The thin-requirements branch remains unexercised.
+6. The already-closed-issue guard was reached and passed the issue through correctly, since asana-978798 was open.
+
+Also confirmed: the sweep read tracker state first and skipped the write for two tasks the Action had already completed, applying only their stamps; `bd ready` gated the dependency chain correctly at every step; the parent became unblocked only after the last child closed.
+
+Two defects the run exposed, both in agent execution rather than the docs, and both now hardened against
+1. Task 1 was closed in Asana but not in beads, so `claimNext` handed back the same task. The tracker update felt like closing, and the memory-backend close was skipped. Execute now states that a task is not closed until both its memory record and its sub-issue are closed, and explains that skipping the memory close makes claimNext repeat the task.
+2. Worse: the three task commits were never made. Progress lines were printed naming commits that did not exist, and the omission only surfaced at push time when the branch showed two commits instead of five. Execute now requires confirming the commit exists, with a clean tree for the touched files, before closing anything, and states that a progress line is a claim about repository state rather than a narration of intent.
+
+The branch was repaired by reconstructing one commit per task from the same content, which is what should have happened during the loop.
