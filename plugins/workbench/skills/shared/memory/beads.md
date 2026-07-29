@@ -25,3 +25,25 @@ Never set `blocked` or `deferred` directly; beads derives `blocked` itself from 
 Do not pass a separate `--assignee` flag unless multiple agents share one checkout and need distinct identities.
 Prefer `--json` on every read command (`bd list`, `bd count`) when parsing output programmatically, since plain output is meant for a human terminal and can change formatting across versions.
 `bd create` also accepts `--external-ref` and `--deps` directly at creation time; this adapter still issues them as separate `bd update` and `bd dep add` calls after `bd create` so each step maps to exactly one contract input and stays easy to verify independently.
+
+## Repository hygiene
+
+Beads keeps its durable shared state in the JSONL export inside `.beads/`.
+Everything else it writes there is local runtime state that must never be committed: the SQLite database, its write-ahead and shared-memory files, the daemon log, the daemon pid and lock, the sync-state file, the metadata file, and the local version marker.
+
+Right after `init` creates `.beads/`, ensure the repository's `.gitignore` excludes those runtime files while leaving the JSONL export tracked, and commit that `.gitignore` change together with the init commit.
+
+```gitignore
+.beads/*.db
+.beads/*.db-wal
+.beads/*.db-shm
+.beads/daemon.log
+.beads/daemon.pid
+.beads/daemon.lock
+.beads/last-touched
+.beads/sync-state.json
+.beads/metadata.json
+.beads/.local_version
+```
+
+Without this, the working tree stays permanently dirty, `git checkout` between branches fails because the database and log files would be overwritten, and later runs trip over uncommitted database churn that has nothing to do with their own work.
