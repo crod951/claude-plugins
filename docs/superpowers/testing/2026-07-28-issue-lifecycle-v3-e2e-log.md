@@ -216,3 +216,26 @@ Honest caveat: this run was executed by the controller agent following the skill
 ### Cross-agent portability: PASS
 
 The same repo, state directory, and beads database were driven by Kiro (IDE and CLI) and then by Claude Code with the renamed workbench plugin, with no migration step and no conflicting state.
+
+## Claude Code pass (workbench plugin, local marketplace install)
+
+Installed via `/plugin marketplace add <local path>` then `/plugin install workbench@crod951`. Both skills loaded as workbench:execute and workbench:scaffold with no collision against the separately installed slickage plugin.
+
+### Sequenced first-run setup + both-trackers ambiguity: PASS
+
+Fresh single-branch clone with no profile, both Asana and Linear MCPs connected.
+- Tracker ambiguity triggered the ask (Linear has six real teams, Asana has the throwaway project), answered Asana.
+- Setup then ran destination, state mapping, and merge-closer as three separate questions, each the only open question, each answered before the next.
+- The profile was written only after all three answers, using the new `# workbench tracker profile` header.
+- The draft appeared alone afterward and was created only on explicit approval.
+
+### Full lifecycle to auto-close: PASS
+
+scaffold created asana-553983 plus four sub-issues with short refs. execute then resolved beads (state present, bd available), adopted all four sub-issues into tasks with a sequential deps chain, and ran the loop with one commit per task and per-task closes in both beads and Asana. Suite went 28 to 33 tests green. PR #5 opened with the tracker URL, completed-task list, and test plan; phase comment posted; final task-state commit made. On squash-merge the workbench-close Action completed the Asana task automatically within seconds.
+
+### Findings from this pass
+
+1. Beads gitignore fix validated by reproduction: this clone predated the fix and its first commit swept in beads.db-wal, daemon.log, daemon.pid, and daemon.lock. Applying the adapter's new hygiene step untracked them and left only the JSONL exports.
+2. Claude Code's Asana MCP exposes no section-move tool, so `updateState` correctly degraded to the fallback comment. Kiro's V2 mcp-remote server does expose one and moved sections. Same profile mapping, different fidelity per agent, and the fallback chain handled it without failing.
+3. Two Asana MCP tools on this build reliably time out after 300s: `asana_get_projects_for_workspace` and `asana_typeahead_search`. The per-team path (`asana_get_teams_for_user` then `asana_get_projects_for_team`) returns instantly and should be preferred for listDestinations.
+4. Beads JSONL and .gitignore both conflict across long-lived branches. Beads installs a .gitattributes merge driver for the JSONL; the gitignore conflict was manual. Worth a caveat for teams running several workbench branches at once.
