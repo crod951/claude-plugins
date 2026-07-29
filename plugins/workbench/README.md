@@ -77,14 +77,30 @@ Task state for an issue lives in exactly one durable backend, chosen automatical
 | Tier | Role |
 | --- | --- |
 | beads (`bd`) | Preferred backend when the `bd` CLI is available. Stores tasks with dependencies in `.beads/` inside your repo. |
-| checklist file | Fallback backend used when beads is not installed. The plan and every task's status live together in `.workbench/tasks/<ref>.md`. |
+| checklist file | Fallback backend used when beads is not installed. Task statuses live as checkboxes in `.workbench/tasks/<ref>.md`. |
 | built-in display overlay | Optional live progress view mirrored into the running agent's own task-list tools (for example Claude Code's task list). Always rebuilt from whichever backend above is active; never treated as the source of truth. |
 
 ## What lands in your repo
 
 - `.workbench/config.md` - the committed tracker profile: which tracker, which default destination, and the state mapping confirmed on first run.
-- `.workbench/tasks/<ref>.md` - the per-issue plan and checklist.
-  This file is a permanent record and stays in the repo after the pull request merges.
+- `.workbench/plans/<ref>.md` - the per-issue plan document: the issue link, codebase context, approach, task list, and testing strategy.
+  It is written for people to read and never carries task status.
+- `.workbench/tasks/<ref>.md` - task statuses as checkboxes, written only when the checklist backend is active.
+  With beads active, statuses live in `.beads/` and no file appears here.
+
+Both records are permanent and stay in the repo after the pull request merges.
+
+## How the tracker learns a PR merged
+
+Asana has no built-in reaction to a merge the way Linear does, so workbench supports three ways to close the loop, in order of preference.
+
+1. **Asana's own GitHub integration.** Install Asana's free GitHub App and add an Asana rule that marks a task complete when its linked pull request merges. Nothing from this plugin runs; Asana closes the task itself, exactly like Linear's native integration. Best option when your organization allows the app.
+2. **The merge-closer Action.** If you cannot install the app, the skills offer to add a small workflow that closes the task on merge using an `ASANA_TOKEN` repository secret. Still server-side, still no agent needed at merge time.
+3. **The sweep.** Whatever you choose, every run checks the repository for issues whose pull requests have since merged and closes anything the first two paths missed. This is the backstop, not the primary path.
+
+You can also just say so: tell either skill that a pull request merged, was closed, or was abandoned, and it runs the sweep immediately for that issue. It confirms the pull request's real state with the GitHub CLI rather than taking the claim at face value, and it tells you when reality differs from what you said.
+
+A pull request that is closed without merging is never treated as done. The skills report it, ask whether to resume the work or move the issue back, and record the abandonment so you are not told twice.
 
 ## Security boundary
 

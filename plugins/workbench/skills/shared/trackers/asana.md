@@ -83,6 +83,17 @@ Record the observation in that issue's file under `.workbench/` as a line such a
 Report it again when a different PR for the same issue is later closed unmerged, since that is new information.
 A recorded abandonment does not close the issue and does not stop a later merge from closing it normally; when a fresh PR for the same issue merges, apply the usual done state and Closed stamp.
 
+## Closing on merge without any workbench machinery
+
+Asana ships a free native GitHub integration, a GitHub App, that links a pull request to a task when the PR body contains the task URL or the branch name contains the task id.
+Paired with an Asana rule of the form "when a GitHub pull request is merged, mark the task complete", that combination closes the task server-side with no Action from this plugin, no sweep, and no agent involved.
+It is the closest equivalent to Linear's native GitHub integration, and it is the recommended arrangement when the team can install the app and add the rule.
+
+Prefer that arrangement when it is available.
+Mention it before offering the merge-closer Action below, since it needs no workflow file and no repository secret, which matters in organizations that restrict either.
+Record the choice in the tracker profile the same way, as `merge-closer: native` when the team relies on the Asana app and rule.
+Treat `native` exactly like `installed` afterwards: never ask again, and let the sweep stay as a backstop that will find anything the integration misses.
+
 ## Merge closer (optional)
 
 Run this check whenever the tracker profile is loaded or created for this repository, not only during first-run setup.

@@ -1,6 +1,6 @@
 ---
 name: execute
-description: This skill should be used when the user asks to "execute ONC-5", "run execute on this issue", "work on an issue", "start an issue", "implement this Asana/Linear issue", "take this issue to a PR", pastes an Asana task URL to build, or names a Linear issue key like ONC-5. Also use when the user says something like "the PR for <issue> merged", "clean up merged issues", or "close out merged work", to run the done-on-merge sweep on demand. Drives an existing tracker issue from breakdown through implementation to an open PR with resumable task tracking.
+description: This skill should be used when the user asks to "execute ONC-5", "run execute on this issue", "work on an issue", "start an issue", "implement this Asana/Linear issue", "take this issue to a PR", pastes an Asana task URL to build, or names a Linear issue key like ONC-5. Also use when the user says something like "the PR for <issue> merged", "clean up merged issues", "the PR was closed", "that PR got abandoned", or "close out merged work", to run the done-on-merge sweep on demand. Drives an existing tracker issue from breakdown through implementation to an open PR with resumable task tracking.
 version: 3.0.0
 ---
 
@@ -48,7 +48,9 @@ If any of these files cannot be found and read, stop immediately and report whic
 1. Run preflight verification as described in `../shared/trackers.md` before any other step.
    Stop here, following that section's instructions, when the tracker's MCP does not verify.
 2. Run the Asana done-on-merge sweep described in `../shared/trackers/asana.md`; this sweep is itself tracker work, so it only runs once preflight has verified the MCP.
-   When the invocation itself was a cleanup phrase such as "the PR for <issue> merged", "clean up merged issues", or "close out merged work", run only this sweep, report what was closed, then stop; do not continue into the rest of this procedure.
+   When the invocation itself was a cleanup phrase, run only this sweep, report what it found, then stop; do not continue into the rest of this procedure.
+   Treat any claim about a pull request's fate as a cleanup phrase, whether it says merged, closed, abandoned, landed, or shipped, and whether it names an issue or asks to clean up whatever is outstanding.
+   Never act on the claim itself: confirm each referenced pull request's real state first, then apply the merged path or the closed-without-merging path accordingly, and say plainly when the confirmed state differs from what the user described.
 3. Resolve which tracker owns this issue and which memory backend owns its task state, following `trackers.md` and `memory.md`.
    When the repo already contains beads state but the beads tooling is unavailable on this machine, stop and say so as memory.md directs; never substitute a different backend for a repo whose state lives in another one.
    Load the existing `.workbench/config.md` tracker profile, or run first-run setup when none exists; either way, run the tracker adapter's profile-load checks and honor any one-time offers they define.
