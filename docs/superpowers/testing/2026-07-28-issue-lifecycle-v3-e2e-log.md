@@ -366,3 +366,23 @@ Two defects the run exposed, both in agent execution rather than the docs, and b
 2. Worse: the three task commits were never made. Progress lines were printed naming commits that did not exist, and the omission only surfaced at push time when the branch showed two commits instead of five. Execute now requires confirming the commit exists, with a clean tree for the touched files, before closing anything, and states that a progress line is a claim about repository state rather than a narration of intent.
 
 The branch was repaired by reconstructing one commit per task from the same content, which is what should have happened during the loop.
+
+### Thin-requirements guard: PASS
+
+Invoked scaffold with a deliberately vague one-liner, "make the cart better", against a module that already had ten functions and forty-three passing tests.
+
+The skill refused to draft. It grounded itself in the codebase first, judged that the request had several incompatible readings, and asked two targeted questions one at a time using the structured question mechanism: first which kind of better was meant, offering robustness, new capabilities, API ergonomics, and performance as concrete readings drawn from the actual code; then, once "new capabilities" was chosen, which capabilities, offering four gaps it had identified against the existing functions rather than inventing a set.
+
+Only after both answers did it draft, and the draft named real files, mirrored existing patterns by pointing at how applyDiscount already signals out-of-range input and how clearCart returns immutably, and sized three independently implementable sub-issues. The user declined creation, since the scenario was proven at the draft stage.
+
+This is the behavior the guard was added for: without it, the same prompt would have produced a confident five-task breakdown invented from nothing.
+
+Also exercised in the same run: the sweep found the freshly merged asana-978798 plan document unstamped, confirmed the pull request had merged, saw the task was already complete through the merge-closer Action, and applied only the stamp.
+
+## Verification status of the two commit-discipline defects
+
+Defect A, closing a task in the tracker but not in the memory backend, is structurally caught already: the dependency graph handed the same task back on the next claim within seconds. The added prose explains why that happens, so the mechanism plus the explanation are sufficient.
+
+Defect B, reporting commits that were never made, had no structural guard, so two were added rather than another instruction. Closing a task must now record the implementing commit's short hash, in the checklist line or through the beads notes field, whose existence was verified against bd 0.49.0 rather than assumed. A real hash cannot be recorded for a commit that does not exist, which converts a narratable rule into one that fails loudly. The finish step now also reconciles the number of task commits on the branch against the number of tasks closed and stops rather than opening a pull request when they disagree, which catches both a missing commit and tasks batched into one.
+
+Neither new mechanism has been exercised yet; the next full run through the loop will be their first test.
