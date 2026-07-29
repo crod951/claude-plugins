@@ -16,6 +16,7 @@ Every run begins by reading durable state from the repository and the tracker, n
 - After the first-run tracker profile is confirmed, proceed without further mid-run confirmation; only stop when this procedure says to stop.
 - The memory backend is the source of truth for task state; state flows one way from it to the tracker, never the reverse.
 - On an unfixable test failure, stop and hold rather than pushing partial or broken work forward.
+- Tracker access goes only through the connected tracker MCP; when it is missing, stop and say so; never hunt for credentials on disk or call tracker APIs directly.
 
 ## Read first
 

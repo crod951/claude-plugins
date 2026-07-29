@@ -9,6 +9,7 @@ version: 3.0.0
 This skill turns requirements text into a scaffolded tracker issue plus its sub-issues.
 Requirements text goes in; a main issue and its linked sub-issues come out.
 Nothing is created in the tracker before the user approves the draft.
+Tracker access goes only through the connected tracker MCP; when it is missing, stop and say so; never hunt for credentials on disk or call tracker APIs directly.
 
 ## Read first
 

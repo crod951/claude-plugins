@@ -35,6 +35,9 @@ Once a tracker is chosen, discover that connected MCP's actual tool names at run
 Adapter files list the typical tool names for each tracker, but real builds vary, so treat those names as a starting hint, not a guarantee.
 When the resolved tracker's MCP is not connected, stop immediately and report a clear message naming the specific missing MCP.
 Never fall back to the other tracker when the resolved tracker's MCP is unavailable; a Linear reference must never be silently handled by Asana, and vice versa.
+Never search the filesystem, environment variables, config files, or token caches for tracker credentials, whether the MCP is connected or not.
+Never call the tracker's HTTP API directly, with a scavenged credential or any other credential.
+The connected tracker MCP is the only permitted channel for tracker operations at runtime; when it is not connected, there is no other channel, so stop.
 
 ## First-run tracker profile
 
