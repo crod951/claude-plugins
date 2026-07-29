@@ -22,7 +22,7 @@ Testing notes.
 
 ## Tasks
 
-- [x] 1. Create login form component -> sub-issue: https://... (done 2026-07-28)
+- [x] 1. Create login form component -> sub-issue: https://... (done 2026-07-28, a1b2c3d)
 - [>] 2. Wire auth API (deps: 1) -> sub-issue: https://...
 - [ ] 3. Add e2e test (deps: 2) -> sub-issue: https://...
 ```
@@ -60,3 +60,6 @@ The Asana done-on-merge sweep (see `trackers/asana.md`) appends a trailing `- Cl
 Treat that line as a footer outside the `## Tasks` section, not as a task line.
 Never parse it for a marker, never assign it a task number, and never let its presence change the counts returned by `status()`.
 When writing or rewriting this file for any other operation, leave an existing `- Closed: <date>` line exactly where it is, after the last task line.
+
+When closing a task, append the short hash of its implementing commit to that task's line alongside the done date, as the commit-verification rules in `../conventions.md` require.
+A line that records a hash cannot be written before the commit exists, which is what makes the one-commit-per-task rule checkable rather than merely stated.

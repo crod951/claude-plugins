@@ -58,6 +58,20 @@ Include these sections:
 
 Keep it current as the run proceeds when something material changes, but do not mirror task status into it.
 
+## Commit verification
+
+A task's close must carry the hash of the commit that implemented it.
+Read the short hash from the repository after committing, then record it with the close: in checklist mode append it to that task's line, and in beads attach it to the task using whatever note or comment field the backend offers.
+When a backend cannot store it, state the hash in the progress line instead.
+
+The point is structural rather than cosmetic.
+Recording a real hash is impossible when no commit was made, so this converts a rule that can be narrated into a step that fails loudly when skipped.
+A progress line describes repository state, so never name a commit that does not exist in the log.
+
+Reconcile before finishing.
+Count the task commits on the branch and compare that count to the number of tasks closed for this issue.
+When the counts disagree, stop and report the discrepancy rather than opening a pull request: either a commit is missing, or tasks were combined into one commit, and both contradict the one-commit-per-task rule.
+
 ## Progress reporting
 
 After each task closes, print one line so a long autonomous run stays legible: the task position in the queue, its id, the commit subject, the test result, and how many tasks remain.
