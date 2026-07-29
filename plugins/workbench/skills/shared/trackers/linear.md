@@ -27,6 +27,9 @@ Linear's GitHub integration automatically closes an issue when a pull request wh
 Because of that integration, do not force a `done` transition through `updateState` at PR-merge time; let the GitHub integration close the issue on merge instead.
 Still use `updateState` to move the issue into `inProgress` and `inReview` at the appropriate points, since those transitions are not handled by the GitHub integration.
 
+That integration only reacts to a merge, so a pull request closed without merging leaves the issue parked in review here exactly as it does on Asana.
+Apply the same rule described under "Pull requests closed without merging" in `asana.md`: never mark the issue done, never silently change its phase, tell the user which issue and which pull request were abandoned, and record the observation once in that issue's file under `.workbench/`.
+
 ## First-run profile for Linear
 
 During first-run tracker profile setup, list the target team's workflow states using a list-issue-statuses-style tool scoped to that team.

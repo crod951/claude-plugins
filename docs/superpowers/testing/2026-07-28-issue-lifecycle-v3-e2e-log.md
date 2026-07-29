@@ -310,3 +310,13 @@ Three defects found and fixed
 3. The plan document broke the merge-closer. The Action and the sweep both searched only .workbench/tasks/, but a beads-mode issue records its branch in the plan document under .workbench/plans/ with no checklist file, so the Action ran, found nothing, and skipped. Both now search all of .workbench/. The Action was additionally hardened to take the issue URL from a line labeled Tracker or Issue rather than blindly taking the first Asana URL in the file, so a reordered file cannot make it close a sub-issue; verified that every per-issue file in the fixture resolves to its main issue under the new rule.
 
 The no-dual-truth section now states the file roles explicitly: the plan document always holds the plan and never status, beads mode writes no tasks file, checklist mode writes statuses there, and at least one file under .workbench/ must record the branch and tracker URL so both closure paths can find the issue.
+
+### Closure-path audit (user-prompted): one real gap found and fixed
+
+Two questions tested empirically rather than assumed.
+
+Branch deletion does not break the sweep. Every merge in this project used --delete-branch, and `gh pr view <deleted-branch>` still resolves because GitHub retains the pull request's head ref name. Verified against a merged, branch-deleted PR that returned its state and mergedAt normally.
+
+Pull requests closed without merging were a real hole. A throwaway PR was opened and closed unmerged to observe both paths. The Action behaved correctly and skipped, since its merged-only guard means an undelivered change must not close the tracker issue. The sweep also did nothing, because it only looks for a non-null mergedAt. The combined effect was that an abandoned PR left its issue parked in the inReview phase indefinitely with nobody informed, so the tracker misstated reality.
+
+Fix: the sweep now treats a referenced PR that is closed with a null mergedAt as an abandoned attempt. It never marks the issue done, since nothing shipped, and never silently moves the phase back, since retry, rescope, or drop is a human decision. It reports the issue and the PR, asks whether to resume on a fresh branch or move the issue back to inProgress, and records the observation once in that issue's file so the same abandoned PR is not reported on every later run. A recorded abandonment never blocks a later merge from closing the issue normally. The same rule is noted in the Linear adapter, since Linear's GitHub integration also reacts only to merges and leaves an abandoned issue parked in review.

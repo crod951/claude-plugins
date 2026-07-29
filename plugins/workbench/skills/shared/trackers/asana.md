@@ -68,6 +68,21 @@ When the push fails, for example because of missing permission, a protected bran
 A failed stamp push must not abort the sweep, and it must not be retried silently in a loop.
 The sweep skips any checklist file that already carries a Closed line, so the merge check runs at most once per issue.
 
+### Pull requests closed without merging
+
+A merged PR is not the only way a PR ends, and the other way is silent by default.
+The merge-closer Action deliberately ignores a PR that was closed without merging, since the work was not delivered, and the merge sweep as described above also ignores it because `mergedAt` is null.
+That combination leaves the issue parked in the `inReview` phase forever while the branch is abandoned, so the tracker misstates reality and nobody is told.
+
+During the sweep, treat a referenced PR whose state is closed with a null `mergedAt` as an abandoned attempt, and handle it as follows.
+Never mark the issue done, because nothing shipped.
+Never silently move the phase back either, because whether to retry, rescope, or drop the work is the user's decision, not an inference from a closed PR.
+Report it instead: name the issue, name the PR, say it was closed without merging, and ask whether to resume the work on a fresh branch or move the issue back to the `inProgress` phase.
+
+Record the observation in that issue's file under `.workbench/` as a line such as `- PR closed unmerged: <date> <pr url>` so the same abandoned PR is reported once rather than on every later run.
+Report it again when a different PR for the same issue is later closed unmerged, since that is new information.
+A recorded abandonment does not close the issue and does not stop a later merge from closing it normally; when a fresh PR for the same issue merges, apply the usual done state and Closed stamp.
+
 ## Merge closer (optional)
 
 Run this check whenever the tracker profile is loaded or created for this repository, not only during first-run setup.
