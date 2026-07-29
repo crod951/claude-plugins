@@ -24,13 +24,24 @@ Existing state wins over capability: never switch backends mid-issue just becaus
 
 Follow this order:
 
-When `.beads/` exists in the repo, check whether `bd --version` succeeds.
+Check the issue's own state before the repository's state, because the per-issue signal decides that issue's backend.
+
+When `.workbench/tasks/<ISSUE-REF>.md` exists and contains task checkboxes, use the checklist adapter for this issue.
+Do this even when `.beads/` exists and even when `bd` is installed.
+An issue whose statuses already live in checkboxes keeps that backend for its whole life; adding beads to a repository later must never move an in-flight issue, which would orphan the statuses already recorded in its checklist file.
+
+Otherwise, when `.beads/` exists in the repo, check whether `bd --version` succeeds.
 Use the beads adapter when it does.
 When it does not, stop and tell the user that this repo's task state lives in beads but the `bd` binary is not available on this machine.
 Ask them to install beads or continue on a machine that has it.
 Do not fall back to the checklist adapter in this case: task status must never fork across two backends, per the no-dual-truth rule below.
-When `.workbench/tasks/<ISSUE-REF>.md` exists and contains task checkboxes, use the checklist adapter, even when `bd` is installed; never switch backends mid-issue.
+
 When neither exists (a fresh run for this issue), check whether `bd --version` succeeds; use the beads adapter if it does, otherwise use the checklist adapter.
+
+Repositories do change backends over time, and that is fine as long as it happens per issue.
+When a repository gains beads while checklist-mode issues are still open, those issues stay on checklists and only issues started afterward use beads.
+Do not ask the user to choose a backend; resolution is a silent probe.
+Do state the resolved backend in the run summary whenever it differs from what the repository's other open issues are using, so a mixed-backend period is visible rather than surprising.
 
 Both backends store their state inside the repo, so any later session on any machine resumes correctly by reading the repo.
 Resume by reading the working tree, not the last commit.

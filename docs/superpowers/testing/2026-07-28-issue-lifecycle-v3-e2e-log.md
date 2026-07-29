@@ -258,3 +258,13 @@ This closes the last untested scenario. Checklist mode is the path Ryan's design
 `trackers/asana.md` now prefers the per-team path for listDestinations, records that a workspace-wide listing and typeahead both stalled for 300s on one build, tells the agent to stop waiting on a stalled call, notes the GID-suffixed argument-name variation, and documents per-build section-move fidelity.
 `agents.md` notes that tool coverage varies per build, not only tool names.
 `memory/beads.md` documents the JSONL merge driver, how to resolve a JSONL conflict by regenerating, and the deduplicate rule for conflicting gitignore additions.
+
+### Backend-resolution ordering bug (user-reported): FIXED
+
+The user asked what happens when beads is added to a project that has been running in checklist mode.
+
+Reading the resolution order exposed a real defect: the `.beads/` check came before the per-issue checklist check, so running `bd init` while an issue was mid-flight would have switched that issue to beads on the next run and orphaned the statuses already in its checklist file. That directly contradicted the "never switch backends mid-issue" rule stated one line below it.
+
+Fix: the per-issue checklist check now runs first, so an issue whose statuses live in checkboxes keeps that backend for its whole life regardless of what the repository gains later. Repository-level beads only claims issues started after it appears, which makes a mixed-backend period the expected behavior rather than a corruption path.
+
+Also specified: resolution stays a silent probe and never asks the user to choose a backend, but the run summary must state the resolved backend whenever it differs from what other open issues in the repo are using, so a mixed period is visible.
