@@ -1,0 +1,54 @@
+name: SkillSpector
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "plugins/*/skills/**"
+      - "plugins/*/.skillspector-baseline.yaml"
+      - "bin/scan-skills.sh"
+      - ".github/workflows/skillspector.yml"
+  pull_request:
+    paths:
+      - "plugins/*/skills/**"
+      - "plugins/*/.skillspector-baseline.yaml"
+      - "bin/scan-skills.sh"
+      - ".github/workflows/skillspector.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan plugin skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install SkillSpector
+        run: |
+          # Pinned so CI results are reproducible; an unpinned install tracks
+          # upstream HEAD, and scan results could change with no change here.
+          # Bump the pinned commit SHA deliberately, re-baselining if findings shift.
+          uv tool install git+https://github.com/NVIDIA/skillspector.git@34f60308522f45447cd343da0aad77bcea308ad4 # v2.5.0
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Scan skills (fail on non-suppressed findings)
+        env:
+          # LLM semantic stage runs when the secret is present; falls back to
+          # static-only otherwise (e.g. fork PRs, secret not yet configured).
+          SKILLSPECTOR_PROVIDER: anthropic
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SKILLSPECTOR_LLM: ${{ secrets.ANTHROPIC_API_KEY != '' && '1' || '0' }}
+        run: REPORT_DIR=skillspector-reports bin/scan-skills.sh
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillspector-reports
+          path: skillspector-reports/
+          if-no-files-found: ignore

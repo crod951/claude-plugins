@@ -1,0 +1,24 @@
+{
+  "name": "workbench",
+  "version": "1.0.0",
+  "description": "Workbench provides the execute and scaffold skills for driving Asana or Linear tracker issues from requirements to an open PR. Agent-portable skills for Claude Code and Kiro with resumable, task-tracked implementation runs.",
+  "author": {
+    "name": "crod951",
+    "email": "crod951@gmail.com"
+  },
+  "homepage": "https://github.com/crod951/claude-plugins",
+  "repository": "https://github.com/crod951/claude-plugins",
+  "license": "MIT",
+  "keywords": [
+    "linear",
+    "asana",
+    "beads",
+    "github",
+    "issue-tracking",
+    "conventional-commits",
+    "pull-requests",
+    "workflow",
+    "automation",
+    "kiro"
+  ]
+}

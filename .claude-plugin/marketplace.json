@@ -5,43 +5,27 @@
     "email": "crod951@gmail.com"
   },
   "metadata": {
-    "description": "Custom Claude Code plugins for codebase analysis, skill generation, and workflow automation"
+    "description": "Custom Claude Code plugins for issue-driven development workflow automation"
   },
   "plugins": [
     {
-      "name": "stackgen",
-      "source": "./plugins/stackgen",
-      "description": "Analyzes codebases and generates tailored Claude Code skills. 11 specialized agents with optimized context passing.",
-      "version": "2.0.0",
+      "name": "workbench",
+      "source": "./plugins/workbench",
+      "description": "Two agent skills, scaffold and execute, that carry a tracker issue from requirements to an open pull request. Works with Asana or Linear, runs on Claude Code and Kiro, tracks tasks in beads or a committed markdown checklist, and resumes from repository state.",
+      "version": "1.0.0",
       "author": {
         "name": "crod951"
       },
       "repository": "https://github.com/crod951/claude-plugins",
       "keywords": [
-        "skills",
-        "analysis",
-        "react",
-        "devops",
-        "testing",
-        "database",
-        "ai"
-      ]
-    },
-    {
-      "name": "issue-lifecycle",
-      "source": "./plugins/issue-lifecycle",
-      "description": "Automates the full lifecycle of working on Linear issues — from planning through PR creation. Integrates Linear, Beads task tracking, and GitHub PRs with Conventional Commits.",
-      "version": "2.1.0",
-      "author": {
-        "name": "crod951"
-      },
-      "repository": "https://github.com/crod951/claude-plugins",
-      "keywords": [
+        "asana",
         "linear",
+        "kiro",
         "beads",
         "github",
         "issue-tracking",
         "conventional-commits",
+        "pull-requests",
         "workflow",
         "automation"
       ]

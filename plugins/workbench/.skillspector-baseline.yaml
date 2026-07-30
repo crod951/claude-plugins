@@ -1,0 +1,99 @@
+version: 2
+
+# Reviewed findings accepted as false positives.
+# Docs: https://github.com/NVIDIA/SkillSpector/blob/main/docs/SUPPRESSION.md
+rules:
+  - id: "RA2"
+    path: "SKILL.md"
+    message: "*hand off to the execute skill*"
+    reason: >-
+      False positive: the "Session Persistence" pattern matched the scaffold
+      skill description's hand-off phrasing ("offers to hand off to the
+      execute skill"). The skill defines no cron jobs, startup scripts, or
+      cross-session state.
+
+  - id: "EA2"
+    path: "SKILL.md"
+    message: "*without asking*"
+    reason: >-
+      False positive: "Autonomous Decision Making" matched the scaffold
+      hand-off step ("in auto mode, invoke the execute skill on that ref
+      without asking and say that you are doing so"). Auto mode is an explicit
+      user-selected setting, the hand-off is announced to the user, and the
+      action is invoking another skill, not a destructive or financial
+      operation. Caution: the message field matches only the flagged text, so
+      this rule suppresses ANY "without asking" EA2 hit in any SKILL.md of
+      this plugin, including future ones this reason does not cover; when
+      adding that phrase to a skill, re-review whether the suppression still
+      only hides benign uses.
+
+  # workbench-shared carries the contract files execute and scaffold read;
+  # its SKILL.md exists so directory-copying installers (npx skills) bring it
+  # along. Scanning it flags documentation text, not executable skill behavior.
+
+  - id: "EA2"
+    path: "memory.md"
+    message: "*Do not ask*"
+    reason: >-
+      False positive: matched the backend-resolution rule ("Do not ask the
+      user to choose a backend; resolution is a silent probe"). Picking
+      which task-memory backend to read is a read-only precedence decision;
+      every consequential action still runs through approval.md's stops.
+
+  - id: "EA2"
+    path: "trackers.md"
+    message: "*without asking*"
+    reason: >-
+      False positive: the flagged line is the first-run setup QUESTION that
+      asks the user to choose an approval mode ("stop for approval ... or
+      run straight through without asking"). It is literally a
+      human-in-the-loop prompt; "without asking" names the option offered,
+      not behavior taken unilaterally.
+
+  - id: "PE3"
+    path: "conventions.md"
+    message: "*credentials.yml*"
+    reason: >-
+      False positive: matched the staging-safety PROHIBITION list, which
+      names .env files, credential stores, and key files precisely to
+      forbid staging them. The rule instructs the agent to stop and ask;
+      nothing reads or transmits credentials.
+
+  - id: "PE3"
+    path: "trackers/asana.md"
+    message: "*access token*"
+    reason: >-
+      False positive: the line documents merge-closer Action setup and
+      tells the USER to add an ASANA_TOKEN repository secret in GitHub
+      settings. The skill never reads or handles the token; the absolute
+      boundary in both entry skills forbids credential access.
+
+  - id: "E1"
+    path: "trackers/asana.md"
+    message: "*app.asana.com*"
+    reason: >-
+      Reviewed, intentional: the flagged curl is inside the OPTIONAL
+      merge-closer GitHub Action template that the user may install into
+      their own repo. It posts a task-completion update to Asana's
+      documented API using a repository secret the user configured for
+      exactly that purpose. The skills themselves never run it; the
+      absolute boundary forbids them from calling tracker HTTP APIs.
+
+  - id: "E1"
+    path: "trackers/linear.md"
+    message: "*api.linear.app*"
+    reason: >-
+      Reviewed, intentional: same as the Asana rule - the flagged curl is
+      the Linear variant of the optional merge-closer Action template,
+      calling Linear's documented GraphQL API with the user's own
+      repository secret. Never executed by the skills.
+
+  - id: "RP1"
+    path: "agents.md"
+    message: "*npx skills*"
+    reason: >-
+      Reviewed, intentional: the install instruction uses the skills.sh
+      CLI (npx skills add). Pinning an exact CLI version here would go
+      stale and is not a security boundary; the command runs on the USER's
+      machine at install time by their choice, and the installed content
+      is this repository itself.

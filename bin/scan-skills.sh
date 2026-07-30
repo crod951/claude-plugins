@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# Scan plugin skills with NVIDIA SkillSpector and fail on any non-suppressed finding.
+#
+# Usage:
+#   bin/scan-skills.sh [plugin ...]   # default: every plugin with a skills/ directory
+#
+# Environment:
+#   SKILLSPECTOR_LLM=1   also run the LLM semantic stage (requires provider credentials,
+#                        e.g. SKILLSPECTOR_PROVIDER=anthropic + ANTHROPIC_API_KEY)
+#   REPORT_DIR=<dir>     write per-skill JSON and Markdown reports into <dir>
+#
+# Known false positives are suppressed via each plugin's .skillspector-baseline.yaml,
+# with an auditable reason per suppression. Suppressed findings still appear in the
+# JSON reports under "suppressed".
+#
+# Each skill is scanned exactly once; the Markdown report is rendered from that
+# scan's JSON so the report can never disagree with the verdict that gated CI.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$repo_root"
+
+if ! command -v skillspector >/dev/null 2>&1; then
+  echo "skillspector not found. Install it with:" >&2
+  echo "  uv tool install git+https://github.com/NVIDIA/skillspector.git" >&2
+  exit 1
+fi
+
+plugins=("$@")
+if [ ${#plugins[@]} -eq 0 ]; then
+  for d in plugins/*/skills; do
+    [ -d "$d" ] && plugins+=("$(basename "$(dirname "$d")")")
+  done
+fi
+if [ ${#plugins[@]} -eq 0 ]; then
+  echo "No plugins with a skills/ directory found." >&2
+  exit 1
+fi
+
+scan_flags=()
+if [ "${SKILLSPECTOR_LLM:-0}" != "1" ]; then
+  scan_flags+=(--no-llm)
+fi
+
+[ -n "${REPORT_DIR:-}" ] && mkdir -p "$REPORT_DIR"
+
+failures=0
+for plugin in "${plugins[@]}"; do
+  skills_dir="plugins/$plugin/skills"
+  if [ ! -d "$skills_dir" ]; then
+    # Auto-discovered plugins always have a skills/ dir, so reaching here means
+    # an explicitly requested plugin is wrong (likely a typo). Fail rather than
+    # risk a false "PASS" after scanning nothing.
+    echo "error: $skills_dir does not exist" >&2
+    exit 1
+  fi
+
+  baseline_flags=()
+  baseline="plugins/$plugin/.skillspector-baseline.yaml"
+  [ -f "$baseline" ] && baseline_flags=(--baseline "$baseline")
+
+  scanned=0
+  for skill_dir in "$skills_dir"/*/; do
+    [ -f "$skill_dir/SKILL.md" ] || continue
+    scanned=$((scanned + 1))
+    skill="$(basename "$skill_dir")"
+    json="$(mktemp)"
+
+    # skillspector is documented to always exit 0, but a crash (bad install,
+    # provider error in the LLM stage) can still exit non-zero; under set -e an
+    # unguarded call would kill the whole run with no summary and no reports.
+    if ! skillspector scan "$skill_dir" ${scan_flags[@]+"${scan_flags[@]}"} ${baseline_flags[@]+"${baseline_flags[@]}"} \
+      --format json --output "$json" >/dev/null; then
+      echo "ERROR: skillspector crashed while scanning $plugin/$skill" >&2
+      failures=$((failures + 1))
+      rm -f "$json"
+      continue
+    fi
+
+    summary="$(python3 - "$json" "$plugin/$skill" <<'PY'
+import json, sys
+report = json.load(open(sys.argv[1]))
+risk = report["risk_assessment"]
+active = report["issues"]
+line = (
+    f"{sys.argv[2]}: score {risk['score']}/100 ({risk['severity']}, "
+    f"{risk['recommendation']}) | active {len(active)} | "
+    f"suppressed {report['suppressed_count']}"
+)
+print(line)
+for issue in active:
+    loc = issue["location"]
+    print(f"  {issue['id']} {issue['pattern']} [{issue['severity']}] "
+          f"{loc['file']}:{loc['start_line']}")
+sys.exit(1 if active else 0)
+PY
+)" && skill_ok=0 || skill_ok=1
+    echo "$summary"
+
+    if [ -n "${REPORT_DIR:-}" ]; then
+      cp "$json" "$REPORT_DIR/$plugin-$skill.json"
+      # Render the Markdown report from the same JSON rather than re-scanning:
+      # a second scan doubles cost (twice per skill, including the LLM stage)
+      # and, because the scanner is not fully deterministic, could produce a
+      # report that contradicts the JSON that decided pass/fail.
+      python3 - "$json" "$plugin/$skill" > "$REPORT_DIR/$plugin-$skill.md" <<'PY'
+import json, sys
+report = json.load(open(sys.argv[1]))
+risk = report["risk_assessment"]
+print(f"# SkillSpector report: {sys.argv[2]}\n")
+print(f"- Score: {risk['score']}/100 ({risk['severity']})")
+print(f"- Recommendation: {risk['recommendation']}")
+print(f"- Active findings: {len(report['issues'])}")
+print(f"- Suppressed findings: {report['suppressed_count']}")
+
+def code_fence(text):
+    # A snippet containing a backtick run >= the fence length would terminate
+    # the fence early and corrupt the rest of the report, so pick a longer one.
+    n = 3
+    while "`" * n in text:
+        n += 1
+    return "`" * n
+
+def emit(title, findings, suppressed):
+    print(f"\n## {title}\n")
+    if not findings:
+        print("None.")
+        return
+    for f in findings:
+        loc = f.get("location") or {}
+        where = f"{loc.get('file', '?')}:{loc.get('start_line', '?')}"
+        print(f"### {f.get('id', '?')} {f.get('pattern', '')} [{f.get('severity', '?')}] {where}\n")
+        for key in ("finding", "explanation", "remediation"):
+            if f.get(key):
+                print(f"- **{key.capitalize()}**: {f[key]}")
+        if suppressed and f.get("suppression_reason"):
+            print(f"- **Suppression reason**: {f['suppression_reason']}")
+        if f.get("code_snippet"):
+            fence = code_fence(f["code_snippet"])
+            print(f"\n{fence}\n{f['code_snippet']}\n{fence}")
+        print()
+
+emit("Active findings", report["issues"], suppressed=False)
+emit("Suppressed findings", report.get("suppressed", []), suppressed=True)
+PY
+    fi
+    rm -f "$json"
+
+    [ "$skill_ok" -ne 0 ] && failures=$((failures + 1))
+  done
+
+  if [ "$scanned" -eq 0 ]; then
+    # A skills/ dir with no SKILL.md underneath would otherwise print nothing
+    # and contribute to a false "PASS" after scanning nothing.
+    echo "error: no skills with a SKILL.md found under $skills_dir" >&2
+    exit 1
+  fi
+done
+
+if [ "$failures" -gt 0 ]; then
+  echo
+  echo "FAIL: $failures skill(s) have non-suppressed findings." >&2
+  echo "Fix the finding, or if it is a reviewed false positive, add a rule with a" >&2
+  echo "reason to the plugin's .skillspector-baseline.yaml." >&2
+  exit 1
+fi
+
+echo
+echo "PASS: all scanned skills are clean (suppressions documented in baselines)."
