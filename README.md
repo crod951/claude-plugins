@@ -5,14 +5,22 @@
 Custom Claude Code plugins for issue-driven development workflow automation.
 All plugin skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) on every change; the build fails on any non-suppressed security finding.
 
-## Installation (inside Claude Code)
+## Installation (30-second setup)
 
-Run these commands **inside a Claude Code session** (they start with `/`):
+**Claude Code** - run these inside a session for a managed install that updates when this repo ships:
 
 ```text
 /plugin marketplace add crod951/claude-plugins
 /plugin install workbench@crod951
 ```
+
+**Kiro, Codex, and other agents** - use [skills.sh](https://www.skills.sh) for an editable copy on any agent:
+
+```bash
+npx skills@latest add crod951/claude-plugins
+```
+
+When the installer asks which skills to take, take all of them; `workbench-shared` carries the contract files the other two read.
 
 > Individual plugins may have additional prerequisites that run in your **terminal** (e.g., `brew install`). See each plugin's README for details.
 

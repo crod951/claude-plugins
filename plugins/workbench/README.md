@@ -13,7 +13,7 @@ It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and
 ## Contents
 
 - [What you get](#what-you-get)
-- [Install](#install)
+- [Install (30-second setup)](#install-30-second-setup)
 - [Setup, step by step](#setup-step-by-step)
 - [Using scaffold](#using-scaffold)
 - [Using execute](#using-execute)
@@ -40,13 +40,21 @@ The checklist backend travels with each task commit; beads keeps its database ou
 
 **Requirements:** an Asana or Linear MCP connected in your agent, the GitHub CLI (`gh`) authenticated, and optionally the beads CLI (`bd`) for richer task memory.
 
-## Install
+## Install (30-second setup)
 
-### Claude Code
+Two ways in, two philosophies.
+**The Claude Code plugin** installs the pair as a managed, read-only bundle that updates when this repo ships - you subscribe rather than fork.
+**[skills.sh](https://www.skills.sh)** copies editable skill files onto your machine for any agent, so you can hack on them and make them your own.
+Pick one - installing both leaves you with every skill twice.
+
+### 1. Get the skills
+
+<details>
+<summary><strong>Claude Code</strong></summary>
 
 Run these inside a Claude Code session:
 
-```
+```text
 /plugin marketplace add crod951/claude-plugins
 /plugin install workbench@crod951
 /reload-plugins
@@ -54,20 +62,30 @@ Run these inside a Claude Code session:
 
 Confirm both skills loaded by asking for the skill list; you should see `workbench:execute` and `workbench:scaffold`.
 
-### Kiro
+</details>
 
-Install with the [skills CLI](https://www.skills.sh) - a 30-second setup:
+<details>
+<summary><strong>Kiro, Codex, and other agents</strong></summary>
 
 ```bash
-npx skills@latest add crod951/claude-plugins -a kiro-cli
+npx skills@latest add crod951/claude-plugins
 ```
 
-Select all three entries when prompted: `execute`, `scaffold`, and `workbench-shared`.
-The last one is not an invocable skill; it carries the contract files the other two read via `../workbench-shared/`, so an install without it stops at the first step.
-Kiro's default agent auto-loads everything under `~/.kiro/skills/`, so no further configuration is needed.
-Update later with `npx skills update`.
+Pick which coding agents to install onto - the installer auto-detects what you have.
+**Take all three entries when it asks which skills you want: `workbench-shared` carries the contract files the other two read, and an install without it stops at the first step.**
 
-Installing by hand still works; keep `execute/`, `scaffold/`, and `workbench-shared/` as siblings at the destination's top level:
+Kiro's default agent auto-loads everything under `~/.kiro/skills/`, so no further configuration is needed there.
+Other agents may need the skill added to their config after install; see that agent's page on [skills.sh](https://www.skills.sh).
+
+</details>
+
+<details>
+<summary><strong>For tinkerers</strong></summary>
+
+The same installer works on any agent - including Claude Code - and writes the skills as ordinary files you own and can edit.
+Nothing updates behind your back; pull the latest changes when you want them with `npx skills update`.
+
+Installing fully by hand also works; keep `execute/`, `scaffold/`, and `workbench-shared/` as siblings at the destination's top level:
 
 ```bash
 # global install, available in every workspace
@@ -78,6 +96,14 @@ ln -s "$PWD/plugins/workbench/skills/execute"          ~/.kiro/skills/execute
 ln -s "$PWD/plugins/workbench/skills/scaffold"         ~/.kiro/skills/scaffold
 ln -s "$PWD/plugins/workbench/skills/workbench-shared" ~/.kiro/skills/workbench-shared
 ```
+
+</details>
+
+### 2. Run either skill once per repo
+
+The first run asks the [setup questions](#setup-step-by-step) - tracker, destination, state mapping, base branch, approval mode - and commits the answers to `.workbench/config.md`, so teammates are never asked again.
+
+### 3. Bam - you're ready to go.
 
 ## Setup, step by step
 
