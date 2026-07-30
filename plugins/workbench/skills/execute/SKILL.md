@@ -55,7 +55,7 @@ If any of these files cannot be found and read, stop immediately and report whic
 3. Resolve which tracker owns this issue and which memory backend owns its task state, following `trackers.md` and `memory.md`.
    When the repo already contains beads state but the beads tooling is unavailable on this machine, stop and say so as memory.md directs; never substitute a different backend for a repo whose state lives in another one.
    Load the existing `.workbench/config.md` tracker profile, or run first-run setup when none exists; either way, run the tracker adapter's profile-load checks and honor any one-time offers they define.
-4. Determine the issue ref from the invocation argument, a pasted issue URL, or the current branch name, in that order of preference; when the argument and the branch name name different issues, stop and ask the user which one to use.
+4. Determine the issue ref from the invocation argument, a pasted issue URL, or the current branch name, in that order of preference; when the argument and the branch name refer to different issues, stop and ask the user which one to use.
 5. Call `getIssue` for that ref and save its title, description, type, URL, and existing children for the rest of this run.
    When the issue is already in the `done` phase or marked complete, do not start work: say so, report what the sweep found for it, and ask whether to reopen it or pick a different issue.
 6. Search the codebase and read the files that look relevant to this issue, noting existing patterns to follow during implementation.
