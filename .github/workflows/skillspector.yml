@@ -30,6 +30,9 @@ jobs:
 
       - name: Install SkillSpector
         run: |
+          # Pinned so CI results are reproducible; an unpinned install tracks
+          # upstream HEAD, and scan results could change with no change here.
+          # Bump the tag deliberately, re-baselining if findings shift.
           uv tool install git+https://github.com/NVIDIA/skillspector.git@34f60308522f45447cd343da0aad77bcea308ad4 # v2.5.0
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 

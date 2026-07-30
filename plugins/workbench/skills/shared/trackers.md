@@ -28,7 +28,8 @@ Do not substitute any other source of truth for that question.
 In particular, never infer a destination from tracker URLs found inside existing `.workbench/tasks/*.md` files, from prior issues in the repository, or from any other guess; a wrong inference silently files work in the wrong place, and even a right one takes the choice away from a user who may have several valid destinations.
 The agent may inspect existing task files or prior issues to offer a suggested default inside that same question, for example "previous issues in this repo used X, use that again?".
 Offering a suggestion does not replace asking; still ask the question and wait for the user's answer before creating anything.
-One exception, defined in `approval.md`: in auto mode, when `listDestinations` returns exactly one destination the answer is determinate, so record it and report it instead of asking. Any other number of destinations is ambiguous and is asked even in auto mode.
+One exception, defined in `approval.md`: in auto mode, when `listDestinations` returns exactly one destination the answer is determinate, so record it and report it instead of asking.
+Any other number of destinations is ambiguous and is asked even in auto mode.
 
 ## Base branch resolution
 
@@ -51,7 +52,7 @@ Do not skip it because a previous run in this session already verified the MCP; 
 
 Infer the intended tracker first.
 When a reference already exists, infer it from the reference shape: a Linear key like `ABC-123`, or an Asana URL or GID.
-When there is no reference yet, as during intake, infer it from the tracker profile's `tracker` field first, then from which tracker MCPs are connected.
+When there is no reference yet, as during scaffold, infer it from the tracker profile's `tracker` field first, then from which tracker MCPs are connected.
 
 Verify the inferred tracker's MCP with one cheap read-only call, the current-user or workspace-list operation that tracker's adapter file names.
 Treat any failure, any absence of the expected tools, or a disabled server the same way: unverified.
@@ -62,6 +63,41 @@ When the MCP is unverified, delivering setup instructions is the task; that is a
 
 On re-invocation, run preflight again from the top.
 Only a verified MCP allows tracker work to begin.
+
+## Done-on-merge sweep
+
+Every skill invocation in a repo must run this sweep before doing any other tracker work, and only once preflight has verified the MCP.
+The sweep is tracker-agnostic: it finds issues from repository state, and only its closure action goes through the resolved tracker's adapter.
+
+The sweep checks whether any file under `.workbench/` references an issue whose pull request has since merged, using `gh pr view <branch> --json state,mergedAt` for each recorded branch; when several issues are outstanding, one `gh pr list --state all --json headRefName,state,mergedAt` call matched locally against the recorded branch names is cheaper than one call per issue.
+Search the whole directory rather than only `tasks/`: depending on the resolved memory backend the per-issue record may be a plan document under `plans/` with no checklist file at all, and narrowing the search to `tasks/` silently skips those issues.
+When the sweep finds a merged pull request for an issue, read the issue's current state before writing to the tracker.
+When the issue is already complete, for example because a merge-closer Action or a native integration already closed it, skip the tracker write and apply only the stamp described below.
+Otherwise apply the mapped `done` state through `updateState`, plus any closure action the adapter defines for the merged path, before proceeding with the rest of the run.
+
+For idempotency, append a `- Closed: <date>` line to that issue's file under `.workbench/`, whichever file the search found, since a beads-mode issue has a plan document and no checklist file, commit the file, and push that commit to the branch the merged pull request targeted, which is the resolved base branch and is not necessarily the repository's default branch once `base-branch` is configured.
+A stamp commit that is only made locally does not propagate: it never reaches the base branch, so the merge check runs at most once per issue only when the commit is pushed to that base branch.
+When the current checkout is on a feature branch, the stamp still must land on that base branch, not on a feature branch.
+Do not switch branches to place it while the run has uncommitted task state in the working tree, since a checkout or a stash can lose the in-progress marker that the memory contract treats as the truth.
+Apply the stamp before any task work begins, or from a separate clone or worktree, or defer it to the next invocation and say plainly that the stamp is pending.
+When the push fails, for example because of missing permission, a protected branch, or being offline, report the failure to the user and continue the run.
+A failed stamp push must not abort the sweep, and it must not be retried silently in a loop.
+The sweep skips any issue whose `.workbench/` file already carries a Closed line, so the merge check runs at most once per issue.
+
+### Pull requests closed without merging
+
+A merged pull request is not the only way a pull request ends, and the other way is silent by default.
+A merge-closer Action or native integration deliberately ignores a pull request that was closed without merging, since the work was not delivered, and the merged path above also ignores it because `mergedAt` is null.
+That combination leaves the issue parked in the `inReview` phase forever while the branch is abandoned, so the tracker misstates reality and nobody is told.
+
+During the sweep, treat a referenced pull request whose state is closed with a null `mergedAt` as an abandoned attempt, and handle it as follows.
+Never mark the issue done, because nothing shipped.
+Never silently move the phase back either, because whether to retry, rescope, or drop the work is the user's decision, not an inference from a closed pull request.
+Report it instead: name the issue, name the pull request, say it was closed without merging, and ask whether to resume the work on a fresh branch or move the issue back to the `inProgress` phase.
+
+Record the observation in that issue's file under `.workbench/` as a line such as `- PR closed unmerged: <date> <pr url>` so the same abandoned pull request is reported once rather than on every later run.
+Report it again when a different pull request for the same issue is later closed unmerged, since that is new information.
+A recorded abandonment does not close the issue and does not stop a later merge from closing it normally; when a fresh pull request for the same issue merges, apply the usual done state and Closed stamp.
 
 ## Runtime resolution
 

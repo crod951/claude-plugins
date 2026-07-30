@@ -20,7 +20,7 @@ Run these commands **inside a Claude Code session** (they start with `/`):
 
 ### workbench (v1.0.0)
 
-Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from intake through an open pull request.
+Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from requirements to an open pull request.
 It works with Asana or Linear as your issue tracker, and both skills run unchanged on Claude Code and Kiro.
 
 #### Prerequisites
@@ -88,200 +88,70 @@ This enables a pre-commit hook that automatically syncs plugin versions from eac
 
 ---
 
-## Contributing: Adding Plugins, Commands, and Agents
+## Contributing: Adding Plugins and Skills
 
-This section is a comprehensive reference for adding new plugins, slash commands, or agents to this repo. You can paste these instructions into Claude Code to have it build new components for you.
+This section is a reference for adding new plugins or skills to this repo.
+You can paste these instructions into Claude Code to have it build new components for you.
 
 ### Repository Structure
 
 ```
 claude-plugins/
 ├── .claude-plugin/
-│   └── marketplace.json           # Registry — lists all plugins in this marketplace
+│   └── marketplace.json           # Registry - lists all plugins in this marketplace
+├── bin/
+│   └── scan-skills.sh             # SkillSpector runner used locally and in CI
 ├── plugins/
 │   └── <plugin-name>/
 │       ├── .claude-plugin/
 │       │   └── plugin.json        # Plugin manifest (name, version, description)
 │       ├── README.md              # Plugin documentation
-│       ├── commands/              # Slash commands (each file = one /command)
-│       │   └── <command-name>.md
-│       └── agents/                # Subagents (optional, used by commands)
-│           └── <agent-name>.md
+│       ├── .skillspector-baseline.yaml   # Optional: reviewed false-positive suppressions
+│       └── skills/
+│           ├── <skill-name>/
+│           │   └── SKILL.md       # One agent skill (Agent Skills standard)
+│           └── shared/            # Optional: contracts shared between skills
+│               └── <topic>.md
 ```
 
 ### How It All Fits Together
 
-- **Marketplace** (`.claude-plugin/marketplace.json`) — the top-level registry that tells Claude Code which plugins exist in this repo and where to find them
-- **Plugin** (`plugins/<name>/.claude-plugin/plugin.json`) — a self-contained package of commands and/or agents
-- **Command** (`plugins/<name>/commands/<command>.md`) — a markdown file that becomes a `/command` the user can invoke. The filename becomes the command name (e.g., `commit.md` → `/commit`)
-- **Agent** (`plugins/<name>/agents/<agent>.md`) — a markdown file that defines a subagent. Agents are spawned by commands using the Task tool — they can't be invoked directly by users
+- **Marketplace** (`.claude-plugin/marketplace.json`) - the top-level registry that tells Claude Code which plugins exist in this repo and where to find them.
+- **Plugin** (`plugins/<name>/.claude-plugin/plugin.json`) - a self-contained package of skills.
+- **Skill** (`plugins/<name>/skills/<skill>/SKILL.md`) - a markdown file following the open [Agent Skills](https://agentskills.io) standard.
+  The frontmatter's `name` and `description` decide when an agent invokes the skill; the body is the procedure it follows.
+  See `plugins/workbench/skills/` for the reference example, including the `shared/` pattern for contracts used by more than one skill.
 
-### Adding a New Slash Command to an Existing Plugin
+### Adding a New Skill to an Existing Plugin
 
-This is the simplest contribution. Create a new `.md` file in the plugin's `commands/` directory.
-
-**Command file format:**
-
-````markdown
----
-description: Short description shown in the command palette
-argument-hint: "<REQUIRED_ARG> [optional-arg] [--flag]"
-allowed-tools: Bash(git add:*), Bash(git commit:*)
----
-
-## Context
-
-Dynamic values injected at runtime using `!` backtick syntax:
-
-- Current branch: !`git branch --show-current`
-- Git status: !`git status`
-- Custom check: !`some-cli-command 2>/dev/null || echo "FALLBACK"`
-
-## Instructions
-
-You are doing X. Follow these steps precisely.
-
-### Step 1: Do the first thing
-
-Explain what Claude should do. Use `$ARGUMENTS` to reference user input.
-
-### Step 2: Do the next thing
-
-Include code blocks for commands Claude should run:
-
-```bash
-some-command --flag value
-```
-
-### Step 3: Present results
-
-```
---- Summary ---
-  Result: <value>
----------------
-```
-````
-
-**Frontmatter fields:**
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `description` | Yes | Help text shown when user types `/` |
-| `argument-hint` | No | Describes expected arguments. Use `<REQUIRED>` and `[optional]` |
-| `allowed-tools` | No | Restricts which tools Claude can use. Omit to allow all tools. Format: `Bash(pattern:*)` |
-
-**Key patterns:**
-
-- **`$ARGUMENTS`** — replaced with whatever the user types after the command name
-- **`!` backtick context** — shell commands in the Context section run at invocation time and inject their output
-- **`AskUserQuestion`** — use this tool to ask the user for input during execution
-- **MCP tools** — reference them by full name (e.g., `mcp__plugin_linear_linear__get_issue`)
-- **Flags** — parse from `$ARGUMENTS` in a dedicated step. Commands don't have built-in flag parsing — you write instructions for Claude to parse them
-
-**Example — a simple deploy command:**
-
-````markdown
----
-description: Deploy the current branch to staging
-argument-hint: "[--production]"
-allowed-tools: Bash(git push:*), Bash(deploy:*)
----
-
-## Context
-
-- Current branch: !`git branch --show-current`
-- Last commit: !`git log --oneline -1`
-
-## Instructions
-
-### Step 1: Parse flags
-
-Check if `$ARGUMENTS` contains `--production`. If yes, target is production. Otherwise, target is staging.
-
-### Step 2: Confirm with user
-
-Use `AskUserQuestion` to confirm:
-- "Deploy `<branch>` (`<last commit>`) to `<target>`?"
-- Options: "Deploy", "Cancel"
-
-### Step 3: Deploy
-
-```bash
-deploy --target <target> --branch <branch>
-```
-
-### Step 4: Show result
-
-```
---- Deployed ---
-  Branch:  <branch>
-  Target:  <target>
-  Commit:  <last commit>
-----------------
-```
-````
-
-### Adding a New Agent to an Existing Plugin
-
-Agents are subagents spawned by commands via the Task tool. They are markdown files with no YAML frontmatter.
-
-**Agent file format:**
+Create `plugins/<name>/skills/<skill-name>/SKILL.md`:
 
 ```markdown
-# Agent Name Agent
+---
+name: my-skill
+description: This skill should be used when the user asks to "do X", "run X on this", or names an X-shaped target. One or two more sentences on what it does.
+version: 1.0.0
+---
 
-You are a specialized agent for [purpose].
+# My Skill
 
-## Activation Condition
+## Procedure
 
-Only activate if [condition from detector/context].
-
-## Your Mission
-
-[What this agent does]
-
-## Constraints
-
-- **Max 8 files**: Focus on the most representative files
-- **Prioritize**: [what to focus on]
-- **Use context**: Reference findings passed to you, avoid re-scanning
-
-## Analysis Areas
-
-### 1. Area Name
-- Point 1
-- Point 2
-
-### 2. Another Area
-- Point 1
-
-## Output Format
-
-[Template for what the agent should produce]
+1. First step, written as an instruction to the executing agent.
+2. Next step.
 ```
 
-Agents are invoked from commands like this (in the command's markdown):
+Skill-writing rules that hold across this repo:
 
-```
-Spawn the `agent-name` agent with the following context: [data to pass]
-```
+- **The description triggers the skill** - write it around the phrases users actually say, and keep it honest about scope.
+- **Reference shared contracts instead of restating them** - a skill that needs a convention another skill also needs should read a `shared/` file, so the two cannot drift apart.
+- **State stop conditions explicitly** - say when the skill must stop and ask rather than guess.
+- **Keep paths relative to the SKILL.md file** - skills may be installed outside this repo, so `../shared/foo.md` works and repo-rooted paths do not.
 
 ### Creating a New Plugin from Scratch
 
-Follow these steps:
-
-**1. Create the directory structure:**
-
-```
-plugins/<plugin-name>/
-├── .claude-plugin/
-│   └── plugin.json
-├── README.md
-└── commands/
-    └── <first-command>.md
-```
-
-**2. Write `plugin.json`:**
+1. Create the directory structure shown above, with at least one skill under `skills/`.
+2. Write `plugin.json`:
 
 ```json
 {
@@ -299,9 +169,7 @@ plugins/<plugin-name>/
 }
 ```
 
-**3. Register in the marketplace:**
-
-Add an entry to `.claude-plugin/marketplace.json` in the `plugins` array:
+3. Register it in `.claude-plugin/marketplace.json` in the `plugins` array:
 
 ```json
 {
@@ -315,23 +183,20 @@ Add an entry to `.claude-plugin/marketplace.json` in the `plugins` array:
 }
 ```
 
-**4. Write your commands** (see "Adding a New Slash Command" above)
+4. Write a `README.md` with installation instructions, a skill reference, and usage examples.
+5. Bump the version in `plugin.json` whenever you make changes; the pre-commit hook syncs it into `marketplace.json` and this README.
 
-**5. Write a README.md** with installation instructions, command reference, and usage examples
+### Security Scanning
 
-**6. Bump the version** in both `plugin.json` and `marketplace.json` whenever you make changes
+Every skill in `plugins/*/skills/` is scanned by [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) in CI, and the build fails on any non-suppressed finding.
+Run the same scan locally before opening a pull request:
 
-### Writing Good Commands: Tips
+```bash
+uv tool install git+https://github.com/NVIDIA/skillspector.git
+bin/scan-skills.sh <plugin-name>
+```
 
-- **Be precise** — Claude follows your instructions literally. Vague instructions produce vague results.
-- **Number your steps** — sequential steps prevent Claude from skipping or reordering.
-- **Use conditionals explicitly** — "If X, do Y. Otherwise, do Z." Don't leave ambiguity.
-- **Gate dangerous actions** — use `AskUserQuestion` before destructive operations (deletes, force pushes, etc.)
-- **Inject context** — use `!` backtick commands to give Claude runtime awareness (branch name, git status, file lists, etc.)
-- **Restrict tools when needed** — use `allowed-tools` to prevent Claude from doing things outside the command's scope (e.g., a commit command shouldn't read random files)
-- **Show examples in output** — template the exact output format you want Claude to produce
-- **Don't commit for the user** — if the command makes code changes, present results and let the user decide. Separate "implement" from "commit" commands.
-- **Keep commands focused** — one command should do one thing well. Chain commands together for workflows.
+When a finding is a reviewed false positive, suppress it in the plugin's `.skillspector-baseline.yaml` with a written reason; never suppress a finding you have not understood.
 
 ### Quick Reference: Asking Claude to Build a Plugin
 
@@ -340,21 +205,18 @@ Paste this into Claude Code to have it scaffold a new plugin for you:
 ```
 Create a new Claude Code plugin called "<plugin-name>" in this repo.
 
-It should have the following commands:
-- /<command-1>: <what it does>
-- /<command-2>: <what it does>
+It should have the following skills:
+- <skill-1>: <what it does and what phrases trigger it>
+- <skill-2>: <what it does and what phrases trigger it>
 
-Follow the existing plugin patterns in this repo:
+Follow the existing plugin patterns in this repo (plugins/workbench is the reference):
 - Create plugins/<plugin-name>/.claude-plugin/plugin.json
-- Create plugins/<plugin-name>/commands/<command>.md for each command
+- Create plugins/<plugin-name>/skills/<skill>/SKILL.md for each skill,
+  with name/description/version frontmatter written to trigger on the phrases above
+- Put contracts shared between skills in plugins/<plugin-name>/skills/shared/
 - Create plugins/<plugin-name>/README.md with install instructions and usage
 - Register in .claude-plugin/marketplace.json
-
-Use the same conventions as the existing plugins:
-- YAML frontmatter with description and argument-hint
-- Context section with runtime shell commands
-- Numbered step-by-step instructions
-- Output summaries in fenced code blocks
+- Run bin/scan-skills.sh <plugin-name> and resolve any SkillSpector findings
 ```
 
 ## License

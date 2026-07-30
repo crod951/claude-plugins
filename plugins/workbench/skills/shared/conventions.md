@@ -74,6 +74,7 @@ Reconcile before finishing.
 A task commit is one whose subject is scoped to this issue's ref and which implements a task; the breakdown commit, the plan document commit, and any task-state bookkeeping commit are not task commits.
 Count them over the range from the resolved base branch to the current head, not over all history, since a branch inherits its base's commits.
 Compare that count to the number of tasks closed for this issue.
+Check the recorded hashes as well: every hash recorded at close must name a commit inside that same range, and each closed task's hash must be distinct, which catches a mismatch that subject-line counting can misclassify.
 When the counts disagree, stop and report the discrepancy rather than opening a pull request: either a commit is missing, or tasks were combined into one commit, and both contradict the one-commit-per-task rule.
 
 ## Pull request test plan

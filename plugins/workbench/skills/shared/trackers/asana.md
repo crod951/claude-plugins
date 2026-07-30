@@ -54,37 +54,8 @@ Sub-issue state transitions degrade to the completed flag instead: moving a subt
 
 Asana has no PR-merge integration comparable to Linear's GitHub integration.
 At PR open, move the main task to the mapped `inReview` state and post a comment stating that the task will be closed by the next skill run after the PR merges.
-Every skill invocation in a repo must run a merge sweep before doing any other tracker work.
-The sweep checks whether any file under `.workbench/` references an Asana task whose PR has since merged, using `gh pr view <branch> --json state,mergedAt`.
-Search the whole directory rather than only `tasks/`: depending on the resolved memory backend the per-issue record may be a plan document under `plans/` with no checklist file at all, and narrowing the search to `tasks/` silently skips those issues.
-When the sweep finds a merged PR for an Asana task, read the task's current state before writing to the tracker.
-When the task is already complete, for example because the merge-closer Action already closed it, skip the tracker write and apply only the stamp described below.
-Otherwise apply the mapped `done` state and set the completed flag before proceeding with the rest of the run.
-For idempotency, append a `- Closed: <date>` line to that issue's file under `.workbench/`, whichever file the search found, since a beads-mode issue has a plan document and no checklist file immediately after closing the task, commit the file, and push that commit to the branch the merged pull request targeted, which is the resolved base branch and is not necessarily the repository's default branch once `base-branch` is configured.
-A stamp commit that is only made locally does not propagate: it never reaches the base branch, so a merge check runs at most once per issue only when the commit is pushed to that base branch.
-When the current checkout is on a feature branch, the stamp belongs to whichever `.workbench/` file records this issue for the merged issue, and it still must land on that base branch, not on a feature branch.
-Do not switch branches to place it while the run has uncommitted task state in the working tree, since a checkout or a stash can lose the in-progress marker that the memory contract treats as the truth.
-Apply the stamp before any task work begins, or from a separate clone or worktree, or defer it to the next invocation and say plainly that the stamp is pending.
-When the push fails, for example because of missing permission, a protected branch, or being offline, report the failure to the user and continue the run.
-A failed stamp push must not abort the sweep, and it must not be retried silently in a loop.
-The sweep skips any issue whose `.workbench/` file already carries a Closed line, so the merge check runs at most once per issue.
-
-### Pull requests closed without merging
-
-A merged PR is not the only way a PR ends, and the other way is silent by default.
-The merge-closer Action deliberately ignores a PR that was closed without merging, since the work was not delivered, and the merge sweep as described above also ignores it because `mergedAt` is null.
-That combination leaves the issue parked in the `inReview` phase forever while the branch is abandoned, so the tracker misstates reality and nobody is told.
-
-During the sweep, treat a referenced PR whose state is closed with a null `mergedAt` as an abandoned attempt, and handle it as follows.
-Never mark the issue done, because nothing shipped.
-Never silently move the phase back either, because whether to retry, rescope, or drop the work is the user's decision, not an inference from a closed PR.
-Report it instead: name the issue, name the PR, say it was closed without merging, and ask whether to resume the work on a fresh branch or move the issue back to the `inProgress` phase.
-
-Record the observation in that issue's file under `.workbench/` as a line such as `- PR closed unmerged: <date> <pr url>` so the same abandoned PR is reported once rather than on every later run.
-Commit that recorded line and push it before the sweep returns, following the same branch-placement and uncommitted-state cautions as the Closed stamp above: a marker that exists only in a working tree, or only in a local commit, does not survive to other clones or later runs, and the same abandoned PR would be re-reported every time.
-When the push fails, report the failure and continue, exactly as a failed stamp push is handled, and expect the PR to be reported again until a push succeeds; that repetition is the honest outcome of unpersisted state, not a bug to suppress.
-Report it again when a different PR for the same issue is later closed unmerged, since that is new information.
-A recorded abandonment does not close the issue and does not stop a later merge from closing it normally; when a fresh PR for the same issue merges, apply the usual done state and Closed stamp.
+The done-on-merge sweep itself, including its handling of pull requests closed without merging, is tracker-agnostic and defined in `../trackers.md`; run it exactly as written there.
+This adapter's closure action for the sweep's merged path: apply the mapped `done` state and set the task's completed flag.
 
 ## Closing on merge without any workbench machinery
 
@@ -111,6 +82,7 @@ The passive sweep and the on-demand cleanup trigger described in the execute ski
 The curl call to the Asana API in the template below exists exclusively for this GitHub Action running in CI, authenticated with its own repository secret.
 The agent must never run that curl call, or any other direct call to the Asana API, interactively.
 The agent must never borrow the `ASANA_TOKEN` secret or any other token from disk to reach the Asana API itself; the connected Asana MCP is the only channel the agent uses at runtime.
+The file-discovery and ref-extraction block in this template is intentionally identical to the one in `linear.md`'s template; a change to either copy must be applied to both.
 
 ```yaml
 name: workbench-close

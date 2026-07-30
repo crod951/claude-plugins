@@ -40,7 +40,7 @@ Never leave the question unanswered, since an unanswered assumption is what leav
 Still use `updateState` to move the issue into `inProgress` and `inReview` at the appropriate points, since those transitions are not handled by the GitHub integration.
 
 That integration only reacts to a merge, so a pull request closed without merging leaves the issue parked in review here exactly as it does on Asana.
-Apply the same rule described under "Pull requests closed without merging" in `asana.md`: never mark the issue done, never silently change its phase, tell the user which issue and which pull request were abandoned, and record the observation once in that issue's file under `.workbench/`, committing and pushing that record before the sweep returns exactly as `asana.md` requires, since an unpersisted marker re-reports the same abandoned pull request on every later run.
+Apply the rule described under "Pull requests closed without merging" in `../trackers.md`: never mark the issue done, never silently change its phase, tell the user which issue and which pull request were abandoned, and record the observation once in that issue's file under `.workbench/`, committing and pushing that record before the sweep returns exactly as `asana.md` requires, since an unpersisted marker re-reports the same abandoned pull request on every later run.
 
 ## First-run profile for Linear
 
@@ -71,6 +71,7 @@ It needs a `LINEAR_API_KEY` repository secret, a personal API key from Linear's 
 Read that state id from the same list-issue-statuses call used during first-run setup, and substitute it into the template before writing the file.
 
 Write it to `.github/workflows/workbench-close.yml`, commit it with the profile, and record `merge-closer: installed` so the sweep knows the Action owns the closure and only backstops it.
+The file-discovery and ref-extraction block in this template is intentionally identical to the one in `asana.md`'s template; a change to either copy must be applied to both.
 
 ```yaml
 name: workbench-close

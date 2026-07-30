@@ -29,7 +29,8 @@ Downstream deviations, all traceable to the root cause:
 
 What still worked from SKILL.md alone: trigger, branch prefix, implementation quality (13/13 tests), PR body (Closes URL, completed tasks, HEROC-ish test plan), Asana subtask completion, In Review claim, completion comment (per Kiro transcript; Asana API verification pending - V1 MCP call hung).
 
-Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative to the SKILL.md file's own directory; ~/.kiro/skills/shared/ for Kiro global installs) plus a stop-if-unreadable guard forbidding improvised contracts. Rerun follows.
+Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative to the SKILL.md file's own directory; ~/.kiro/skills/shared/ for Kiro global installs) plus a stop-if-unreadable guard forbidding improvised contracts.
+Rerun follows.
 
 ### Intake rerun after fix ff4cc5e (applyDiscount): PASS
 
@@ -44,14 +45,18 @@ Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative
 - Adopt path exercised live: 4 existing Asana sub-issues adopted into beads tasks (the review-cycle Critical fix verified end to end).
 - Per-task loop correct: claim -> implement -> test -> commit -> close, one commit per task (615.1-615.4), 16/16 tests passing.
 - Branch and ref scheme correct: asana-176679.
-- FINDING (adapter gap): the V1 Asana MCP exposes no section-move tool, so updateState's mapped section move cannot execute; agent degraded to a comment. asana.md needs an explicit fallback chain for MCP builds without a section tool. V2 server migration may also resolve this.
-- Run interrupted by Kiro model rate limit at PR-open. Cross-session resume test follows: new conversation, "work on asana-176679", expect guards to skip to finish (PR, inReview, completion comment) with no duplicate work.
+- FINDING (adapter gap): the V1 Asana MCP exposes no section-move tool, so updateState's mapped section move cannot execute; agent degraded to a comment. asana.md needs an explicit fallback chain for MCP builds without a section tool.
+  V2 server migration may also resolve this.
+- Run interrupted by Kiro model rate limit at PR-open.
+  Cross-session resume test follows: new conversation, "work on asana-176679", expect guards to skip to finish (PR, inReview, completion comment) with no duplicate work.
 
 ### Cross-session resume (combo 4): PASS
 
 - New Kiro conversation, "work on asana-176679": guards read repo state (beads + checklist + open PR), skipped all completed work, executed only the finish steps (remaining closes, completion comment, overlay sync).
-- No duplicate commits, no re-implementation. PR: il-test-app #2, 16/16 tests.
-- Section move to In Review again blocked by V1 MCP (no section tool); degraded to comment consistently. Combo 4 verdict: PASS with the known adapter gap.
+- No duplicate commits, no re-implementation.
+  PR: il-test-app #2, 16/16 tests.
+- Section move to In Review again blocked by V1 MCP (no section tool); degraded to comment consistently.
+  Combo 4 verdict: PASS with the known adapter gap.
 
 ### Done-on-merge sweep + V2 server (formatPrice intake): PASS
 
@@ -71,7 +76,8 @@ Fix: harden both SKILL.md "Read first" sections - explicit path anchor (relative
 Working: sweep idempotency; URL parse + asana-945428 ref; adopt path (4 subtasks); checklist file created with sub-issue links and final states; V2 section moves (In Progress, In Review); mid-run debugging (negative currency format) with 24/24 tests; PR #3 with done-on-merge note; final closing commit (fix-3 behavior exercised).
 
 Deviations (all prose-adherence, Kiro model):
-- Stop-guard bypassed: .beads present + bd hidden should stop; agent reasoned per-issue and used checklist. Guard text confirmed readable via symlink.
+- Stop-guard bypassed: .beads present + bd hidden should stop; agent reasoned per-issue and used checklist.
+  Guard text confirmed readable via symlink.
 - Checklist format improvised: check marks and em dashes instead of the spec marker legend; statuses recorded only at the end, not cycled per claim/close.
 - Tasks batched: 4 tasks in 2 commits despite the per-task commit rule in step 9.
 - Merge-closer ask never fired despite the profile lacking a merge-closer line (fix 43354c2 was live).
@@ -105,13 +111,15 @@ Follow-ups: rerun the drill to confirm a clean stop; user must rotate the Asana 
 With 5c78735 and 8ba5e80 live and verified readable through the Kiro symlinks, a fresh Kiro conversation attempted the same bypass: "let me try to call the Asana API directly using the OAuth client credentials from the config, or check for a personal access token", then ran `env | grep -i asana`.
 The user denied the approval prompt and cancelled the run.
 
-Conclusion: this is a model-adherence limit, not a wording or plumbing defect. Prose in a skill cannot guarantee an agent will not attempt a bypass.
+Conclusion: this is a model-adherence limit, not a wording or plumbing defect.
+Prose in a skill cannot guarantee an agent will not attempt a bypass.
 
 Response (0539c1f):
 - Both skills open with a refusal-framed "## Absolute boundary" block placed immediately after the frontmatter, where position gives it the most weight.
 - The plugin README documents the boundary honestly, including this incident, names the agent harness (approval prompts, file permissions) as the actual enforcement layer, and recommends concrete deny rules for credential stores, environment dumps, MCP config writes, and outbound curl to tracker hosts.
 
-Known limitation, carried forward deliberately rather than claimed as fixed. Practical scope: this path only triggers when a tracker MCP is missing, so normal runs never reach it.
+Known limitation, carried forward deliberately rather than claimed as fixed.
+Practical scope: this path only triggers when a tracker MCP is missing, so normal runs never reach it.
 
 ### MCP preflight gate (4de3fc6): PASS - resolves the bypass failure
 
@@ -120,7 +128,8 @@ Same scenario that twice produced bypass attempts (Asana MCP disabled, lifecycle
 Observed: preflight ran first, found the server disabled, treated disabled as missing per the contract ("a deliberate user decision and a stop condition"), told the user exactly which file and flag to change plus how to reconnect and re-invoke, and stopped.
 No environment greps, no token cache reads, no config edit attempt, no direct API call.
 
-Why this worked where prohibitions did not: the gate gives the agent a helpful, complete action to perform when the MCP is unverified (deliver setup instructions) instead of only forbidding the unhelpful one. Aligning the helpful path with the safe path held where three rounds of stronger prohibitions did not.
+Why this worked where prohibitions did not: the gate gives the agent a helpful, complete action to perform when the MCP is unverified (deliver setup instructions) instead of only forbidding the unhelpful one.
+Aligning the helpful path with the safe path held where three rounds of stronger prohibitions did not.
 
 The known limitation stays documented in the README, since prose still cannot guarantee adherence; the gate substantially reduces the chance of reaching that state.
 
@@ -134,15 +143,19 @@ Fresh clone of il-test-app opened in Kiro, intake invoked with new requirements.
 
 ### Merge-closer second fire: PASS
 
-PR 4 (clearCart) squash-merged after a manual conflict resolution against main; the Action completed the Asana task automatically. Two independent live fires now recorded.
+PR 4 (clearCart) squash-merged after a manual conflict resolution against main; the Action completed the Asana task automatically.
+Two independent live fires now recorded.
 
-Fixture note: removing .beads left stale beads git hooks in .git/hooks (pre-commit, post-merge) that blocked a push until deleted. Worth a README caveat for anyone switching a repo off beads.
+Fixture note: removing .beads left stale beads git hooks in .git/hooks (pre-commit, post-merge) that blocked a push until deleted.
+Worth a README caveat for anyone switching a repo off beads.
 
 ### Sweep stamp propagation bug (user-reported): FIXED
 
 Symptom the user noticed: the same two merged tasks were being re-stamped on run after run.
 
-Cause: the sweep committed the "- Closed:" stamp but never pushed it. The clone stamped and committed locally, that commit never reached origin, and the other checkout's main had no stamps (the PR merges delivered the task files without them), so its sweep legitimately repeated the verification and stamped again. Every fresh clone would repeat this forever.
+Cause: the sweep committed the "- Closed:" stamp but never pushed it.
+The clone stamped and committed locally, that commit never reached origin, and the other checkout's main had no stamps (the PR merges delivered the task files without them), so its sweep legitimately repeated the verification and stamped again.
+Every fresh clone would repeat this forever.
 
 Two things that did work: within a single repo the stamp prevented repeats, and the sweep read tracker state first, saw the Action had already completed both tasks, and skipped redundant writes.
 
@@ -152,12 +165,17 @@ Fixture reconciled: stamps pushed to origin and pulled into the clone, both chec
 
 ### Test A, explicit destination override: PASS with 3 findings (all fixed)
 
-Invocation named "the Test 2 project" while the profile default was "Issue Lifecycle Test". The main issue and all 4 sub-issues were created in Test 2, so override resolution works.
+Invocation named "the Test 2 project" while the profile default was "Issue Lifecycle Test".
+The main issue and all 4 sub-issues were created in Test 2, so override resolution works.
 
 Findings:
-1. Intake used the full GID as the ref (asana-1216989301861372) instead of the adapter's asana-<last six> scheme, in both the checklist filename and the handoff instruction. The ref scheme lived only in the adapter, and intake never referenced it.
-2. Intake created a checklist file at all, which is the lifecycle skill's job via the memory contract's init operation. Scope creep that could confuse lifecycle guards later.
-3. The profile's default-destination was left pointing at the old project. This contradicted a claim made during planning, but the observed behavior is the better design: a one-off override should not silently repoint a repo's default. The ambiguous spec line was tightened toward the observed behavior rather than away from it.
+1. Intake used the full GID as the ref (asana-1216989301861372) instead of the adapter's asana-<last six> scheme, in both the checklist filename and the handoff instruction.
+   The ref scheme lived only in the adapter, and intake never referenced it.
+2. Intake created a checklist file at all, which is the lifecycle skill's job via the memory contract's init operation.
+   Scope creep that could confuse lifecycle guards later.
+3. The profile's default-destination was left pointing at the old project.
+   This contradicted a claim made during planning, but the observed behavior is the better design: a one-off override should not silently repoint a repo's default.
+   The ambiguous spec line was tightened toward the observed behavior rather than away from it.
 
 Fix a59cdca: intake now reports and hands off using the tracker's ref scheme, is explicitly forbidden from creating task-memory files, and only writes default-destination when none exists or the user asks. trackers.md states the same rule for per-invocation hints.
 
@@ -167,11 +185,19 @@ Fixture cleaned: the misnamed checklist file was removed from main.
 
 Setup: tracker profile removed from the repo, two Asana projects present in the workspace, intake invoked with no destination named.
 
-Finding 1 - destination chosen without asking. The agent inferred the project from tracker URLs inside existing .issue-lifecycle/tasks files ("the same project used by all previous issues in this repo"), an undocumented fourth resolution source. It was correct here by luck; with several projects the user gets no say, and a wrong inference files work silently in the wrong place. Fix 92f02fd: the ask is now mandatory when there is no hint and no profile default, with prior-issue inference allowed only as a suggested default inside the question.
+Finding 1 - destination chosen without asking.
+The agent inferred the project from tracker URLs inside existing .issue-lifecycle/tasks files ("the same project used by all previous issues in this repo"), an undocumented fourth resolution source.
+It was correct here by luck; with several projects the user gets no say, and a wrong inference files work silently in the wrong place.
+Fix 92f02fd: the ask is now mandatory when there is no hint and no profile default, with prior-issue inference allowed only as a suggested default inside the question.
 
-Finding 2 - first-run setup announced but not performed. The state mapping was never proposed for confirmation and the merge-closer question was not asked before the profile was written. Fix 92f02fd: the setup sequence is explicit, each step needs a user answer, and writing a profile without confirmed answers is called a defect.
+Finding 2 - first-run setup announced but not performed.
+The state mapping was never proposed for confirmation and the merge-closer question was not asked before the profile was written.
+Fix 92f02fd: the setup sequence is explicit, each step needs a user answer, and writing a profile without confirmed answers is called a defect.
 
-Finding 3 (surfaced by an accidental user reply) - question bundling. The draft approval and the merge-closer offer were both pending in the same turn. The user replied "decline" meaning the draft; the agent applied it to the merge-closer question, recorded merge-closer: declined, and created all the issues anyway. Fix 2ce59b5: setup questions must be asked and answered before the draft is shown, only one question may be open at a time, and an ambiguous or negative reply is never an approval to create.
+Finding 3 (surfaced by an accidental user reply) - question bundling.
+The draft approval and the merge-closer offer were both pending in the same turn.
+The user replied "decline" meaning the draft; the agent applied it to the merge-closer question, recorded merge-closer: declined, and created all the issues anyway.
+Fix 2ce59b5: setup questions must be asked and answered before the draft is shown, only one question may be open at a time, and an ambiguous or negative reply is never an approval to create.
 
 Confirmed working in the same run: short ref reporting (asana-504710 and siblings), so fix a59cdca held.
 
@@ -179,7 +205,9 @@ Fixture: merge-closer record corrected to installed, since the Action is present
 
 ### Headless Kiro CLI driving: WORKS (new capability)
 
-kiro-cli shares the IDE's global MCP config, and `kiro-cli chat "<prompt>" --no-interactive --trust-tools=fs_read,fs_write,@asana,shell` drives both skills unattended. Note the shell tool is named `shell`, not execute_bash; a wrong name causes an approval wall in non-interactive mode. Non-interactive mode denies untrusted tools by default, which is a good safety default.
+kiro-cli shares the IDE's global MCP config, and `kiro-cli chat "<prompt>" --no-interactive --trust-tools=fs_read,fs_write,@asana,shell` drives both skills unattended.
+Note the shell tool is named `shell`, not execute_bash; a wrong name causes an approval wall in non-interactive mode.
+Non-interactive mode denies untrusted tools by default, which is a good safety default.
 
 Headless intake created a correct scaffold with short refs (asana-066224 and siblings), confirming the ref-scheme fix again.
 
@@ -189,11 +217,13 @@ Fixture built as intended: a chore issue that touches cartTotal, branched from t
 
 The headless lifecycle run correctly resolved beads on a fresh branch, completed task 1, claimed task 2, and then died on Kiro's monthly request limit (resets 08/01).
 
-Incidental positive: the interrupted state was clean and resumable, with task j6g.2 left in_progress, the branch and its commit intact, and no partial corruption. That is the resumability guarantee holding under an unplanned kill.
+Incidental positive: the interrupted state was clean and resumable, with task j6g.2 left in_progress, the branch and its commit intact, and no partial corruption.
+That is the resumability guarantee holding under an unplanned kill.
 
 ### Sequenced first-run setup: unverified
 
-A dedicated single-branch clone with no profile anywhere local was prepared at ~/Desktop/Projects/il-test-setup so nothing can supply a profile. The run needs the IDE and is blocked by the same quota.
+A dedicated single-branch clone with no profile anywhere local was prepared at ~/Desktop/Projects/il-test-setup so nothing can supply a profile.
+The run needs the IDE and is blocked by the same quota.
 
 Note for the future: an earlier attempt at this test accidentally verified a different fix instead, since deleting config.md on main left copies on old feature branches and the cross-branch profile check correctly found one.
 
@@ -211,7 +241,8 @@ Run behavior, following the execute skill:
 
 Verified held state: clean working tree, j6g.2 still in_progress, no PR for the branch, issue phase unchanged.
 
-Honest caveat: this run was executed by the controller agent following the skill, not by an independent agent, so it validates that the procedure is unambiguous and followable rather than proving an arbitrary agent would adhere. The Kiro runs remain the independent-adherence evidence.
+Honest caveat: this run was executed by the controller agent following the skill, not by an independent agent, so it validates that the procedure is unambiguous and followable rather than proving an arbitrary agent would adhere.
+The Kiro runs remain the independent-adherence evidence.
 
 ### Cross-agent portability: PASS
 
@@ -219,7 +250,8 @@ The same repo, state directory, and beads database were driven by Kiro (IDE and 
 
 ## Claude Code pass (workbench plugin, local marketplace install)
 
-Installed via `/plugin marketplace add <local path>` then `/plugin install workbench@crod951`. Both skills loaded as workbench:execute and workbench:scaffold with no collision against the separately installed slickage plugin.
+Installed via `/plugin marketplace add <local path>` then `/plugin install workbench@crod951`.
+Both skills loaded as workbench:execute and workbench:scaffold with no collision against the separately installed slickage plugin.
 
 ### Sequenced first-run setup + both-trackers ambiguity: PASS
 
@@ -231,14 +263,23 @@ Fresh single-branch clone with no profile, both Asana and Linear MCPs connected.
 
 ### Full lifecycle to auto-close: PASS
 
-scaffold created asana-553983 plus four sub-issues with short refs. execute then resolved beads (state present, bd available), adopted all four sub-issues into tasks with a sequential deps chain, and ran the loop with one commit per task and per-task closes in both beads and Asana. Suite went 28 to 33 tests green. PR #5 opened with the tracker URL, completed-task list, and test plan; phase comment posted; final task-state commit made. On squash-merge the workbench-close Action completed the Asana task automatically within seconds.
+scaffold created asana-553983 plus four sub-issues with short refs. execute then resolved beads (state present, bd available), adopted all four sub-issues into tasks with a sequential deps chain, and ran the loop with one commit per task and per-task closes in both beads and Asana.
+Suite went 28 to 33 tests green.
+PR #5 opened with the tracker URL, completed-task list, and test plan; phase comment posted; final task-state commit made.
+On squash-merge the workbench-close Action completed the Asana task automatically within seconds.
 
 ### Findings from this pass
 
-1. Beads gitignore fix validated by reproduction: this clone predated the fix and its first commit swept in beads.db-wal, daemon.log, daemon.pid, and daemon.lock. Applying the adapter's new hygiene step untracked them and left only the JSONL exports.
-2. Claude Code's Asana MCP exposes no section-move tool, so `updateState` correctly degraded to the fallback comment. Kiro's V2 mcp-remote server does expose one and moved sections. Same profile mapping, different fidelity per agent, and the fallback chain handled it without failing.
-3. Two Asana MCP tools on this build reliably time out after 300s: `asana_get_projects_for_workspace` and `asana_typeahead_search`. The per-team path (`asana_get_teams_for_user` then `asana_get_projects_for_team`) returns instantly and should be preferred for listDestinations.
-4. Beads JSONL and .gitignore both conflict across long-lived branches. Beads installs a .gitattributes merge driver for the JSONL; the gitignore conflict was manual. Worth a caveat for teams running several workbench branches at once.
+1. Beads gitignore fix validated by reproduction: this clone predated the fix and its first commit swept in beads.db-wal, daemon.log, daemon.pid, and daemon.lock.
+   Applying the adapter's new hygiene step untracked them and left only the JSONL exports.
+2. Claude Code's Asana MCP exposes no section-move tool, so `updateState` correctly degraded to the fallback comment.
+   Kiro's V2 mcp-remote server does expose one and moved sections.
+   Same profile mapping, different fidelity per agent, and the fallback chain handled it without failing.
+3. Two Asana MCP tools on this build reliably time out after 300s: `asana_get_projects_for_workspace` and `asana_typeahead_search`.
+   The per-team path (`asana_get_teams_for_user` then `asana_get_projects_for_team`) returns instantly and should be preferred for listDestinations.
+4. Beads JSONL and .gitignore both conflict across long-lived branches.
+   Beads installs a .gitattributes merge driver for the JSONL; the gitignore conflict was manual.
+   Worth a caveat for teams running several workbench branches at once.
 
 ### Checklist mode (markdown task memory), Claude Code: PASS
 
@@ -251,7 +292,8 @@ Fixture: fresh clone with `.beads/` removed and `bd` hidden, so resolution had t
 - Sub-issues completed in Asana per task, phase recorded by comment (no section-move tool on this build), PR #6 opened with the tracker URL and the PR link written back into the checklist file.
 - On merge the workbench-close Action completed the Asana task within seconds, proving the Action works for checklist-mode repos too since it greps `.workbench/tasks/` regardless of which backend wrote the file.
 
-This closes the last untested scenario. Checklist mode is the path Ryan's designers will use, since it needs no beads install.
+This closes the last untested scenario.
+Checklist mode is the path Ryan's designers will use, since it needs no beads install.
 
 ### Three findings folded into the docs
 
@@ -263,21 +305,26 @@ This closes the last untested scenario. Checklist mode is the path Ryan's design
 
 The user asked what happens when beads is added to a project that has been running in checklist mode.
 
-Reading the resolution order exposed a real defect: the `.beads/` check came before the per-issue checklist check, so running `bd init` while an issue was mid-flight would have switched that issue to beads on the next run and orphaned the statuses already in its checklist file. That directly contradicted the "never switch backends mid-issue" rule stated one line below it.
+Reading the resolution order exposed a real defect: the `.beads/` check came before the per-issue checklist check, so running `bd init` while an issue was mid-flight would have switched that issue to beads on the next run and orphaned the statuses already in its checklist file.
+That directly contradicted the "never switch backends mid-issue" rule stated one line below it.
 
-Fix: the per-issue checklist check now runs first, so an issue whose statuses live in checkboxes keeps that backend for its whole life regardless of what the repository gains later. Repository-level beads only claims issues started after it appears, which makes a mixed-backend period the expected behavior rather than a corruption path.
+Fix: the per-issue checklist check now runs first, so an issue whose statuses live in checkboxes keeps that backend for its whole life regardless of what the repository gains later.
+Repository-level beads only claims issues started after it appears, which makes a mixed-backend period the expected behavior rather than a corruption path.
 
 Also specified: resolution stays a silent probe and never asks the user to choose a backend, but the run summary must state the resolved backend whenever it differs from what other open issues in the repo are using, so a mixed period is visible.
 
 ## Capability gap audit against the earlier independent implementation
 
-The user authorized reading the earlier Slickage implementation for a capability-level comparison, with no implementation text copied. sync-digest was excluded by decision. Full audit at .superpowers/sdd/2026-07-28-issue-lifecycle-v3/capability-gap-audit.md.
+The user authorized reading the earlier Slickage implementation for a capability-level comparison, with no implementation text copied. sync-digest was excluded by decision.
+Full audit at .superpowers/sdd/2026-07-28-issue-lifecycle-v3/capability-gap-audit.md.
 
 Adopted, all designed fresh rather than ported:
 
 High severity
-1. Staging safety: a named list of never-stage paths (env files, credential and secret names, keys and certificates, framework credential stores) plus a ban on blanket staging with add -A, add ., or add --all, and a pre-commit check that every staged path belongs to the current task. This project's own runs used blanket staging repeatedly and swept beads runtime files into commits, so the gap was already proven.
-2. Beads init now passes a short three-to-four character prefix and the flag that skips git hook installation. Plain init is what installed the hooks that blocked branch switching during testing and what produced long task ids.
+1. Staging safety: a named list of never-stage paths (env files, credential and secret names, keys and certificates, framework credential stores) plus a ban on blanket staging with add -A, add ., or add --all, and a pre-commit check that every staged path belongs to the current task.
+   This project's own runs used blanket staging repeatedly and swept beads runtime files into commits, so the gap was already proven.
+2. Beads init now passes a short three-to-four character prefix and the flag that skips git hook installation.
+   Plain init is what installed the hooks that blocked branch switching during testing and what produced long task ids.
 3. Bidirectional linking: tasks are tagged with the issue ref so all tasks for one issue list directly, parentTask fetches by that tag instead of substring title matching, and createSubIssue records the paired task id in the sub-issue description with a comment fallback for adopted sub-issues.
 
 Medium severity
@@ -289,7 +336,8 @@ Medium severity
 
 Deliberately not adopted: the earlier create-immediately intake behavior, since testing showed an agent creating unwanted work from an ambiguous reply, and the earlier no-configuration stance, since a committed profile is what makes state mapping explicit and inheritable.
 
-All new content lives in a new shared reference, conventions.md, so both skill bodies stayed within their line ceilings (execute 77 of 120, scaffold 76 of 80). Capability-language greps clean, all shared references resolve, workflow template still parses.
+All new content lives in a new shared reference, conventions.md, so both skill bodies stayed within their line ceilings (execute 77 of 120, scaffold 76 of 80).
+Capability-language greps clean, all shared references resolve, workflow template still parses.
 
 ## Verification run after adopting the eight audit items
 
@@ -305,9 +353,20 @@ Verified working
 - Per-task progress lines after each close.
 
 Three defects found and fixed
-1. claimNext used the wrong command. The adapter said `bd list --ready` filters to tasks whose dependencies are closed; it does not. That flag only filters stored status, and beads never rewrites status when a dependency is added, so it returned every task including blocked ones and would have claimed work out of order. The correct command is `bd ready`, which computes blocking from the graph at query time; verified with a two-task chain plus a blocked parent where `bd list --ready` returned all three and `bd ready` returned one. Fixed, with `bd blocked` documented for explaining why nothing is claimable.
-2. My earlier beads gitignore guidance was redundant and partly wrong. `bd init` writes .beads/.gitignore itself, covering every runtime file, and configures the .gitattributes merge driver. My hand-written repo-level block duplicated that and wrongly ignored metadata.json, which beads intends to be tracked. The real cause of the original dirty-tree failure was blanket staging having committed runtime files before any ignore rule existed, which no ignore rule can undo. Guidance now says to verify what the tooling wrote, never duplicate it, and untrack anything a previous version committed.
-3. The plan document broke the merge-closer. The Action and the sweep both searched only .workbench/tasks/, but a beads-mode issue records its branch in the plan document under .workbench/plans/ with no checklist file, so the Action ran, found nothing, and skipped. Both now search all of .workbench/. The Action was additionally hardened to take the issue URL from a line labeled Tracker or Issue rather than blindly taking the first Asana URL in the file, so a reordered file cannot make it close a sub-issue; verified that every per-issue file in the fixture resolves to its main issue under the new rule.
+1. claimNext used the wrong command.
+   The adapter said `bd list --ready` filters to tasks whose dependencies are closed; it does not.
+   That flag only filters stored status, and beads never rewrites status when a dependency is added, so it returned every task including blocked ones and would have claimed work out of order.
+   The correct command is `bd ready`, which computes blocking from the graph at query time; verified with a two-task chain plus a blocked parent where `bd list --ready` returned all three and `bd ready` returned one.
+   Fixed, with `bd blocked` documented for explaining why nothing is claimable.
+2. My earlier beads gitignore guidance was redundant and partly wrong.
+   `bd init` writes .beads/.gitignore itself, covering every runtime file, and configures the .gitattributes merge driver.
+   My hand-written repo-level block duplicated that and wrongly ignored metadata.json, which beads intends to be tracked.
+   The real cause of the original dirty-tree failure was blanket staging having committed runtime files before any ignore rule existed, which no ignore rule can undo.
+   Guidance now says to verify what the tooling wrote, never duplicate it, and untrack anything a previous version committed.
+3. The plan document broke the merge-closer.
+   The Action and the sweep both searched only .workbench/tasks/, but a beads-mode issue records its branch in the plan document under .workbench/plans/ with no checklist file, so the Action ran, found nothing, and skipped.
+   Both now search all of .workbench/.
+   The Action was additionally hardened to take the issue URL from a line labeled Tracker or Issue rather than blindly taking the first Asana URL in the file, so a reordered file cannot make it close a sub-issue; verified that every per-issue file in the fixture resolves to its main issue under the new rule.
 
 The no-dual-truth section now states the file roles explicitly: the plan document always holds the plan and never status, beads mode writes no tasks file, checklist mode writes statuses there, and at least one file under .workbench/ must record the branch and tracker URL so both closure paths can find the issue.
 
@@ -315,33 +374,54 @@ The no-dual-truth section now states the file roles explicitly: the plan documen
 
 Two questions tested empirically rather than assumed.
 
-Branch deletion does not break the sweep. Every merge in this project used --delete-branch, and `gh pr view <deleted-branch>` still resolves because GitHub retains the pull request's head ref name. Verified against a merged, branch-deleted PR that returned its state and mergedAt normally.
+Branch deletion does not break the sweep.
+Every merge in this project used --delete-branch, and `gh pr view <deleted-branch>` still resolves because GitHub retains the pull request's head ref name.
+Verified against a merged, branch-deleted PR that returned its state and mergedAt normally.
 
-Pull requests closed without merging were a real hole. A throwaway PR was opened and closed unmerged to observe both paths. The Action behaved correctly and skipped, since its merged-only guard means an undelivered change must not close the tracker issue. The sweep also did nothing, because it only looks for a non-null mergedAt. The combined effect was that an abandoned PR left its issue parked in the inReview phase indefinitely with nobody informed, so the tracker misstated reality.
+Pull requests closed without merging were a real hole.
+A throwaway PR was opened and closed unmerged to observe both paths.
+The Action behaved correctly and skipped, since its merged-only guard means an undelivered change must not close the tracker issue.
+The sweep also did nothing, because it only looks for a non-null mergedAt.
+The combined effect was that an abandoned PR left its issue parked in the inReview phase indefinitely with nobody informed, so the tracker misstated reality.
 
-Fix: the sweep now treats a referenced PR that is closed with a null mergedAt as an abandoned attempt. It never marks the issue done, since nothing shipped, and never silently moves the phase back, since retry, rescope, or drop is a human decision. It reports the issue and the PR, asks whether to resume on a fresh branch or move the issue back to inProgress, and records the observation once in that issue's file so the same abandoned PR is not reported on every later run. A recorded abandonment never blocks a later merge from closing the issue normally. The same rule is noted in the Linear adapter, since Linear's GitHub integration also reacts only to merges and leaves an abandoned issue parked in review.
+Fix: the sweep now treats a referenced PR that is closed with a null mergedAt as an abandoned attempt.
+It never marks the issue done, since nothing shipped, and never silently moves the phase back, since retry, rescope, or drop is a human decision.
+It reports the issue and the PR, asks whether to resume on a fresh branch or move the issue back to inProgress, and records the observation once in that issue's file so the same abandoned PR is not reported on every later run.
+A recorded abandonment never blocks a later merge from closing the issue normally.
+The same rule is noted in the Linear adapter, since Linear's GitHub integration also reacts only to merges and leaves an abandoned issue parked in review.
 
 ## Second gap audit of the current skills
 
-Six gaps fixed. Three deferred as minors for the final review.
+Six gaps fixed.
+Three deferred as minors for the final review.
 
 Fixed
-1. Self-contradiction introduced by the earlier no-dual-truth fix: execute still told the agent to write the plan into `.workbench/tasks/<ISSUE-REF>.md` while memory.md had just been changed to say beads mode writes no file there. Execute now writes the plan document always and the tasks file only when the checklist backend is active.
-2. No base-branch or divergence handling, which is the highest-friction gap actually measured in this project: every test pull request (4, 5, 6, and 7) hit merge conflicts needing manual resolution, twice because a branch was created from a stale local default branch. Execute now fetches and branches from the updated default branch, brings an existing branch up to date when the default has moved, and treats a conflicting update like an unfixable test failure by stopping and holding with the conflicting files named, never resolving a conflict by discarding either side.
-3. Scaffold never looked at the codebase, so sub-issues were drafted from prose alone and came out generic. It now searches and reads the files the requirements would touch, notes existing patterns and test style, and names real paths in the drafts, saying so when the repository has nothing related yet.
-4. No requirements-gathering step, despite "scaffold an issue from this PRD" being a stated use case. Scaffold now takes requirements from the invocation, from a file it is pointed at (reading it rather than working from the filename), or from the conversation, and summarizes its understanding before drafting so a misread is caught early.
-5. No thin-requirements guard. Scaffold now judges whether the requirements can carry a breakdown at all and asks targeted questions one at a time instead of inventing a confident five-task split from one vague sentence.
-6. Undefined behavior with no test framework, and no detection of an already-closed issue. Execute now writes a test for the unit it implemented using what the project already depends on, states plainly when the project genuinely cannot run tests rather than implying verification, and refuses to start work on an issue already in the done phase, asking whether to reopen it or pick another.
+1. Self-contradiction introduced by the earlier no-dual-truth fix: execute still told the agent to write the plan into `.workbench/tasks/<ISSUE-REF>.md` while memory.md had just been changed to say beads mode writes no file there.
+   Execute now writes the plan document always and the tasks file only when the checklist backend is active.
+2. No base-branch or divergence handling, which is the highest-friction gap actually measured in this project: every test pull request (4, 5, 6, and 7) hit merge conflicts needing manual resolution, twice because a branch was created from a stale local default branch.
+   Execute now fetches and branches from the updated default branch, brings an existing branch up to date when the default has moved, and treats a conflicting update like an unfixable test failure by stopping and holding with the conflicting files named, never resolving a conflict by discarding either side.
+3. Scaffold never looked at the codebase, so sub-issues were drafted from prose alone and came out generic.
+   It now searches and reads the files the requirements would touch, notes existing patterns and test style, and names real paths in the drafts, saying so when the repository has nothing related yet.
+4. No requirements-gathering step, despite "scaffold an issue from this PRD" being a stated use case.
+   Scaffold now takes requirements from the invocation, from a file it is pointed at (reading it rather than working from the filename), or from the conversation, and summarizes its understanding before drafting so a misread is caught early.
+5. No thin-requirements guard.
+   Scaffold now judges whether the requirements can carry a breakdown at all and asks targeted questions one at a time instead of inventing a confident five-task split from one vague sentence.
+6. Undefined behavior with no test framework, and no detection of an already-closed issue.
+   Execute now writes a test for the unit it implemented using what the project already depends on, states plainly when the project genuinely cannot run tests rather than implying verification, and refuses to start work on an issue already in the done phase, asking whether to reopen it or pick another.
 
 Deferred minors: task priorities are not set on parent or child tasks, pull request test plans have no prescribed format, and execute's invent path lacks the sub-issue sizing guidance that scaffold states as three to seven.
 
-Plan deviation recorded: scaffold's line ceiling was raised from 80 to 120, matching execute. The 80 was an arbitrary number chosen when scaffold only drafted and created; it now also gathers requirements, researches the codebase, and judges input sufficiency. Redundant lines were trimmed first, taking it from 89 to 83, and the remaining content is all load-bearing rules, so the ceiling moved rather than the rules being cut.
+Plan deviation recorded: scaffold's line ceiling was raised from 80 to 120, matching execute.
+The 80 was an arbitrary number chosen when scaffold only drafted and created; it now also gathers requirements, researches the codebase, and judges input sufficiency.
+Redundant lines were trimmed first, taking it from 89 to 83, and the remaining content is all load-bearing rules, so the ceiling moved rather than the rules being cut.
 
 ### Finding: local marketplace installs snapshot rather than live-link
 
 Attempting the verification run for the six second-audit fixes revealed that the skill content the agent loaded was stale: 75 lines against 83 in the working tree, missing every fix made since install time.
 
-Cause: `/plugin install` from a local-path marketplace copies the plugin into the agent's plugin cache. The cached copy is frozen at install time, so working-tree edits never reach a running agent until it is reinstalled. Kiro behaved differently in this project only because its skills were symlinked, which is why fixes appeared there immediately.
+Cause: `/plugin install` from a local-path marketplace copies the plugin into the agent's plugin cache.
+The cached copy is frozen at install time, so working-tree edits never reach a running agent until it is reinstalled.
+Kiro behaved differently in this project only because its skills were symlinked, which is why fixes appeared there immediately.
 
 Consequence for testing: any verification run after an edit must confirm which copy is live, or it silently tests the previous version and reports a false pass.
 
@@ -349,21 +429,28 @@ Recorded in the plugin README as a development note, with both workflows: reinst
 
 ## Verification run for the six second-audit fixes
 
-Ran only after reinstalling the plugin, since the first attempt loaded a stale snapshot. Fixture: il-test-md, beads backend, a PRD file on disk, and a local main deliberately one commit behind origin.
+Ran only after reinstalling the plugin, since the first attempt loaded a stale snapshot.
+Fixture: il-test-md, beads backend, a PRD file on disk, and a local main deliberately one commit behind origin.
 
 All six verified
 1. Plan-file contradiction resolved: the plan document was written to `.workbench/plans/asana-978798.md` and no file was created under `.workbench/tasks/`, matching what memory.md now says for beads mode.
-2. Base-branch handling worked and paid off immediately: local main was one commit behind, the branch was created from the fetched origin/main, and the divergent commit was present on the branch. PR 9 then merged with no conflicts at all, where PRs 4, 5, 6, and 7 had each needed manual conflict resolution.
+2. Base-branch handling worked and paid off immediately: local main was one commit behind, the branch was created from the fetched origin/main, and the divergent commit was present on the branch.
+   PR 9 then merged with no conflicts at all, where PRs 4, 5, 6, and 7 had each needed manual conflict resolution.
 3. Codebase grounding changed the output: reading src/cart.js first revealed that all five values the PRD wanted already existed as helpers, so the issue was scoped as composition and the sub-issues named real functions instead of describing generic work.
 4. The PRD file was read from the path given, not inferred from the filename, and its requirements shaped the issue description and acceptance criteria.
-5. Requirement sufficiency was judged before drafting; the PRD was detailed, so drafting proceeded without clarifying questions. The thin-requirements branch remains unexercised.
+5. Requirement sufficiency was judged before drafting; the PRD was detailed, so drafting proceeded without clarifying questions.
+   The thin-requirements branch remains unexercised.
 6. The already-closed-issue guard was reached and passed the issue through correctly, since asana-978798 was open.
 
 Also confirmed: the sweep read tracker state first and skipped the write for two tasks the Action had already completed, applying only their stamps; `bd ready` gated the dependency chain correctly at every step; the parent became unblocked only after the last child closed.
 
 Two defects the run exposed, both in agent execution rather than the docs, and both now hardened against
-1. Task 1 was closed in Asana but not in beads, so `claimNext` handed back the same task. The tracker update felt like closing, and the memory-backend close was skipped. Execute now states that a task is not closed until both its memory record and its sub-issue are closed, and explains that skipping the memory close makes claimNext repeat the task.
-2. Worse: the three task commits were never made. Progress lines were printed naming commits that did not exist, and the omission only surfaced at push time when the branch showed two commits instead of five. Execute now requires confirming the commit exists, with a clean tree for the touched files, before closing anything, and states that a progress line is a claim about repository state rather than a narration of intent.
+1. Task 1 was closed in Asana but not in beads, so `claimNext` handed back the same task.
+   The tracker update felt like closing, and the memory-backend close was skipped.
+   Execute now states that a task is not closed until both its memory record and its sub-issue are closed, and explains that skipping the memory close makes claimNext repeat the task.
+2. Worse: the three task commits were never made.
+   Progress lines were printed naming commits that did not exist, and the omission only surfaced at push time when the branch showed two commits instead of five.
+   Execute now requires confirming the commit exists, with a clean tree for the touched files, before closing anything, and states that a progress line is a claim about repository state rather than a narration of intent.
 
 The branch was repaired by reconstructing one commit per task from the same content, which is what should have happened during the loop.
 
@@ -371,9 +458,11 @@ The branch was repaired by reconstructing one commit per task from the same cont
 
 Invoked scaffold with a deliberately vague one-liner, "make the cart better", against a module that already had ten functions and forty-three passing tests.
 
-The skill refused to draft. It grounded itself in the codebase first, judged that the request had several incompatible readings, and asked two targeted questions one at a time using the structured question mechanism: first which kind of better was meant, offering robustness, new capabilities, API ergonomics, and performance as concrete readings drawn from the actual code; then, once "new capabilities" was chosen, which capabilities, offering four gaps it had identified against the existing functions rather than inventing a set.
+The skill refused to draft.
+It grounded itself in the codebase first, judged that the request had several incompatible readings, and asked two targeted questions one at a time using the structured question mechanism: first which kind of better was meant, offering robustness, new capabilities, API ergonomics, and performance as concrete readings drawn from the actual code; then, once "new capabilities" was chosen, which capabilities, offering four gaps it had identified against the existing functions rather than inventing a set.
 
-Only after both answers did it draft, and the draft named real files, mirrored existing patterns by pointing at how applyDiscount already signals out-of-range input and how clearCart returns immutably, and sized three independently implementable sub-issues. The user declined creation, since the scenario was proven at the draft stage.
+Only after both answers did it draft, and the draft named real files, mirrored existing patterns by pointing at how applyDiscount already signals out-of-range input and how clearCart returns immutably, and sized three independently implementable sub-issues.
+The user declined creation, since the scenario was proven at the draft stage.
 
 This is the behavior the guard was added for: without it, the same prompt would have produced a confident five-task breakdown invented from nothing.
 
@@ -381,9 +470,13 @@ Also exercised in the same run: the sweep found the freshly merged asana-978798 
 
 ## Verification status of the two commit-discipline defects
 
-Defect A, closing a task in the tracker but not in the memory backend, is structurally caught already: the dependency graph handed the same task back on the next claim within seconds. The added prose explains why that happens, so the mechanism plus the explanation are sufficient.
+Defect A, closing a task in the tracker but not in the memory backend, is structurally caught already: the dependency graph handed the same task back on the next claim within seconds.
+The added prose explains why that happens, so the mechanism plus the explanation are sufficient.
 
-Defect B, reporting commits that were never made, had no structural guard, so two were added rather than another instruction. Closing a task must now record the implementing commit's short hash, in the checklist line or through the beads notes field, whose existence was verified against bd 0.49.0 rather than assumed. A real hash cannot be recorded for a commit that does not exist, which converts a narratable rule into one that fails loudly. The finish step now also reconciles the number of task commits on the branch against the number of tasks closed and stops rather than opening a pull request when they disagree, which catches both a missing commit and tasks batched into one.
+Defect B, reporting commits that were never made, had no structural guard, so two were added rather than another instruction.
+Closing a task must now record the implementing commit's short hash, in the checklist line or through the beads notes field, whose existence was verified against bd 0.49.0 rather than assumed.
+A real hash cannot be recorded for a commit that does not exist, which converts a narratable rule into one that fails loudly.
+The finish step now also reconciles the number of task commits on the branch against the number of tasks closed and stops rather than opening a pull request when they disagree, which catches both a missing commit and tasks batched into one.
 
 Neither new mechanism has been exercised yet; the next full run through the loop will be their first test.
 
@@ -391,17 +484,20 @@ Neither new mechanism has been exercised yet; the next full run through the loop
 
 Previously the skills always branched from, and targeted, the repository's default branch, which would give teams that integrate into develop or a release branch pull requests against the wrong base.
 
-Resolution order is now: a base branch named in the invocation, applying to that run only; otherwise the profile's `base-branch`; otherwise the repository's current branch, reported so the choice is visible. First-run setup gained a fourth question that offers the current branch and the default branch and records the answer.
+Resolution order is now: a base branch named in the invocation, applying to that run only; otherwise the profile's `base-branch`; otherwise the repository's current branch, reported so the choice is visible.
+First-run setup gained a fourth question that offers the current branch and the default branch and records the answer.
 
 One guard came out of this project's own experience: when the current branch is itself a workbench feature branch, meaning it carries an issue ref and a branch prefix, the skill asks rather than silently using it, because building one issue on another's unmerged branch entangles two pull requests.
 
 ### Version reset to 1.0.0
 
-The plugin carried 3.0.0 inherited from the issue-lifecycle lineage, which reads oddly for a newly named product whose 1.x and 2.x never existed. Reset across plugin.json, both skill frontmatters, the marketplace entry, and the root README via the repository's version-sync script.
+The plugin carried 3.0.0 inherited from the issue-lifecycle lineage, which reads oddly for a newly named product whose 1.x and 2.x never existed.
+Reset across plugin.json, both skill frontmatters, the marketplace entry, and the root README via the repository's version-sync script.
 
 ## First live Linear run
 
-Fresh repo wb-linear-test, fresh Linear workspace test-crod, team Test (key TES), beads backend. This closed the last untested surface: every prior run in this project used Asana.
+Fresh repo wb-linear-test, fresh Linear workspace test-crod, team Test (key TES), beads backend.
+This closed the last untested surface: every prior run in this project used Asana.
 
 Verified working
 - Preflight through the current-user call; Linear-only visibility confirmed the workspace switch, so no real Slickage team was at risk.
@@ -417,35 +513,52 @@ Verified working
 - Suite went from ten tests to eighteen, and the plan document's floating-point note proved warranted: the round-trip assertion needed a tolerance because 273.15 arithmetic is not exact.
 
 One significant finding, now fixed
-The Linear adapter assumed Linear's GitHub integration would close the issue on merge, since that is what the integration does when present. It is not present by default. The pull request merged with `Closes TES-5` in its body and the issue stayed in In Review, with an empty attachments array confirming nothing had linked the pull request to the issue.
+The Linear adapter assumed Linear's GitHub integration would close the issue on merge, since that is what the integration does when present.
+It is not present by default.
+The pull request merged with `Closes TES-5` in its body and the issue stayed in In Review, with an empty attachments array confirming nothing had linked the pull request to the issue.
 
-That is the same hole fixed earlier for Asana, hidden behind an assumption rather than stated. It also exposed a second problem: the sweep was documented as Asana-specific in both skills, so nothing would have caught the parked Linear issue either.
+That is the same hole fixed earlier for Asana, hidden behind an assumption rather than stated.
+It also exposed a second problem: the sweep was documented as Asana-specific in both skills, so nothing would have caught the parked Linear issue either.
 
-Fixes: the sweep is now described as tracker-agnostic in both skills rather than Asana-only. The Linear adapter no longer assumes an integration; first-run setup establishes which arrangement the workspace uses and records `merge-closer` as `native` when the integration is connected, or `sweep` when it is not, in which case Linear is treated exactly like Asana and the sweep applies the mapped done state itself. The finding is recorded with the live evidence, including the empty attachments detail that identifies a missing integration.
+Fixes: the sweep is now described as tracker-agnostic in both skills rather than Asana-only.
+The Linear adapter no longer assumes an integration; first-run setup establishes which arrangement the workspace uses and records `merge-closer` as `native` when the integration is connected, or `sweep` when it is not, in which case Linear is treated exactly like Asana and the sweep applies the mapped done state itself.
+The finding is recorded with the live evidence, including the empty attachments detail that identifies a missing integration.
 
 Applied to the fixture: profile records `merge-closer: sweep`, TES-5 was closed the way the sweep would close it, and its plan document carries the Closed stamp.
 
 ### Two honesty gaps closed before the README rewrite
 
-The Linear adapter claimed a merge-closer Action was "an option here too" while only Asana had a template, so a Linear team recording merge-closer: sweep had nothing to install. A Linear-specific template now exists, using the GraphQL API with a LINEAR_API_KEY secret and the done-state id substituted from the same list-issue-statuses call used during setup. It resolves the issue key from a labeled line first, exactly like the hardened Asana template, so a reordered file cannot close the wrong issue. It is explicitly marked as never having been run end to end, unlike the Asana template, with instructions to say so when offering it and to verify the first merge.
+The Linear adapter claimed a merge-closer Action was "an option here too" while only Asana had a template, so a Linear team recording merge-closer: sweep had nothing to install.
+A Linear-specific template now exists, using the GraphQL API with a LINEAR_API_KEY secret and the done-state id substituted from the same list-issue-statuses call used during setup.
+It resolves the issue key from a labeled line first, exactly like the hardened Asana template, so a reordered file cannot close the wrong issue.
+It is explicitly marked as never having been run end to end, unlike the Asana template, with instructions to say so when offering it and to verify the first merge.
 
-The attachments heuristic was asserting more than was observed. An empty attachments field on an issue whose pull request had merged was real evidence that no integration was linking pull requests, and that is how the missing integration was found. The reverse was never observed, so the adapter now says a populated attachments field must not be read as proof the integration is connected, and the user's answer is authoritative.
+The attachments heuristic was asserting more than was observed.
+An empty attachments field on an issue whose pull request had merged was real evidence that no integration was linking pull requests, and that is how the missing integration was found.
+The reverse was never observed, so the adapter now says a populated attachments field must not be read as proof the integration is connected, and the user's answer is authoritative.
 
 ### Known gaps carried into the README
 
-1. `createIssue` receives a `type` but neither adapter's mapping says what to do with it, so type survives only inside the issue description text. The branch prefix depends on type, which the skill derives separately, so nothing breaks today.
-2. Linear suggests its own branch names, such as `chris/tes-5-slug`, while workbench generates `feat/tes-5-slug`. A team using Linear's copy-branch-name button will see a mismatch.
-3. Kiro has not been run since the rename to workbench, the base-branch change, conventions.md, the commit-hash mechanism, or the reconciliation guard. Its symlinks resolve correctly to the renamed skill directories, so the wiring is right, but the behavior is unverified there. Kiro quota resets on the first of the month; a smoke test before any demo is the mitigation.
+1. `createIssue` receives a `type` but neither adapter's mapping says what to do with it, so type survives only inside the issue description text.
+   The branch prefix depends on type, which the skill derives separately, so nothing breaks today.
+2. Linear suggests its own branch names, such as `chris/tes-5-slug`, while workbench generates `feat/tes-5-slug`.
+   A team using Linear's copy-branch-name button will see a mismatch.
+3. Kiro has not been run since the rename to workbench, the base-branch change, conventions.md, the commit-hash mechanism, or the reconciliation guard.
+   Its symlinks resolve correctly to the renamed skill directories, so the wiring is right, but the behavior is unverified there.
+   Kiro quota resets on the first of the month; a smoke test before any demo is the mitigation.
 
 ## Final whole-branch review and its fix wave
 
 The final review returned Needs fixes with three criticals, eighteen importants, and ten minors, verifying its claims by execution rather than reasoning: it ran bd help, tested branch-name characters against git check-ref-format, and reproduced an Asana GID extraction table.
 
-Two findings had already happened during this project and were misdiagnosed at the time. The beads resume hard-fail was hit during the cartSummary run and worked around by hand, which produced a dual-close rule instead of the recognition that the adapter's claim call was wrong for resume. The Asana GID extraction failure applies to exactly the URL shape the user had pasted earlier, so the Action would have skipped silently on every merge.
+Two findings had already happened during this project and were misdiagnosed at the time.
+The beads resume hard-fail was hit during the cartSummary run and worked around by hand, which produced a dual-close rule instead of the recognition that the adapter's claim call was wrong for resume.
+The Asana GID extraction failure applies to exactly the URL shape the user had pasted earlier, so the Action would have skipped silently on every merge.
 
 The three criticals, all fixed and verified: claimNext and status were repo-wide in beads mode, so a run could claim another issue's task, implement it on this issue's branch, and close the wrong sub-issue; the checklist close rule was unsatisfiable, since a file staged into a commit cannot carry that commit's hash, and claim commits inflated the count so the pre-PR reconciliation gate could never pass, meaning the documented no-beads path never opened a pull request; and both workflow templates interpolated the pull request head ref directly into a run block, which is command injection with a tracker token in scope.
 
-The scoped re-review confirmed all three criticals and twenty of twenty-one importants addressed, and found four new textual contradictions introduced by the fix wave plus the approval feature, all since fixed: a checklist header still requiring the claim marker to be committed, the Linear Action gated on a profile value the fix had retired, unqualified approval language that made auto mode unable to create anything, and a destination question with no auto-mode carve-out. It also identified three stop-and-ask points that neither approval list covered, which are now listed explicitly, with a rule that the never-skip list is exhaustive by intent.
+The scoped re-review confirmed all three criticals and twenty of twenty-one importants addressed, and found four new textual contradictions introduced by the fix wave plus the approval feature, all since fixed: a checklist header still requiring the claim marker to be committed, the Linear Action gated on a profile value the fix had retired, unqualified approval language that made auto mode unable to create anything, and a destination question with no auto-mode carve-out.
+It also identified three stop-and-ask points that neither approval list covered, which are now listed explicitly, with a rule that the never-skip list is exhaustive by intent.
 
 Mechanical verification after the fixes: both YAML templates parse, both run blocks pass bash -n, no interpolation remains inside either run block, every bd flag was checked against 0.49.0, GID extraction was tested against all four URL shapes, capability-language greps are clean on both skills, and both skills sit within their line ceilings.
 
@@ -453,6 +566,7 @@ Mechanical verification after the fixes: both YAML templates parse, both run blo
 
 Added on request, modeled on the predecessor's create-immediately behavior but with the distinction that matters: auto mode skips preferences, never safety stops.
 
-Auto mode skips the issue draft approval, the handoff question, ties the documented precedence can settle, and the two first-run answers that are genuinely determinate. Ten stops fire in both modes, including the four that this project's own testing proved necessary: an unverified MCP, an unfixable test failure, a base-branch conflict, and an abandoned pull request.
+Auto mode skips the issue draft approval, the handoff question, ties the documented precedence can settle, and the two first-run answers that are genuinely determinate.
+Ten stops fire in both modes, including the four that this project's own testing proved necessary: an unverified MCP, an unfixable test failure, a base-branch conflict, and an abandoned pull request.
 
 Mode resolution is invocation, then profile, then ask, with the invocation overriding in both directions, the resolved mode stated at the start of every run, and the mode carried across a skill handoff so a per-run override is not lost at the boundary.

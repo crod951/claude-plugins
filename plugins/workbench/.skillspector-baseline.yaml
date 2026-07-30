@@ -21,4 +21,8 @@ rules:
       without asking and say that you are doing so"). Auto mode is an explicit
       user-selected setting, the hand-off is announced to the user, and the
       action is invoking another skill, not a destructive or financial
-      operation.
+      operation. Caution: the message field matches only the flagged text, so
+      this rule suppresses ANY "without asking" EA2 hit in any SKILL.md of
+      this plugin, including future ones this reason does not cover; when
+      adding that phrase to a skill, re-review whether the suppression still
+      only hides benign uses.

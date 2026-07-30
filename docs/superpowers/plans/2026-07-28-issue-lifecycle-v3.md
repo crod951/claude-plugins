@@ -4,7 +4,8 @@
 
 **Goal:** Replace the v2 command-based issue-lifecycle plugin with a clean-room, agent-portable skill set (Claude Code + Kiro) driving Asana or Linear issues from requirements to an open PR.
 
-**Architecture:** Two core skills (`issue-lifecycle`, `issue-intake`) written in capability language with zero tool names, backed by three adapter axes in `skills/shared/`: tracker adapters (Asana, Linear) behind an 8-operation contract, memory adapters (beads, markdown checklist) behind a 6-operation contract, and one thin per-agent notes file. Runtime probing resolves adapters; a committed tracker profile (`.issue-lifecycle/config.md` in the consumer repo) holds state mappings and default destinations.
+**Architecture:** Two core skills (`issue-lifecycle`, `issue-intake`) written in capability language with zero tool names, backed by three adapter axes in `skills/shared/`: tracker adapters (Asana, Linear) behind an 8-operation contract, memory adapters (beads, markdown checklist) behind a 6-operation contract, and one thin per-agent notes file.
+Runtime probing resolves adapters; a committed tracker profile (`.issue-lifecycle/config.md` in the consumer repo) holds state mappings and default destinations.
 
 **Tech Stack:** Markdown skill files per the open Agent Skills standard (SKILL.md), Claude Code plugin packaging, `bd` (beads CLI), `gh` CLI, Asana MCP, Linear MCP.
 
@@ -16,7 +17,8 @@
 - Clean-room rule: never open, copy from, or reference files in the `slickage-claude-plugins` repository.
 - Never use the em dash character; use plain `-`.
 - In all skill/reference markdown, put each full sentence on its own line.
-- Core skills (`skills/issue-lifecycle/SKILL.md`, `skills/issue-intake/SKILL.md`) must contain zero MCP tool names (nothing matching `mcp_`), zero `bd ` commands, and zero agent-specific tool names (TaskCreate, TaskUpdate, Glob, Grep). Capability language only; concrete tools live in adapters.
+- Core skills (`skills/issue-lifecycle/SKILL.md`, `skills/issue-intake/SKILL.md`) must contain zero MCP tool names (nothing matching `mcp_`), zero `bd ` commands, and zero agent-specific tool names (TaskCreate, TaskUpdate, Glob, Grep).
+  Capability language only; concrete tools live in adapters.
 - Every SKILL.md needs frontmatter: `name`, `description` (with third-person trigger phrasing "This skill should be used when..."), `version: 3.0.0`.
 - Version 3.0.0 everywhere; `bin/sync-versions.sh` syncs plugin.json, README, marketplace.json - the pre-commit hook runs it automatically, so commit README/marketplace version mismatches never by hand-editing but by letting the hook sync (verify after commit).
 - Tracker state phases are exactly: `inProgress`, `inReview`, `done`.
@@ -86,7 +88,8 @@ After committing, run `git show --stat HEAD` and confirm the pre-commit version-
 - Create: `plugins/issue-lifecycle/skills/shared/trackers.md`
 
 **Interfaces:**
-- Produces: the 8-operation tracker contract table, the runtime resolution procedure, and the first-run tracker profile procedure. Adapter files (Tasks 3-4) implement this contract; core skills (Tasks 8-9) reference operations by these exact names.
+- Produces: the 8-operation tracker contract table, the runtime resolution procedure, and the first-run tracker profile procedure.
+  Adapter files (Tasks 3-4) implement this contract; core skills (Tasks 8-9) reference operations by these exact names.
 
 - [ ] **Step 1: Write `trackers.md`**
 
@@ -213,7 +216,8 @@ Contents (fresh text, sentence per line):
 4. `## Subtask limitation` - subtasks do not appear in board sections unless explicitly added; sub-issue transitions degrade to the completed flag (`inProgress` is a no-op or an optional comment; `done` marks complete); section/status mapping applies to the main task only.
 5. `## Done on merge` - Asana has no PR-merge integration:
    - At PR open, move the main task to the mapped `inReview` state and post a comment stating the task will be closed by the next skill run after the PR merges.
-   - Every skill invocation in a repo first checks: does any `.issue-lifecycle/tasks/*.md` reference an Asana task whose PR has since merged (check with `gh pr view <branch> --json state,mergedAt`)? If yes, apply the mapped `done` state and completed flag before proceeding.
+   - Every skill invocation in a repo first checks: does any `.issue-lifecycle/tasks/*.md` reference an Asana task whose PR has since merged (check with `gh pr view <branch> --json state,mergedAt`)?
+     If yes, apply the mapped `done` state and completed flag before proceeding.
    - Idempotency: after closing, append a `- Closed: <date>` line to that checklist file (committed to the default branch); the sweep skips files that already carry a Closed line, so the check runs at most once per issue.
 
 - [ ] **Step 2: Verify**
@@ -238,7 +242,8 @@ git commit -m "feat(issue-lifecycle): add Asana tracker adapter with ref scheme 
 - Create: `plugins/issue-lifecycle/skills/shared/memory.md`
 
 **Interfaces:**
-- Produces: 6-operation memory contract; fallback resolution; display-overlay rule. Tasks 6-7 implement it; Tasks 8-9 consume operation names.
+- Produces: 6-operation memory contract; fallback resolution; display-overlay rule.
+  Tasks 6-7 implement it; Tasks 8-9 consume operation names.
 
 - [ ] **Step 1: Write `memory.md`**
 
@@ -488,8 +493,11 @@ Execution order note: run this task BEFORE Tasks 8-9; both core skills reference
 Contents:
 
 1. `# Agent notes` - the skills follow the open Agent Skills standard and run unchanged in Claude Code and Kiro; this file holds the only per-agent differences.
-2. `## Install` - Claude Code: install the plugin from this marketplace repo. Kiro: copy or symlink the plugin's `skills/` directory into `.kiro/skills/` (workspace) or `~/.kiro/skills/` (global).
-3. `## Task display overlay` - Claude Code: TaskCreate/TaskUpdate/TaskList tool family. Kiro: use its built-in todo/task tools if exposed; otherwise skip the overlay. Repeat the one-line rule: overlay is display only, never truth.
+2. `## Install` - Claude Code: install the plugin from this marketplace repo.
+   Kiro: copy or symlink the plugin's `skills/` directory into `.kiro/skills/` (workspace) or `~/.kiro/skills/` (global).
+3. `## Task display overlay` - Claude Code: TaskCreate/TaskUpdate/TaskList tool family.
+   Kiro: use its built-in todo/task tools if exposed; otherwise skip the overlay.
+   Repeat the one-line rule: overlay is display only, never truth.
 4. `## MCP tool naming` - tool name prefixes differ per agent and per MCP build; discover the connected tracker server's actual tool names at runtime instead of hardcoding.
 5. `## Permissions` - for smooth autonomous runs pre-approve: `git`, `gh`, `bd`, and the tracker MCP's tools; list where each agent configures this (Claude Code settings allowlist; Kiro trusted commands).
 
@@ -521,7 +529,8 @@ git commit -m "feat(issue-lifecycle): add per-agent notes"
 Sections:
 
 1. What it is: two skills (issue-lifecycle, issue-intake), trackers supported (Asana, Linear), agents supported (Claude Code, Kiro), one-line frontier-model note (built for frontier-model agents; no small-model mode).
-2. Install - Claude Code: marketplace/plugin instructions matching this repo's existing README conventions (read the repo root README first and match its install phrasing). Kiro: copy/symlink `skills/` into `.kiro/skills/`.
+2. Install - Claude Code: marketplace/plugin instructions matching this repo's existing README conventions (read the repo root README first and match its install phrasing).
+   Kiro: copy/symlink `skills/` into `.kiro/skills/`.
 3. Setup: connect your tracker MCP (Asana or Linear); optionally install beads (`bd`) for the richest task memory; first run asks once about state mapping and saves `.issue-lifecycle/config.md`.
 4. Usage examples: "work on ONC-5"; "work on <asana task url>"; "turn these requirements into an issue".
 5. How task memory works: three tiers in one short table (beads -> checklist file -> built-in display overlay).
@@ -599,7 +608,8 @@ git commit -m "fix(issue-lifecycle): apply validator and skill-reviewer findings
 
 This task requires the user's accounts and machine; pause and coordinate rather than proceeding autonomously.
 
-- [ ] **Step 1: Test repo** - create a throwaway repo (e.g. `~/Desktop/Projects/il-test-app`) with a small real project: a few source files, a test suite with passing tests, and one intentionally broken test on a branch for the stop-and-hold scenario. Push to GitHub (private) so `gh pr` works.
+- [ ] **Step 1: Test repo** - create a throwaway repo (e.g. `~/Desktop/Projects/il-test-app`) with a small real project: a few source files, a test suite with passing tests, and one intentionally broken test on a branch for the stop-and-hold scenario.
+  Push to GitHub (private) so `gh pr` works.
 - [ ] **Step 2: Asana** - user creates/confirms a free Asana workspace, a project with board sections including In Progress / Review / Done, and connects the Asana MCP in Claude Code.
 - [ ] **Step 3: Linear** - confirm a Linear test team exists and its MCP is connected.
 - [ ] **Step 4: Kiro** - user installs Kiro, symlinks the plugin's `skills/` into `~/.kiro/skills/`, connects the Asana MCP in Kiro's mcp.json, and confirms the skills appear in Kiro's skill UI.

@@ -1,6 +1,7 @@
 # Approval modes
 
-Both skills run in one of two modes. The mode changes which questions get asked; it never changes which conditions stop a run.
+Both skills run in one of two modes.
+The mode changes which questions get asked; it never changes which conditions stop a run.
 
 ## Resolving the mode
 
@@ -20,27 +21,43 @@ State the resolved mode at the start of the run so it is never a surprise, and s
 
 ## What auto mode skips
 
-These are preferences. Skipping them changes how much the run interrupts you, not whether it is correct.
+These are preferences.
+Skipping them changes how much the run interrupts you, not whether it is correct.
 
-- The issue draft in `scaffold`. Create the scaffold immediately and report what was created instead of asking first.
-- The handoff question after scaffolding. Continue straight into `execute` on the new issue.
-- A tracker or destination tie that the documented precedence can settle on its own. Resolve it by that precedence and report the choice rather than asking.
-- Any first-run setup question whose answer is unambiguous: one destination available, or tracker state names that match the three phases exactly. Record the answer, and note in the profile that it was auto-accepted rather than confirmed, so a wrong destination is traceable later.
+- The issue draft in `scaffold`.
+  Create the scaffold immediately and report what was created instead of asking first.
+- The handoff question after scaffolding.
+  Continue straight into `execute` on the new issue.
+- A tracker or destination tie that the documented precedence can settle on its own.
+  Resolve it by that precedence and report the choice rather than asking.
+- Any first-run setup question whose answer is unambiguous: one destination available, or tracker state names that match the three phases exactly.
+  Record the answer, and note in the profile that it was auto-accepted rather than confirmed, so a wrong destination is traceable later.
 
 ## What auto mode never skips
 
-These are safety stops. Auto mode exists to remove friction, not judgment, so every one of them still fires.
+These are safety stops.
+Auto mode exists to remove friction, not judgment, so every one of them still fires.
 
-- **An unverified tracker MCP.** Still refuse and deliver setup instructions. Auto mode is not permission to work around a missing or disabled server.
-- **A test failure that cannot be fixed.** Still stop and hold. Never push broken work or open a pull request that implies verification that did not happen.
-- **A conflict while updating from the base branch.** Still stop and hold, naming the conflicting files. Resolving a conflict unattended means silently discarding someone's changes.
-- **A pull request closed without merging.** Still report it and ask. Whether to retry, rescope, or drop the work is a judgment call with no safe default.
-- **A phase with no matching tracker state.** Still ask. The alternative is silently mapping review onto a state that means something else.
-- **An ambiguous first-run setup answer.** Still ask that specific question. A wrong destination sends every future issue in the repository to the wrong place, and a wrong state mapping misreports every issue's progress.
-- **A reply whose target is unclear.** Still stop and ask which question it answered. Auto mode removes questions; it does not license guessing at answers.
-- **An issue ref that disagrees with the current branch.** Still stop and ask which one to work. Guessing here means implementing the wrong issue, the same hazard as an unscoped task claim.
-- **An issue already in the `done` phase.** Still stop and ask whether to reopen it or pick another. Auto mode has nothing safe to infer, since reopening finished work and silently doing nothing are both wrong.
-- **Requirements too thin to break down.** Still ask the targeted questions. Auto mode skips approval of a draft; it never licenses inventing a breakdown that the requirements do not support.
+- **An unverified tracker MCP.** Still refuse and deliver setup instructions.
+  Auto mode is not permission to work around a missing or disabled server.
+- **A test failure that cannot be fixed.** Still stop and hold.
+  Never push broken work or open a pull request that implies verification that did not happen.
+- **A conflict while updating from the base branch.** Still stop and hold, naming the conflicting files.
+  Resolving a conflict unattended means silently discarding someone's changes.
+- **A pull request closed without merging.** Still report it and ask.
+  Whether to retry, rescope, or drop the work is a judgment call with no safe default.
+- **A phase with no matching tracker state.** Still ask.
+  The alternative is silently mapping review onto a state that means something else.
+- **An ambiguous first-run setup answer.** Still ask that specific question.
+  A wrong destination sends every future issue in the repository to the wrong place, and a wrong state mapping misreports every issue's progress.
+- **A reply whose target is unclear.** Still stop and ask which question it answered.
+  Auto mode removes questions; it does not license guessing at answers.
+- **An issue ref that disagrees with the current branch.** Still stop and ask which one to work.
+  Guessing here means implementing the wrong issue, the same hazard as an unscoped task claim.
+- **An issue already in the `done` phase.** Still stop and ask whether to reopen it or pick another.
+  Auto mode has nothing safe to infer, since reopening finished work and silently doing nothing are both wrong.
+- **Requirements too thin to break down.** Still ask the targeted questions.
+  Auto mode skips approval of a draft; it never licenses inventing a breakdown that the requirements do not support.
 
 This list exhausts the approval-mode stops by intent: everything auto mode is allowed to skip appears in the previous section, and any stop not listed there fires in both modes.
 It does not enumerate every stop the skills define; unconditional stops that have nothing to do with approval, such as a required shared contract file that cannot be read, beads being unavailable for a repository whose task state lives in beads, or a task/commit reconciliation that fails, live with the procedures that define them and also fire in both modes.

@@ -7,7 +7,7 @@ Read the rest of this plugin's skills as agent-neutral; when you need an agent-s
 ## Install
 
 Claude Code: install this plugin from its marketplace repo.
-Kiro: copy or symlink this plugin's `skills/` directory into `.kiro/skills/` for a workspace install, or into `~/.kiro/skills/` for a global install.
+Kiro: copy or symlink the contents of this plugin's `skills/` directory into `.kiro/skills/` for a workspace install, or into `~/.kiro/skills/` for a global install, so that `execute/`, `scaffold/`, and `shared/` sit as siblings directly under the destination; copying the `skills/` directory itself would nest them one level too deep and break every `../shared/` reference.
 
 ## Task display overlay
 
