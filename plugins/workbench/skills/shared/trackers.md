@@ -50,9 +50,11 @@ Fetch the resolved base branch before creating anything from it, and create the 
 Run this before any other tracker operation, on every invocation.
 Do not skip it because a previous run in this session already verified the MCP; verify again each time.
 
-Infer the intended tracker first.
-When a reference already exists, infer it from the reference shape: a Linear key like `ABC-123`, or an Asana URL or GID.
-When there is no reference yet, as during scaffold, infer it from the tracker profile's `tracker` field first, then from which tracker MCPs are connected.
+Infer the intended tracker first, one precedence for every skill.
+When the invocation names a tracker explicitly, that wins over everything else; profile inference must never override what the user just said.
+Otherwise, when a reference already exists in the invocation, a pasted URL, or the current branch name, infer the tracker from the reference shape: a Linear key like `ABC-123`, or an Asana URL or GID.
+Otherwise infer it from the tracker profile's `tracker` field, then from which tracker MCPs are connected.
+This is the same precedence the skills use to resolve the tracker for the run, so preflight and the run always verify and work against the same tracker.
 
 Verify the inferred tracker's MCP with one cheap read-only call, the current-user or workspace-list operation that tracker's adapter file names.
 Treat any failure, any absence of the expected tools, or a disabled server the same way: unverified.
@@ -96,6 +98,8 @@ Never silently move the phase back either, because whether to retry, rescope, or
 Report it instead: name the issue, name the pull request, say it was closed without merging, and ask whether to resume the work on a fresh branch or move the issue back to the `inProgress` phase.
 
 Record the observation in that issue's file under `.workbench/` as a line such as `- PR closed unmerged: <date> <pr url>` so the same abandoned pull request is reported once rather than on every later run.
+Commit that recorded line and push it before the sweep returns, under the same branch-placement and uncommitted-state cautions as the Closed stamp above: a marker that exists only in a working tree, or only in a local commit, does not survive to other clones or later runs, and the same abandoned pull request would be re-reported every time.
+When the push fails, report the failure and continue, exactly as a failed stamp push is handled, and expect the pull request to be reported again until a push succeeds; that repetition is the honest outcome of unpersisted state, not a bug to suppress.
 Report it again when a different pull request for the same issue is later closed unmerged, since that is new information.
 A recorded abandonment does not close the issue and does not stop a later merge from closing it normally; when a fresh pull request for the same issue merges, apply the usual done state and Closed stamp.
 

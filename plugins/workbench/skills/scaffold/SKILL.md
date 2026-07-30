@@ -38,7 +38,7 @@ If any of these files cannot be found and read, stop immediately and report whic
 ## Procedure
 
 1. Resolve the approval mode per `../shared/approval.md` and state it.
-   Then determine whether the tracker is already settled: a profile records one, or exactly one tracker MCP is connected.
+   Then determine whether the tracker is already settled, in the shared precedence order from `../shared/trackers.md`: the invocation names one, a profile records one, or exactly one tracker MCP is connected; an invocation-named tracker wins over the profile.
    When it is settled, run preflight verification against that tracker as described in `../shared/trackers.md`; stop there when the tracker's MCP does not verify.
    When it is not settled, because no profile exists and both tracker MCPs are connected, do not guess which MCP to verify: defer preflight to step 3, which asks the tie-break question first and then runs preflight against the answer.
 2. Run the done-on-merge sweep for the resolved tracker, whose tracker-agnostic mechanics are in `../shared/trackers.md`; it is tracker work, so it only runs once preflight has verified the MCP.

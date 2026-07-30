@@ -95,7 +95,7 @@ You can paste these instructions into Claude Code to have it build new component
 
 ### Repository Structure
 
-```
+```text
 claude-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json           # Registry - lists all plugins in this marketplace

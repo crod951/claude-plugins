@@ -165,7 +165,7 @@ It also handles cleanup on demand.
 Tell it a pull request merged, was closed, or was abandoned, and it runs only the sweep.
 It confirms the real state with `gh` rather than trusting the claim, and tells you when reality differs from what you said:
 
-```
+```text
 the PR for TES-5 merged
 clean up merged issues
 that PR got abandoned
@@ -205,7 +205,7 @@ Auto mode removes friction, not judgment.
 Set the default during first-run setup, or edit `approval` in `.workbench/config.md`.
 Override it per run from the prompt, in either direction:
 
-```
+```text
 scaffold these requirements, auto approve
 work on TES-5, ask me first
 ```
