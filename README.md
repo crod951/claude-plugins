@@ -1,6 +1,9 @@
 # claude-plugins
 
+[![SkillSpector](https://github.com/crod951/claude-plugins/actions/workflows/skillspector.yml/badge.svg)](https://github.com/crod951/claude-plugins/actions/workflows/skillspector.yml)
+
 Custom Claude Code plugins for codebase analysis, skill generation, and workflow automation.
+All plugin skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) on every change; the build fails on any non-suppressed security finding.
 
 ## Installation (inside Claude Code)
 
