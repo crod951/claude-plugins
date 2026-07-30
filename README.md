@@ -2,7 +2,7 @@
 
 [![SkillSpector](https://github.com/crod951/claude-plugins/actions/workflows/skillspector.yml/badge.svg)](https://github.com/crod951/claude-plugins/actions/workflows/skillspector.yml)
 
-Custom Claude Code plugins for codebase analysis, skill generation, and workflow automation.
+Custom Claude Code plugins for issue-driven development workflow automation.
 All plugin skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) on every change; the build fails on any non-suppressed security finding.
 
 ## Installation (inside Claude Code)
@@ -11,69 +11,12 @@ Run these commands **inside a Claude Code session** (they start with `/`):
 
 ```
 /plugin marketplace add crod951/claude-plugins
-/plugin install stackgen@crod951
+/plugin install workbench@crod951
 ```
 
 > Individual plugins may have additional prerequisites that run in your **terminal** (e.g., `brew install`). See each plugin's README for details.
 
 ## Available Plugins
-
-### stackgen (v2.0.0)
-
-Analyzes codebases and generates tailored Claude Code skills. **11 specialized agents** with optimized context passing.
-
-#### Features
-
-- **Fast Detection** - Single stack-detector (Haiku) analyzes dependencies, configs, structure
-- **Context Passing** - Detector findings passed to analyzers to avoid redundant reads
-- **Tech Gating** - Only spawns analyzers for detected technologies
-- **8-File Limits** - Each analyzer reads max 8 files for efficiency
-
-#### Commands
-
-| Command | Description |
-|---------|-------------|
-| `/stackgen:analyze` | Full codebase analysis and skill generation |
-| `/stackgen:quick` | Quick tech stack overview |
-| `/stackgen:refresh` | Update existing skills |
-| `/stackgen:check` | Audit skills for issues |
-
-#### Agents
-
-**Detection (1):**
-- `stack-detector` - Comprehensive dependency/config/pattern analysis (Haiku)
-
-**Core Analyzers (4, always run):**
-- `security-analyzer` - Security patterns and best practices
-- `architecture-analyzer` - Code structure and organization
-- `code-quality-analyzer` - Linting, formatting, types, dependencies
-- `performance-analyzer` - Performance optimization
-
-**Conditional Analyzers (6, gated by detection):**
-- `frontend-analyzer` - UI framework patterns (React, Vue, Angular)
-- `backend-analyzer` - Server patterns (APIs, Server Actions)
-- `database-analyzer` - ORM/database patterns
-- `testing-analyzer` - Unit, integration, E2E tests
-- `devops-analyzer` - CI/CD, Docker, deployment
-- `monitoring-analyzer` - Logging, error tracking, analytics
-
-#### Generated Skills
-
-```
-.claude/skills/
-├── security/
-├── architecture/
-├── code-quality/
-├── performance/
-├── frontend/       (if detected)
-├── backend/        (if detected)
-├── database/       (if detected)
-├── testing/        (if detected)
-├── devops/         (if detected)
-└── monitoring/     (if detected)
-```
-
----
 
 ### workbench (v1.0.0)
 
@@ -127,13 +70,6 @@ See the [full guide](./plugins/workbench/README.md) for setup, task memory, and 
 
 ## Workflow
 
-**stackgen:**
-1. **Analyze project**: `/stackgen:analyze`
-2. **Quick context**: `/stackgen:quick`
-3. **After upgrades**: `/stackgen:refresh`
-4. **Maintenance**: `/stackgen:check`
-
-**workbench:**
 1. **Scaffold requirements**: talk to the scaffold skill, for example "scaffold these requirements"
 2. **Execute the issue**: talk to the execute skill, for example "execute ONC-5"
 3. **Resume if interrupted**: re-invoke execute on the same issue; it picks up where the last run left off
