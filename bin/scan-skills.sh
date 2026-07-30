@@ -12,6 +12,9 @@
 # Known false positives are suppressed via each plugin's .skillspector-baseline.yaml,
 # with an auditable reason per suppression. Suppressed findings still appear in the
 # JSON reports under "suppressed".
+#
+# Each skill is scanned exactly once; the Markdown report is rendered from that
+# scan's JSON so the report can never disagree with the verdict that gated CI.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -56,13 +59,23 @@ for plugin in "${plugins[@]}"; do
   baseline="plugins/$plugin/.skillspector-baseline.yaml"
   [ -f "$baseline" ] && baseline_flags=(--baseline "$baseline")
 
+  scanned=0
   for skill_dir in "$skills_dir"/*/; do
     [ -f "$skill_dir/SKILL.md" ] || continue
+    scanned=$((scanned + 1))
     skill="$(basename "$skill_dir")"
     json="$(mktemp)"
 
-    skillspector scan "$skill_dir" ${scan_flags[@]+"${scan_flags[@]}"} ${baseline_flags[@]+"${baseline_flags[@]}"} \
-      --format json --output "$json" >/dev/null
+    # skillspector is documented to always exit 0, but a crash (bad install,
+    # provider error in the LLM stage) can still exit non-zero; under set -e an
+    # unguarded call would kill the whole run with no summary and no reports.
+    if ! skillspector scan "$skill_dir" ${scan_flags[@]+"${scan_flags[@]}"} ${baseline_flags[@]+"${baseline_flags[@]}"} \
+      --format json --output "$json" >/dev/null; then
+      echo "ERROR: skillspector crashed while scanning $plugin/$skill" >&2
+      failures=$((failures + 1))
+      rm -f "$json"
+      continue
+    fi
 
     summary="$(python3 - "$json" "$plugin/$skill" <<'PY'
 import json, sys
@@ -86,14 +99,53 @@ PY
 
     if [ -n "${REPORT_DIR:-}" ]; then
       cp "$json" "$REPORT_DIR/$plugin-$skill.json"
-      skillspector scan "$skill_dir" ${scan_flags[@]+"${scan_flags[@]}"} ${baseline_flags[@]+"${baseline_flags[@]}"} \
-        --show-suppressed --format markdown \
-        --output "$REPORT_DIR/$plugin-$skill.md" >/dev/null
+      # Render the Markdown report from the same JSON rather than re-scanning:
+      # a second scan doubles cost (twice per skill, including the LLM stage)
+      # and, because the scanner is not fully deterministic, could produce a
+      # report that contradicts the JSON that decided pass/fail.
+      python3 - "$json" "$plugin/$skill" > "$REPORT_DIR/$plugin-$skill.md" <<'PY'
+import json, sys
+report = json.load(open(sys.argv[1]))
+risk = report["risk_assessment"]
+print(f"# SkillSpector report: {sys.argv[2]}\n")
+print(f"- Score: {risk['score']}/100 ({risk['severity']})")
+print(f"- Recommendation: {risk['recommendation']}")
+print(f"- Active findings: {len(report['issues'])}")
+print(f"- Suppressed findings: {report['suppressed_count']}")
+
+def emit(title, findings, suppressed):
+    print(f"\n## {title}\n")
+    if not findings:
+        print("None.")
+        return
+    for f in findings:
+        loc = f.get("location") or {}
+        where = f"{loc.get('file', '?')}:{loc.get('start_line', '?')}"
+        print(f"### {f.get('id', '?')} {f.get('pattern', '')} [{f.get('severity', '?')}] {where}\n")
+        for key in ("finding", "explanation", "remediation"):
+            if f.get(key):
+                print(f"- **{key.capitalize()}**: {f[key]}")
+        if suppressed and f.get("suppression_reason"):
+            print(f"- **Suppression reason**: {f['suppression_reason']}")
+        if f.get("code_snippet"):
+            print(f"\n```\n{f['code_snippet']}\n```")
+        print()
+
+emit("Active findings", report["issues"], suppressed=False)
+emit("Suppressed findings", report.get("suppressed", []), suppressed=True)
+PY
     fi
     rm -f "$json"
 
     [ "$skill_ok" -ne 0 ] && failures=$((failures + 1))
   done
+
+  if [ "$scanned" -eq 0 ]; then
+    # A skills/ dir with no SKILL.md underneath would otherwise print nothing
+    # and contribute to a false "PASS" after scanning nothing.
+    echo "error: no skills with a SKILL.md found under $skills_dir" >&2
+    exit 1
+  fi
 done
 
 if [ "$failures" -gt 0 ]; then
