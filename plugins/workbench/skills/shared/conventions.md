@@ -72,6 +72,18 @@ Reconcile before finishing.
 Count the task commits on the branch and compare that count to the number of tasks closed for this issue.
 When the counts disagree, stop and report the discrepancy rather than opening a pull request: either a commit is missing, or tasks were combined into one commit, and both contradict the one-commit-per-task rule.
 
+## Pull request test plan
+
+Give every pull request a test plan with the same shape, so a reviewer reads the same structure each time.
+
+State the command a reviewer runs, in a fenced block.
+State the observed result as counts, for example how many tests passed and how the total changed.
+State what the new tests cover, one line per behavior rather than one line per file.
+State anything deliberately not covered, and why.
+
+Never describe a test plan you did not run.
+When the project cannot run tests at all, say that plainly here rather than leaving the section implying verification happened.
+
 ## Progress reporting
 
 After each task closes, print one line so a long autonomous run stays legible: the task position in the queue, its id, the commit subject, the test result, and how many tasks remain.

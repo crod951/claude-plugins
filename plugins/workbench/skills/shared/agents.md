@@ -17,9 +17,8 @@ Read `memory.md` before this section; do not treat what follows as a replacement
 Claude Code: mirror tasks into the TaskCreate/TaskUpdate/TaskList/TaskGet tool family.
 Kiro: use its built-in todo/task tools when the workspace exposes them; when it does not expose such tools, skip the overlay silently.
 
-In both cases, the overlay is display only, never the source of truth.
-Rebuild it from the durable backend on every resume.
-Skip it silently when the agent exposes no such tools.
+The rules governing the overlay live in `memory.md` and are not restated here, so the two files cannot drift apart.
+This file only names which tools each agent offers for it.
 
 ## MCP tool naming
 

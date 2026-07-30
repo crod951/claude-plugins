@@ -63,3 +63,6 @@ When writing or rewriting this file for any other operation, leave an existing `
 
 When closing a task, append the short hash of its implementing commit to that task's line alongside the done date, as the commit-verification rules in `../conventions.md` require.
 A line that records a hash cannot be written before the commit exists, which is what makes the one-commit-per-task rule checkable rather than merely stated.
+
+Write multiple dependencies as a comma-separated list inside one parenthesis, for example `(deps: 1, 2)`.
+Write the done date in ISO form, `YYYY-MM-DD`, so lines sort and parse predictably.

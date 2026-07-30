@@ -4,7 +4,8 @@ Workbench is a pair of agent skills, execute and scaffold, that carry a tracker 
 It works with Asana or Linear as your issue tracker.
 Both skills follow the open Agent Skills standard, so they run unchanged on Claude Code and Kiro.
 
-> Built for frontier-model agents. There is no small-model mode.
+> Built for frontier-model agents.
+> There is no small-model mode.
 
 ## What it is
 
