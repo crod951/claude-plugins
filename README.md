@@ -74,6 +74,18 @@ See the [full guide](./plugins/workbench/README.md) for setup, task memory, and 
 2. **Execute the issue**: talk to the execute skill, for example "execute ONC-5"
 3. **Resume if interrupted**: re-invoke execute on the same issue; it picks up where the last run left off
 
+## Security Scanning
+
+Every skill in `plugins/*/skills/` is scanned by [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) in CI, and the build fails on any non-suppressed finding.
+Run the same scan locally before committing:
+
+```bash
+uv tool install git+https://github.com/NVIDIA/skillspector.git
+bin/scan-skills.sh <plugin-name>
+```
+
+When a finding is a reviewed false positive, suppress it in the plugin's `.skillspector-baseline.yaml` with a written reason; never suppress a finding you have not understood.
+
 ## License
 
 MIT
