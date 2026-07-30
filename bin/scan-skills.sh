@@ -50,6 +50,7 @@ baseline=".skillspector-baseline.yaml"
 [ -n "${REPORT_DIR:-}" ] && mkdir -p "$REPORT_DIR"
 
 failures=0
+crashes=0
 scanned=0
 for skill in "${skill_names[@]}"; do
   skill_dir="skills/$skill"
@@ -69,7 +70,7 @@ for skill in "${skill_names[@]}"; do
     if ! skillspector scan "$skill_dir" ${scan_flags[@]+"${scan_flags[@]}"} ${baseline_flags[@]+"${baseline_flags[@]}"} \
       --format json --output "$json" >/dev/null; then
       echo "ERROR: skillspector crashed while scanning $skill" >&2
-      failures=$((failures + 1))
+      crashes=$((crashes + 1))
       rm -f "$json"
       continue
     fi
@@ -153,11 +154,17 @@ if [ "$scanned" -eq 0 ]; then
   exit 1
 fi
 
-if [ "$failures" -gt 0 ]; then
+if [ "$failures" -gt 0 ] || [ "$crashes" -gt 0 ]; then
   echo
-  echo "FAIL: $failures skill(s) have non-suppressed findings." >&2
-  echo "Fix the finding, or if it is a reviewed false positive, add a rule with a" >&2
-  echo "reason to .skillspector-baseline.yaml." >&2
+  if [ "$failures" -gt 0 ]; then
+    echo "FAIL: $failures skill(s) have non-suppressed findings." >&2
+    echo "Fix the finding, or if it is a reviewed false positive, add a rule with a" >&2
+    echo "reason to .skillspector-baseline.yaml." >&2
+  fi
+  if [ "$crashes" -gt 0 ]; then
+    echo "FAIL: the scanner crashed on $crashes skill(s); those skills were NOT" >&2
+    echo "assessed. Check the install and provider credentials, then re-run." >&2
+  fi
   exit 1
 fi
 

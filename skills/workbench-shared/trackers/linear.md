@@ -13,10 +13,10 @@ When a tool name assumed below does not exist on the connected server, list the 
 | `getIssue(ref)` | Fetch the issue by its key (for example `ONC-5`) using a get-issue-style tool. Save the native UUID, the issue URL, its labels, and its current workflow state from the response; later operations that need the native id should reuse the saved UUID rather than re-fetching. |
 | `listSubIssues(ref)` | List issues filtered by parent, using the native UUID or key of the issue from `getIssue`. Return each child's id, title, and state. |
 | `listDestinations()` | List the viewer's team memberships using the current-user tool, not a full workspace team list. For each team the viewer belongs to, list that team's projects when a destination narrower than the team is needed. Never call a tool that lists every team in the workspace. |
-| `resolveDestination(hint?)` | Match a given hint against a team's key or name to resolve its native UUID. When the hint also names a project, validate that the project exists under the resolved team before returning it. When no hint is given, resolve the tracker profile's configured default destination the same way. Return null when the hint matches more than one team or project ambiguously. |
+| `resolveDestination(hint?)` | Match a given hint against a team's key or name to resolve its native UUID. When the hint also names a project, validate that the project exists under the resolved team before returning it. When no hint is given, resolve the tracker profile's configured default destination the same way. Return the team UUID and any resolved project id together as this adapter's one destination value, per the contract's adapter-owned destination rule. Return null when the hint matches more than one team or project ambiguously. |
 | `createIssue(title, description, type, destination)` | Create the issue with the resolved team UUID, the title, and the description. When a project was also resolved, add it to the create call so the issue lands in that project. Capture the created issue's key (for example `ONC-5`) and its URL from the tool response, and return both to the caller. |
 | `createSubIssue(parentRef, title, description)` | Create the issue with the parent's native id set as its parent; do not pass a team, since Linear inherits the team from the parent issue. Capture the created issue's key and its URL from the tool response, and return both to the caller. |
-| `updateState(ref, phase)` | Look up the workflow state name saved in the tracker profile's state mapping for the given phase, then update the issue's state to that name. Never hardcode a status name here; always go through the mapping saved during first-run setup. |
+| `updateState(ref, phase)` | Look up the workflow state name saved in the tracker profile's state mapping for the given phase, then update the issue's state to that name. When the profile explicitly records this phase as unmapped, a decision first-run setup captured from the user, skip the state mutation as a documented no-op rather than guessing a state. Never hardcode a status name here; always go through the mapping saved during first-run setup. |
 | `comment(ref, body)` | Create a comment using the issue's native id and the comment body. |
 
 ## Notes
@@ -105,13 +105,21 @@ jobs:
             exit 1
           fi
 
-          # sort makes the file choice deterministic; grep -r order is readdir order.
-          FILE=$(grep -rlF "$BRANCH" .workbench/ 2>/dev/null | sort | head -n 1)
+          # A branch must map to exactly one record; closing an issue picked
+          # arbitrarily from several matches could complete the wrong one.
+          MATCHES=$(grep -rlF "$BRANCH" .workbench/ 2>/dev/null | sort)
+          MATCH_COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
 
-          if [ -z "$FILE" ]; then
+          if [ "$MATCH_COUNT" -eq 0 ]; then
             echo "No file under .workbench/ references branch $BRANCH, skipping."
             exit 0
           fi
+          if [ "$MATCH_COUNT" -gt 1 ]; then
+            echo "Multiple files under .workbench/ reference branch $BRANCH; refusing to guess:"
+            echo "$MATCHES"
+            exit 1
+          fi
+          FILE="$MATCHES"
 
           # Only a labeled line is trusted. Matching any uppercase-dash-digits
           # token anywhere would also match RFC-7231, ISO-8601, SHA-1 and the
@@ -130,20 +138,23 @@ jobs:
             -d "{\"query\":\"mutation { issueUpdate(id: \\\"$KEY\\\", input: { stateId: \\\"$DONE_STATE_ID\\\" }) { success } }\"}") \
             || { echo "Linear API call failed for $KEY"; exit 1; }
 
-          # A GraphQL error arrives with HTTP 200, so -f alone is not enough.
-          case "$RESPONSE" in
-            *'"errors"'*)
-              echo "Linear returned an error for $KEY: $RESPONSE"
-              exit 1
-              ;;
-            *'"success":true'*)
-              echo "Closed $KEY."
-              ;;
-            *)
-              echo "Unexpected Linear response for $KEY: $RESPONSE"
-              exit 1
-              ;;
-          esac
+          # A GraphQL error arrives with HTTP 200, so -f alone is not enough;
+          # parse the JSON instead of pattern-matching the raw text, which
+          # would misread payloads that merely contain those substrings.
+          if ! printf '%s' "$RESPONSE" | jq -e . >/dev/null 2>&1; then
+            echo "Unexpected (non-JSON) Linear response for $KEY: $RESPONSE"
+            exit 1
+          fi
+          if printf '%s' "$RESPONSE" | jq -e '(.errors // []) | length > 0' >/dev/null; then
+            echo "Linear returned an error for $KEY: $RESPONSE"
+            exit 1
+          fi
+          if [ "$(printf '%s' "$RESPONSE" | jq -r '.data.issueUpdate.success // false')" = "true" ]; then
+            echo "Closed $KEY."
+          else
+            echo "Unexpected Linear response for $KEY: $RESPONSE"
+            exit 1
+          fi
 ```
 
 This template has not been run end to end; the Asana template has.

@@ -89,10 +89,10 @@ Run the same scan locally before committing:
 
 ```bash
 uv tool install git+https://github.com/NVIDIA/skillspector.git
-bin/scan-skills.sh <plugin-name>
+bin/scan-skills.sh            # all skills; or name specific ones: bin/scan-skills.sh execute
 ```
 
-When a finding is a reviewed false positive, suppress it in the plugin's `.skillspector-baseline.yaml` with a written reason; never suppress a finding you have not understood.
+When a finding is a reviewed false positive, suppress it in the repo-root `.skillspector-baseline.yaml` with a written reason; never suppress a finding you have not understood.
 
 ## License
 

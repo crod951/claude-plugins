@@ -18,7 +18,7 @@ When an assumed tool name below does not exist on the connected server, list the
 | `resolveDestination(hint?)` | Match a given hint against a project's name or GID to resolve its native GID. When no hint is given, resolve the tracker profile's configured default destination the same way. Return null when the hint matches more than one project ambiguously. |
 | `createIssue(title, description, type, destination)` | Create the task with the resolved project GID, the title, and the description. Capture the created task's GID and its permalink URL from the tool response, and return both to the caller. |
 | `createSubIssue(parentRef, title, description)` | Create the task with the parent's GID set as its parent; do not pass a project, since Asana inherits project membership from the parent task. Capture the created subtask's GID and its permalink URL from the tool response, and return both to the caller. |
-| `updateState(ref, phase)` | Apply this only to the main task, never to a subtask. Look up the tracker profile's state mapping for the given phase, then follow this fallback chain in order: (a) if the connected MCP exposes a section-move or add-to-section tool, move the main task to the mapped section; (b) else if the profile maps a status custom field and a task-update tool can set that field, set the field to the mapped value; (c) else post a comment stating the phase transition, for example "Phase: In Review - <PR url>". When the phase is `done`, always set the task's completed flag to true regardless of which branch of the chain applied. Skipping the transition silently is not allowed; the fallback comment in step (c) is the minimum required action. Never hardcode a section or status name here; always go through the mapping saved during first-run setup. |
+| `updateState(ref, phase)` | Apply this only to the main task, never to a subtask. Look up the tracker profile's state mapping for the given phase, then follow this fallback chain in order: (a) if the connected MCP exposes a section-move or add-to-section tool, move the main task to the mapped section; (b) else if the profile maps a status custom field and a task-update tool can set that field, set the field to the mapped value; (c) else post a comment stating the phase transition, for example "Phase: In Review - <PR url>". When the phase is `done`, always set the task's completed flag to true regardless of which branch of the chain applied. Skipping the transition silently is not allowed; the fallback comment in step (c) is the minimum required action. The chain handles missing tools, not missing mappings: when the profile explicitly records this phase as unmapped, a decision first-run setup captured from the user, treat the transition as a documented no-op instead of running the chain, and still set the completed flag when the phase is `done`. Never hardcode a section or status name here; always go through the mapping saved during first-run setup. |
 | `comment(ref, body)` | Post a story (comment) on the task using its GID and the comment body. |
 
 The deprecated V1 server (mcp.asana.com/sse, shutdown 2026-11-05) lacks a section-move tool, so the V2 server (mcp.asana.com/v2/mcp) is recommended for full section-move support.
@@ -110,13 +110,21 @@ jobs:
             exit 0
           fi
 
-          # sort makes the file choice deterministic; grep -r order is readdir order.
-          TASK_FILE=$(grep -rlF "$BRANCH" .workbench/ 2>/dev/null | sort | head -n 1)
+          # A branch must map to exactly one record; closing a task picked
+          # arbitrarily from several matches could complete the wrong issue.
+          MATCHES=$(grep -rlF "$BRANCH" .workbench/ 2>/dev/null | sort)
+          MATCH_COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
 
-          if [ -z "$TASK_FILE" ]; then
+          if [ "$MATCH_COUNT" -eq 0 ]; then
             echo "No file under .workbench/ references branch $BRANCH, skipping."
             exit 0
           fi
+          if [ "$MATCH_COUNT" -gt 1 ]; then
+            echo "Multiple files under .workbench/ reference branch $BRANCH; refusing to guess:"
+            echo "$MATCHES"
+            exit 1
+          fi
+          TASK_FILE="$MATCHES"
 
           # Only a labeled line is trusted, so a URL sitting in prose cannot
           # make this close the wrong task. Matches "- Ref: <url>" and
