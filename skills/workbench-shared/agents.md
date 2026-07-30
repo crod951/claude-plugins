@@ -7,7 +7,7 @@ Read the rest of this plugin's skills as agent-neutral; when you need an agent-s
 ## Install
 
 Claude Code: install this plugin from its marketplace repo.
-Kiro: install with the skills CLI, `npx skills add crod951/claude-plugins -a kiro-cli`, which places `execute/`, `scaffold/`, and `workbench-shared/` as siblings under `~/.kiro/skills/`; or copy or symlink the contents of this plugin's `skills/` directory there by hand so the three sit as siblings directly under the destination. Copying the `skills/` directory itself would nest them one level too deep and break every `../workbench-shared/` reference.
+Kiro: install with the skills CLI, `npx skills add crod951/skills -a kiro-cli`, which places `execute/`, `scaffold/`, and `workbench-shared/` as siblings under `~/.kiro/skills/`; or copy or symlink the contents of this plugin's `skills/` directory there by hand so the three sit as siblings directly under the destination. Copying the `skills/` directory itself would nest them one level too deep and break every `../workbench-shared/` reference.
 
 ## Task display overlay
 

@@ -55,7 +55,7 @@ Pick one - installing both leaves you with every skill twice.
 Run these inside a Claude Code session:
 
 ```text
-/plugin marketplace add crod951/claude-plugins
+/plugin marketplace add crod951/skills
 /plugin install workbench@crod951
 /reload-plugins
 ```
@@ -68,7 +68,7 @@ Confirm both skills loaded by asking for the skill list; you should see `workben
 <summary><strong>Kiro, Codex, and other agents</strong></summary>
 
 ```bash
-npx skills@latest add crod951/claude-plugins
+npx skills@latest add crod951/skills
 ```
 
 Pick which coding agents to install onto - the installer auto-detects what you have.
@@ -89,12 +89,12 @@ Installing fully by hand also works; keep `execute/`, `scaffold/`, and `workbenc
 
 ```bash
 # global install, available in every workspace
-cp -r plugins/workbench/skills/. ~/.kiro/skills/
+cp -r skills/. ~/.kiro/skills/
 
 # or symlink while iterating, so edits take effect immediately
-ln -s "$PWD/plugins/workbench/skills/execute"          ~/.kiro/skills/execute
-ln -s "$PWD/plugins/workbench/skills/scaffold"         ~/.kiro/skills/scaffold
-ln -s "$PWD/plugins/workbench/skills/workbench-shared" ~/.kiro/skills/workbench-shared
+ln -s "$PWD/skills/execute"          ~/.kiro/skills/execute
+ln -s "$PWD/skills/scaffold"         ~/.kiro/skills/scaffold
+ln -s "$PWD/skills/workbench-shared" ~/.kiro/skills/workbench-shared
 ```
 
 </details>
@@ -425,7 +425,7 @@ Before trusting a test run, confirm which copy is live by comparing line counts:
 
 ```bash
 wc -l ~/.claude/plugins/cache/<marketplace>/workbench/*/skills/execute/SKILL.md \
-      plugins/workbench/skills/execute/SKILL.md
+      skills/execute/SKILL.md
 ```
 
 ## Upgrading

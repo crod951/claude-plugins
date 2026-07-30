@@ -20,8 +20,9 @@ plugin_authors=()
 plugin_repositories=()
 plugin_keywords_json=()
 
-for plugin_dir in "$REPO_ROOT"/plugins/*/; do
-  plugin_json="$plugin_dir.claude-plugin/plugin.json"
+# The repo root is the single plugin (marketplace source "./"), so the one
+# manifest lives beside marketplace.json in .claude-plugin/.
+for plugin_json in "$REPO_ROOT/.claude-plugin/plugin.json"; do
   if [ ! -f "$plugin_json" ]; then
     continue
   fi
@@ -42,7 +43,7 @@ for plugin_dir in "$REPO_ROOT"/plugins/*/; do
 done
 
 if [ ${#plugin_names[@]} -eq 0 ]; then
-  echo "No plugins found in $REPO_ROOT/plugins/"
+  echo "No plugin manifest found at $REPO_ROOT/.claude-plugin/plugin.json"
   exit 1
 fi
 
@@ -79,7 +80,7 @@ import json, sys, os
 data = json.load(sys.stdin)
 new_entry = {
     'name': os.environ['SYNC_NAME'],
-    'source': './plugins/' + os.environ['SYNC_NAME'],
+    'source': './',
     'description': os.environ['SYNC_DESC'],
     'version': os.environ['SYNC_VERSION'],
     'author': {'name': os.environ['SYNC_AUTHOR']},
