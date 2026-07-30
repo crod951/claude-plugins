@@ -1,48 +1,67 @@
 # Workbench
 
-Workbench is a pair of agent skills, execute and scaffold, that carry a tracker issue from intake through an open pull request.
-It works with Asana or Linear as your issue tracker.
-Both skills follow the open Agent Skills standard, so they run unchanged on Claude Code and Kiro.
+Workbench is a pair of agent skills that carry a tracker issue from requirements to an open pull request.
+
+- **scaffold** turns requirements into a tracker issue plus linked sub-issues.
+- **execute** drives an existing issue through implementation to a pull request, one task at a time.
+
+It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and **Kiro** because both follow the open Agent Skills standard.
 
 > Built for frontier-model agents.
 > There is no small-model mode.
 
-## What it is
+## Contents
 
-- **execute** - drives one tracker issue through a single resumable pass: breakdown, implementation, tests, commits, and an open PR.
-  Re-invoke it on the same issue to resume wherever the last run left off; it never relies on memory of a previous run, only on what is saved to disk and in the tracker.
-- **scaffold** - turns requirements text (a PRD, a spec, a paragraph) into a scaffolded main issue plus linked sub-issues, then offers to hand off to execute.
+- [What you get](#what-you-get)
+- [Install](#install)
+- [Setup, step by step](#setup-step-by-step)
+- [Using scaffold](#using-scaffold)
+- [Using execute](#using-execute)
+- [Decision trees](#decision-trees)
+- [What lands in your repo](#what-lands-in-your-repo)
+- [How the tracker learns a PR merged](#how-the-tracker-learns-a-pr-merged)
+- [Working conventions](#working-conventions)
+- [Security boundary](#security-boundary)
+- [Troubleshooting](#troubleshooting)
+- [Known limitations](#known-limitations)
+- [Developing this plugin](#developing-this-plugin)
+- [Upgrading](#upgrading)
 
-**Trackers supported:** Asana, Linear.
-**Agents supported:** Claude Code, Kiro.
+## What you get
+
+A run of the two skills back to back produces: a tracker issue with sub-issues, a feature branch, a plan document a reviewer can read before any code exists, one commit per unit of work, a pull request whose body links the issue and lists what was verified, and the issue sitting in review.
+
+The design goal is that **nothing is remembered between invocations**. Every run reads state from your repository and your tracker, so an interrupted run resumes by being re-invoked, on any machine, in either agent.
+
+**Requirements:** an Asana or Linear MCP connected in your agent, the GitHub CLI (`gh`) authenticated, and optionally the beads CLI (`bd`) for richer task memory.
 
 ## Install
 
 ### Claude Code
 
-Run these commands inside a Claude Code session (they start with `/`):
+Run these inside a Claude Code session:
 
 ```
 /plugin marketplace add crod951/claude-plugins
 /plugin install workbench@crod951
+/reload-plugins
 ```
+
+Confirm both skills loaded by asking for the skill list; you should see `workbench:execute` and `workbench:scaffold`.
 
 ### Kiro
 
-Copy or symlink this plugin's `skills/` directory contents into `.kiro/skills/` for a workspace install, or into `~/.kiro/skills/` for a global install.
-Keep `execute/`, `scaffold/`, and `shared/` as siblings at the top level of that destination, since each skill references `../shared/` files by relative path.
+Kiro reads skills from a directory, so copy or symlink them. Keep `execute/`, `scaffold/`, and `shared/` as siblings at the destination's top level, because each skill reaches its shared references with `../shared/`.
 
 ```bash
+# global install, available in every workspace
 cp -r plugins/workbench/skills/. ~/.kiro/skills/
+
+# or workspace-only
+cp -r plugins/workbench/skills/. .kiro/skills/
 ```
 
-## Developing or editing this plugin
-
-Installing from a marketplace copies the plugin into the agent's plugin cache; it does not live-link your working tree.
-That means edits to `plugins/workbench/` do not reach a running agent until you reinstall, and an agent will keep loading the snapshot it installed earlier.
-
-When iterating on the skills, either reinstall after each change (`/plugin uninstall workbench` then `/plugin install workbench@<marketplace>`, followed by `/reload-plugins`), or point the agent at the working tree directly.
-Kiro reads whatever `~/.kiro/skills/` contains, so symlinking the skill directories there gives live edits with no reinstall step:
+Symlinking instead of copying is better while iterating, since edits take effect immediately:
 
 ```bash
 ln -s "$PWD/plugins/workbench/skills/execute"  ~/.kiro/skills/execute
@@ -50,110 +69,247 @@ ln -s "$PWD/plugins/workbench/skills/scaffold" ~/.kiro/skills/scaffold
 ln -s "$PWD/plugins/workbench/skills/shared"   ~/.kiro/skills/shared
 ```
 
-Confirm which copy is live before trusting a test run: compare the line count of the installed `SKILL.md` against your working tree.
+## Setup, step by step
 
-## Setup
+### 1. Connect your tracker's MCP
 
-1. **Connect your tracker's MCP.**
-   Asana or Linear, whichever you use.
-   In Claude Code, install and authenticate the matching MCP plugin before running either skill.
-   In Kiro, configure the equivalent MCP server.
-   Tool names are discovered at runtime, so any recent build of either MCP works.
-2. **Optionally install beads (`bd`) for the richest task memory.**
-   Without it, task tracking falls back to a plain checklist file committed on the branch, which works fine for solo or small-scale use.
-   Beads adds dependency-aware task claiming and is recommended once a project has more than a handful of tasks per issue.
-   ```bash
-   brew install beads
-   bd version
-   ```
-3. **Install and authenticate the GitHub CLI (`gh`).**
-   The execute skill opens pull requests with `gh`, so it must be installed and authenticated before your first run.
-   ```bash
-   brew install gh
-   gh auth login
-   ```
-4. **First run asks once about state mapping.**
-   The first time either skill runs in a repository, it inspects your tracker's actual states and proposes a mapping to the three phases it needs: `inProgress`, `inReview`, and `done`.
-   You confirm or correct that mapping, and it is saved to `.workbench/config.md` so every later run uses it silently.
+Asana or Linear, whichever you use. In Claude Code install and authenticate the matching MCP plugin; in Kiro add the server to `mcp.json`.
 
-## Usage examples
+Tool names are discovered at runtime, so any recent build works. If a server exists but is disabled, that counts as missing: the skills refuse to run rather than guess.
 
-Talk to either skill in plain language, or name it directly; there are no slash commands to memorize.
+For Asana specifically, prefer the **V2** server (`https://mcp.asana.com/v2/mcp`). The V1 beta server is deprecated and, in testing, exposed no tool for moving a task between board sections, which downgrades phase transitions to comments.
 
-- `execute ONC-5`
-- `run execute on this issue`
-- `work on ONC-5`
-- `work on <asana task url>`
-- `scaffold these requirements`
-- `turn these requirements into an issue`
+### 2. Authenticate the GitHub CLI
 
-## How task memory works
+`execute` opens pull requests with `gh`, so this is not optional.
 
-Task state for an issue lives in exactly one durable backend, chosen automatically and never switched mid-issue.
+```bash
+brew install gh
+gh auth login
+```
 
-| Tier | Role |
+### 3. Optionally install beads
+
+Without beads, task state lives in a markdown checklist committed on your branch, which is fine for solo work and small issues. Beads adds dependency-aware task claiming, so a task cannot be started before the work it depends on is finished.
+
+```bash
+brew install beads
+bd version
+```
+
+### 4. Answer the first-run questions
+
+The first time either skill runs in a repository it asks a short series of questions, one at a time, and writes the answers to `.workbench/config.md`. Because that file is committed, **teammates who clone the repo are never asked any of it**.
+
+| Question | Why it is asked |
 | --- | --- |
-| beads (`bd`) | Preferred backend when the `bd` CLI is available. Stores tasks with dependencies in `.beads/` inside your repo. |
-| checklist file | Fallback backend used when beads is not installed. Task statuses live as checkboxes in `.workbench/tasks/<ref>.md`. |
-| built-in display overlay | Optional live progress view mirrored into the running agent's own task-list tools (for example Claude Code's task list). Always rebuilt from whichever backend above is active; never treated as the source of truth. |
+| Which tracker? | Only when both MCPs are connected and nothing else settles it. |
+| Which destination? | The Asana project or Linear team new issues go to. |
+| How do your states map? | Your real board sections or workflow states get mapped to three phases: in progress, in review, done. |
+| How should the tracker learn a PR merged? | Asana and Linear differ; see [How the tracker learns a PR merged](#how-the-tracker-learns-a-pr-merged). |
+| Which base branch? | Feature branches start from it and pull requests target it. Defaults to your current branch. |
+
+If your tracker has no state for a phase, which is common for review states in a fresh Linear team, the skill says so and offers real choices rather than silently picking the nearest state.
+
+### 5. Pre-approve the commands
+
+Autonomous runs stall on permission prompts. Pre-approve `git`, `gh`, `bd`, and your tracker MCP's tools: in Claude Code through the permissions allowlist, in Kiro through trusted commands.
+
+Read [Security boundary](#security-boundary) before blanket-approving shell access.
+
+## Using scaffold
+
+Give it requirements in any of these forms:
+
+```
+scaffold these requirements: <paste a paragraph>
+scaffold an issue from docs/prd-checkout.md
+turn these requirements into an issue
+break this spec into tickets
+```
+
+It reads a file when you point at one, rather than working from the filename. It then **reads your codebase before drafting**, so sub-issues name real files and follow patterns that already exist. It shows you a draft and creates nothing until you approve it.
+
+If your requirements are too thin to split sensibly, it will not invent a breakdown. It asks targeted questions instead, one at a time. Asking "make the cart better" gets you questions, not five fabricated tickets.
+
+When the scaffold exists, it offers to hand straight off to `execute`.
+
+## Using execute
+
+```
+execute TES-5
+work on TES-5
+work on https://app.asana.com/1/…/task/1217003545553983
+run execute on this issue
+```
+
+It also handles cleanup on demand. Tell it a pull request merged, was closed, or was abandoned, and it runs only the sweep. It confirms the real state with `gh` rather than trusting the claim, and tells you when reality differs from what you said:
+
+```
+the PR for TES-5 merged
+clean up merged issues
+that PR got abandoned
+```
+
+A run does this: verifies the tracker MCP, sweeps for merged work, resolves tracker and task memory, fetches the issue, reads relevant code, creates the branch from a freshly fetched base, builds the breakdown and plan document, moves the issue to in progress, then loops one task at a time. Each task gets claimed, implemented, tested, committed on its own, and closed in both task memory and the tracker. At the end it pushes, opens the pull request, and moves the issue to in review.
+
+Re-invoking on the same issue resumes it. Guards see what already exists and skip it.
+
+**When tests cannot pass**, the run stops and holds: the work stays, the task stays open, and you get told what failed. It does not push broken work or a misleading pull request.
+
+## Decision trees
+
+### Which tracker
+
+```
+Did the invocation name one?            -> use it
+Does .workbench/config.md name one?     -> use it
+Is exactly one tracker MCP connected?   -> use it
+Are both connected?                     -> ask once, save the answer
+Is neither connected?                   -> stop, name both, print setup steps
+```
+
+### Which task memory backend, decided per issue
+
+```
+Does this issue already have a checklist file?  -> checklist, even if beads is installed
+Does the repo have beads state?
+    and bd works?                               -> beads
+    and bd is missing?                          -> stop and say so, never switch backends
+Neither, so a fresh issue?
+    bd available?                               -> beads
+    bd absent?                                  -> checklist
+```
+
+An issue keeps the backend it started with for life. Adding beads to a repository later only affects issues started afterwards, so a mixed period is normal rather than broken.
+
+### Which base branch
+
+```
+Named in the invocation?                        -> use it, this run only
+Recorded as base-branch in the profile?         -> use it
+Otherwise                                       -> the current branch, reported so you see it
+Current branch is itself a workbench branch?    -> ask, never stack one issue on another
+```
+
+The base branch is always fetched before branching from it. Branching from a stale local copy is the usual cause of conflicts at merge time.
+
+### What happens to the tracker issue
+
+```
+Work starts                     -> in progress
+Pull request opened             -> in review
+Pull request merged             -> done, by whichever closer you configured
+Pull request closed unmerged    -> nothing automatic; you are told and asked what to do
+Tests cannot pass               -> stays in progress, run stops and holds
+```
 
 ## What lands in your repo
 
-- `.workbench/config.md` - the committed tracker profile: which tracker, which default destination, and the state mapping confirmed on first run.
-- `.workbench/plans/<ref>.md` - the per-issue plan document: the issue link, codebase context, approach, task list, and testing strategy.
-  It is written for people to read and never carries task status.
-- `.workbench/tasks/<ref>.md` - task statuses as checkboxes, written only when the checklist backend is active.
-  With beads active, statuses live in `.beads/` and no file appears here.
+| Path | What it is |
+| --- | --- |
+| `.workbench/config.md` | The committed profile: tracker, destination, state mapping, base branch, closer choice. |
+| `.workbench/plans/<ref>.md` | The per-issue plan: issue link, codebase context, approach, tasks, testing strategy. Written for people, never carries status. |
+| `.workbench/tasks/<ref>.md` | Task statuses as checkboxes. Only when the checklist backend is active. |
+| `.beads/` | Beads task database and its JSONL export, when beads is the backend. |
+| `.github/workflows/workbench-close.yml` | Only if you accepted the optional merge-closer Action. |
 
-Both records are permanent and stay in the repo after the pull request merges.
+Plans and task files stay after the pull request merges; they are the record of how the work was broken down.
 
 ## How the tracker learns a PR merged
 
-Asana has no built-in reaction to a merge the way Linear does, so workbench supports three ways to close the loop, in order of preference.
+Linear can close issues natively, Asana cannot, so workbench supports several arrangements. It asks once which one you use and records the answer.
 
-1. **Asana's own GitHub integration.** Install Asana's free GitHub App and add an Asana rule that marks a task complete when its linked pull request merges. Nothing from this plugin runs; Asana closes the task itself, exactly like Linear's native integration. Best option when your organization allows the app.
-2. **The merge-closer Action.** If you cannot install the app, the skills offer to add a small workflow that closes the task on merge using an `ASANA_TOKEN` repository secret. Still server-side, still no agent needed at merge time.
-3. **The sweep.** Whatever you choose, every run checks the repository for issues whose pull requests have since merged and closes anything the first two paths missed. This is the backstop, not the primary path.
+1. **The tracker's own GitHub integration.** Linear closes an issue when a pull request body contains `Closes TES-5`. Asana can do the equivalent with its free GitHub App plus a rule that completes a task when its linked pull request merges. Nothing from this plugin runs. Best option when your organization allows the app.
+2. **The optional merge-closer Action.** If you cannot install an integration, the skills offer a small workflow that closes the issue on merge using a repository secret. Server-side, no agent needed at merge time.
+3. **The sweep.** Whatever you choose, every run checks the repository for issues whose pull requests have since merged and closes anything the first two missed. This is the backstop.
 
-You can also just say so: tell either skill that a pull request merged, was closed, or was abandoned, and it runs the sweep immediately for that issue. It confirms the pull request's real state with the GitHub CLI rather than taking the claim at face value, and it tells you when reality differs from what you said.
+You can also just say so, and the skill verifies with `gh` before acting.
 
-A pull request that is closed without merging is never treated as done. The skills report it, ask whether to resume the work or move the issue back, and record the abandonment so you are not told twice.
+A pull request **closed without merging** is never treated as done. You get told which issue and pull request were abandoned and asked whether to resume or move the issue back, and the observation is recorded so you are not told twice.
+
+## Working conventions
+
+Applied to every run:
+
+- **Staging safety.** Never `git add -A` or `git add .`, and never stage environment files, credential files, or key material. Staged paths are checked against the task before committing.
+- **Commit messages.** Conventional subjects scoped by the issue ref, for example `feat(TES-5): add celsiusToKelvin with absolute-zero validation`, with the task named in the body.
+- **One commit per task.** Even when two tasks touch the same file. Before finishing, the run reconciles the number of task commits against tasks closed and stops if they disagree.
+- **Commit hashes recorded at close.** A task's close carries the hash of the commit that implemented it, so a task cannot be closed for work that was never committed.
+- **A progress line per task**, so a long run stays legible.
 
 ## Security boundary
 
-Both skills promise the same thing about tracker access: tracker work only happens through the connected tracker MCP.
-When that MCP is missing or disabled, the skill refuses the request and stops, naming the missing MCP so you know to connect it.
-The skills are instructed to never read credentials from disk or environment variables, never call a tracker's HTTP API directly, and never edit MCP or agent configuration.
+Tracker work happens only through the connected tracker MCP. When that MCP is missing or disabled, the skills refuse and print setup instructions, naming what is missing. They are instructed never to read credentials from disk or environment variables, never to call a tracker's HTTP API directly, and never to edit MCP or agent configuration.
 
-That promise is a set of instructions to a model, not a sandbox.
-A model can disregard instructions.
-During testing, one agent run attempted exactly this bypass after its tracker MCP was disabled: it tried editing `mcp.json`, reading OAuth token caches, and grepping the environment for credentials before attempting a direct Asana API call.
-What actually stopped it was not the prose in these skills.
-It was the agent harness's own approval prompts and file permissions.
+**That promise is instructions to a model, not a sandbox.** A model can disregard instructions. During testing, one run with its tracker MCP disabled tried to edit `mcp.json`, read OAuth token caches, and grep the environment for credentials before attempting a direct API call. What stopped it was the agent harness's approval prompts and file permissions, not the prose in these skills.
 
-So configure real enforcement in your agent harness, not just in the skill text.
-At minimum, deny without case-by-case approval:
+The mitigation that worked was giving the agent something useful to do instead: a preflight check that delivers setup instructions when the MCP is unverified. After that change, the same scenario produced a clean stop with no bypass attempts.
 
-- Reads of credential stores and token caches, for example `~/.aws`, `~/.kiro/settings`, `~/.mcp-auth`, or similar OAuth caches.
+Configure real enforcement in your harness anyway. At minimum, require case-by-case approval for:
+
+- Reads of credential stores and token caches, for example `~/.aws`, `~/.kiro/settings`, or OAuth caches.
 - `env` and `printenv` style environment dumps.
 - Writes to MCP configuration files.
-- Outbound `curl` (or equivalent) to tracker API hosts.
+- Outbound `curl` to tracker API hosts.
 
-Both Claude Code (permission settings) and Kiro (trusted command settings) support rules like these.
-Agent approval prompts are the last line of defense here, so do not blanket-approve shell commands during autonomous runs; an approval you grant once, without reading it, is an approval you have effectively granted forever for that session.
+Both Claude Code and Kiro support rules like these. Approval prompts are the last line of defense, so do not blanket-approve shell commands during autonomous runs.
 
-In practice this path only triggers when a tracker MCP is missing or disabled.
-A normal run, with the MCP connected, never reaches any of this.
+In practice this path only triggers when a tracker MCP is missing. A normal run never reaches it.
 
-## Migrating from v2
+## Troubleshooting
 
-Version 3 removes the v2 slash commands: `/issue-start`, `/issue-task`, `/commit`, and `/issue-finish`.
-In their place, the execute skill covers the same ground with one instruction: "execute ONC-5" (or "work on ONC-5") now does what used to take `/issue-start`, then `/issue-task` and `/commit` repeated per task, then `/issue-finish`.
-v2 remains available in this repository's git history if you need to reference it.
+**"It says my MCP is not verified but it looks connected."** A disabled server presents exactly like a missing one. Check for a `disabled` flag on the entry before adding a new server.
 
-## Upgrading from earlier versions
+**Branch switching fails with beads errors.** Beads runtime files were committed by a previous version. Ignore rules do not apply to already-tracked files, so untrack them once: `git rm -r --cached .beads` then commit. `bd init` writes its own `.beads/.gitignore`, so do not duplicate those rules at the repository root.
 
-Repos that already have a `.issue-lifecycle/` directory from a previous version should rename it to `.workbench/`.
-If you installed the merge-closer GitHub Action, also rename `.github/workflows/issue-lifecycle-close.yml` to `.github/workflows/workbench-close.yml` and update the `grep -rl "$BRANCH" .issue-lifecycle/tasks/` line inside it to point at `.workbench/tasks/`.
-Update the profile's first line from the old `# issue-lifecycle tracker profile` heading to `# workbench tracker profile`.
-If the repo uses beads for task memory, confirm that `.beads/.gitignore` and `.gitattributes` exist, since the beads tooling writes both, and untrack any beads runtime files that an earlier version committed, because ignore rules never apply to files that are already tracked.
+**Phase transitions show up as comments instead of moving the card.** Your Asana MCP build has no section-move tool. This is expected and handled, but the V2 server does support real section moves.
+
+**Listing destinations hangs.** On some Asana builds a workspace-wide project listing never returns. The skills prefer listing per team for this reason; if a call stalls rather than errors, that is the one.
+
+**A merged pull request did not close the issue.** Either no integration is connected, or its secret is missing. Ask the skill to clean up merged issues and it will close anything outstanding, then fix the arrangement so it happens automatically next time.
+
+**My edits to the plugin are not taking effect.** Marketplace installs copy the plugin into the agent's cache. See [Developing this plugin](#developing-this-plugin).
+
+## Known limitations
+
+- **Kiro has not been re-verified since the most recent changes.** The skills ran successfully on Kiro earlier in development, and the wiring is unchanged, but the rename, base-branch resolution, and commit-verification work have only been exercised on Claude Code. Smoke-test one run before relying on it there.
+- **The Linear merge-closer Action template has never been run end to end.** The Asana one has, three times. Verify your first merge rather than assuming.
+- **The issue type passed to `createIssue` is not stored as a tracker field.** It survives in the issue description and drives the branch prefix, but Linear labels and Asana custom fields are not set from it.
+- **Linear suggests its own branch names**, such as `chris/tes-5-slug`, while workbench generates `feat/tes-5-slug`. Using Linear's copy-branch-name button will not match.
+- **No CI awareness.** Once the pull request is open, a failing CI run is not noticed or reported.
+- **Jira is not supported.** Only Asana and Linear.
+
+## Developing this plugin
+
+Installing from a marketplace **copies** the plugin into the agent's cache; it does not live-link your working tree. Edits do not reach a running agent until you reinstall, and the agent keeps loading the snapshot it installed earlier. This is easy to miss and will make you think a fix did not work.
+
+Either reinstall after each change:
+
+```
+/plugin uninstall workbench
+/plugin install workbench@crod951
+/reload-plugins
+```
+
+Or point the agent at your working tree with the symlinks shown under [Install](#install), which Kiro picks up live.
+
+Before trusting a test run, confirm which copy is live by comparing line counts:
+
+```bash
+wc -l ~/.claude/plugins/cache/<marketplace>/workbench/*/skills/execute/SKILL.md \
+      plugins/workbench/skills/execute/SKILL.md
+```
+
+## Upgrading
+
+Repos set up by an earlier version need four things renamed or added:
+
+1. Rename `.issue-lifecycle/` to `.workbench/`.
+2. Rename `.github/workflows/issue-lifecycle-close.yml` to `.github/workflows/workbench-close.yml`, and update the path it greps to `.workbench/`.
+3. Change the profile's first line to `# workbench tracker profile`.
+4. Add `base-branch` to the profile, or let the next run ask.
+
+If the repo used beads, confirm `.beads/.gitignore` and `.gitattributes` exist, since the beads tooling writes both, and untrack any beads runtime files an earlier version committed.
+
+Version 3 of the predecessor plugin removed its slash commands (`/issue-start`, `/issue-task`, `/commit`, `/issue-finish`). The `execute` skill covers all of them: "execute TES-5" does what the whole sequence used to.
