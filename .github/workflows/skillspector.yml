@@ -30,7 +30,7 @@ jobs:
 
       - name: Install SkillSpector
         run: |
-          uv tool install git+https://github.com/NVIDIA/skillspector.git
+          uv tool install git+https://github.com/NVIDIA/skillspector.git@34f60308522f45447cd343da0aad77bcea308ad4 # v2.5.0
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Scan skills (fail on non-suppressed findings)

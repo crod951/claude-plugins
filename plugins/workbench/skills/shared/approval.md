@@ -42,7 +42,9 @@ These are safety stops. Auto mode exists to remove friction, not judgment, so ev
 - **An issue already in the `done` phase.** Still stop and ask whether to reopen it or pick another. Auto mode has nothing safe to infer, since reopening finished work and silently doing nothing are both wrong.
 - **Requirements too thin to break down.** Still ask the targeted questions. Auto mode skips approval of a draft; it never licenses inventing a breakdown that the requirements do not support.
 
-This list is exhaustive by intent: a stop that is not listed under what auto mode skips is a stop that fires. When a new stop is added to either skill, decide explicitly which list it belongs to.
+This list exhausts the approval-mode stops by intent: everything auto mode is allowed to skip appears in the previous section, and any stop not listed there fires in both modes.
+It does not enumerate every stop the skills define; unconditional stops that have nothing to do with approval, such as a required shared contract file that cannot be read, beads being unavailable for a repository whose task state lives in beads, or a task/commit reconciliation that fails, live with the procedures that define them and also fire in both modes.
+When a new stop is added to either skill, decide explicitly whether it belongs to the skip list, this list, or the unconditional stops in the defining procedure.
 
 ## Recording it
 

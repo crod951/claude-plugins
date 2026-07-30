@@ -45,8 +45,11 @@ failures=0
 for plugin in "${plugins[@]}"; do
   skills_dir="plugins/$plugin/skills"
   if [ ! -d "$skills_dir" ]; then
-    echo "warning: $skills_dir does not exist, skipping" >&2
-    continue
+    # Auto-discovered plugins always have a skills/ dir, so reaching here means
+    # an explicitly requested plugin is wrong (likely a typo). Fail rather than
+    # risk a false "PASS" after scanning nothing.
+    echo "error: $skills_dir does not exist" >&2
+    exit 1
   fi
 
   baseline_flags=()

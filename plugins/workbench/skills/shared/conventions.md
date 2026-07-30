@@ -63,7 +63,7 @@ Keep it current as the run proceeds when something material changes, but do not 
 A task's close must carry the hash of the commit that implemented it.
 Read the short hash from the repository after committing, then record it with the close.
 In beads, attach it to the task with the backend's note field, which is a separate store and needs no further commit.
-In checklist mode the hash belongs on the task's line in a file that is itself part of that commit, so amend the commit to add it rather than creating a second commit; a file staged into a commit cannot contain that commit's own hash.
+In checklist mode the hash belongs on the task's line, but a file staged into a commit cannot contain that commit's own final hash, and amending the commit to add it changes the hash again, leaving a stale value; so write the hash into the file after committing and let that edit ride the next commit that touches the file, which is the next task's close or the run's final closing commit, while stating the hash in the progress line immediately.
 When a backend cannot store it, state the hash in the progress line instead.
 
 The point is structural rather than cosmetic.

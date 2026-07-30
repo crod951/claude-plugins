@@ -37,8 +37,12 @@ If any of these files cannot be found and read, stop immediately and report whic
 
 ## Procedure
 
-1. Resolve the approval mode per `../shared/approval.md` and state it, then run preflight verification as described in `../shared/trackers.md`; stop there when the tracker's MCP does not verify.
+1. Resolve the approval mode per `../shared/approval.md` and state it.
+   Then determine whether the tracker is already settled: a profile records one, or exactly one tracker MCP is connected.
+   When it is settled, run preflight verification against that tracker as described in `../shared/trackers.md`; stop there when the tracker's MCP does not verify.
+   When it is not settled, because no profile exists and both tracker MCPs are connected, do not guess which MCP to verify: defer preflight to step 3, which asks the tie-break question first and then runs preflight against the answer.
 2. Run the done-on-merge sweep for the resolved tracker, whose mechanics are in `../shared/trackers/asana.md` and apply to Linear too; it is tracker work, so it only runs once preflight has verified the MCP.
+   When preflight was deferred in step 1, defer this sweep with it; step 3 runs both once the tracker is chosen.
 3. Resolve the tracker, then the destination.
    - There is no existing issue ref to infer the tracker from, so this step settles the tracker explicitly.
    - Preflight and the sweep in the previous steps run against the tracker inferred from the profile, or from the single connected MCP when there is no profile; when neither settles it, do the tie-break question here first and then run preflight and the sweep against the answer before continuing.

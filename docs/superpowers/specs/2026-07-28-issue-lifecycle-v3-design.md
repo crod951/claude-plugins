@@ -2,7 +2,20 @@
 
 Date: 2026-07-28
 Branch: `feat/issue-lifecycle-v3`
-Status: Approved
+Status: Approved; implemented with renames (see note below)
+
+> **Implementation note (2026-07-30).**
+> This design was implemented on `feat/workbench` under the name **Workbench**, with these renames relative to the text below:
+>
+> | This document says | Implemented as |
+> |---|---|
+> | `plugins/issue-lifecycle/` | `plugins/workbench/` |
+> | `issue-lifecycle` skill | `execute` skill |
+> | `issue-intake` skill | `scaffold` skill |
+> | `.issue-lifecycle/` config dir | `.workbench/` |
+>
+> One behavioral correction: Linear does **not** close issues automatically on PR merge unless its GitHub integration is explicitly connected; the implemented adapter (`plugins/workbench/skills/shared/trackers/linear.md`) requires establishing the `merge-closer` arrangement during first-run setup and keeps the done-on-merge sweep as the backstop.
+> For current paths, names, and contracts, `plugins/workbench/` is the authority; this document is retained as the approved design record.
 
 ## Purpose
 
@@ -27,7 +40,7 @@ It is written fresh from learnings; no skill text is copied from any other repos
 
 ## Section 1: Repo layout and packaging
 
-```
+```text
 plugins/issue-lifecycle/
 ├── .claude-plugin/plugin.json        # Claude Code packaging, version 3.0.0
 ├── README.md                         # install paths for both agents

@@ -81,6 +81,8 @@ Never silently move the phase back either, because whether to retry, rescope, or
 Report it instead: name the issue, name the PR, say it was closed without merging, and ask whether to resume the work on a fresh branch or move the issue back to the `inProgress` phase.
 
 Record the observation in that issue's file under `.workbench/` as a line such as `- PR closed unmerged: <date> <pr url>` so the same abandoned PR is reported once rather than on every later run.
+Commit that recorded line and push it before the sweep returns, following the same branch-placement and uncommitted-state cautions as the Closed stamp above: a marker that exists only in a working tree, or only in a local commit, does not survive to other clones or later runs, and the same abandoned PR would be re-reported every time.
+When the push fails, report the failure and continue, exactly as a failed stamp push is handled, and expect the PR to be reported again until a push succeeds; that repetition is the honest outcome of unpersisted state, not a bug to suppress.
 Report it again when a different PR for the same issue is later closed unmerged, since that is new information.
 A recorded abandonment does not close the issue and does not stop a later merge from closing it normally; when a fresh PR for the same issue merges, apply the usual done state and Closed stamp.
 
