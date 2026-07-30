@@ -102,6 +102,12 @@ When a user's reply could answer more than one pending question, or its target i
    Inspect what the connected tracker actually offers: for Linear, list the team's workflow states; for Asana, list the project's board sections and any status custom fields.
    Propose a mapping from those tracker-specific states to the three phases (`inProgress`, `inReview`, `done`).
    Show the proposed mapping to the user and let them confirm it or correct it.
+
+   A tracker may have no state for a phase at all, which is common for `inReview`: a default Linear team ships without a review state, and an Asana project may have no matching section.
+   Do not silently pick the nearest state, and do not fabricate one.
+   Say which phase has nothing to map to, then offer the real choices: the user adds a state in the tracker and you re-read the states afterwards, or the phase maps onto another state with the loss of distinction stated plainly, or the phase stays unmapped so the skill skips that transition entirely.
+   Record an unmapped phase in the profile as `unmapped` rather than omitting the line, so a later run knows the phase was considered and skipped rather than forgotten.
+   Creating tracker states is the user's job; no adapter operation defines a workflow state, so never claim to have added one.
 3. Run the tracker adapter's profile-load offers.
    For Asana, this is the merge-closer question described in that tracker's adapter file.
    Ask it and record the answer in the profile.
