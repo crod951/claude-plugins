@@ -13,9 +13,12 @@ Adapter files implement each one against a specific tracker's tools; treat the o
 | --- | --- |
 | `getIssue(ref)` | Fetch one issue's title, description, type/labels, URL, native id, current state, and existing children. |
 | `listSubIssues(ref)` | List an issue's existing child issues, each with id, title, and state; use this when adopting an issue that may already have children. |
-| `listDestinations()` | List where a new top-level issue can be created (Asana projects, Linear teams), each as a stable id paired with a display name. |
-| `resolveDestination(hint?)` | Turn a caller-supplied hint, or the tracker profile's configured default when no hint is given, into one native destination id; return null when the result is ambiguous. |
+| `listDestinations()` | List where a new top-level issue can be created (Asana projects, Linear teams), each as a stable destination value paired with a display name. |
+| `resolveDestination(hint?)` | Turn a caller-supplied hint, or the tracker profile's configured default when no hint is given, into one destination value; return null when the result is ambiguous. |
 | `createIssue(title, description, type, destination)` | Create a new top-level issue in the given destination; return its ref and URL. |
+
+The destination value is adapter-owned and opaque to the skills: they only pass it between these three operations and store it in the profile, never inspect it.
+It may bundle more than one native id when the tracker needs that; Linear's carries the team UUID plus an optional project id, while Asana's is a single project GID.
 | `createSubIssue(parentRef, title, description)` | Create a new child issue under an existing parent; return its ref and URL. Do not attempt to record the paired task id during this call; the task does not exist yet. The execute skill writes it back after `createTask` returns, using `comment` so no additional contract operation is needed. |
 | `updateState(ref, phase)` | Move an issue to the given phase, where phase is one of `inProgress`, `inReview`, or `done`; apply it through the tracker profile's state mapping rather than a hardcoded status name. |
 | `comment(ref, body)` | Post a comment on an issue. |
@@ -71,7 +74,7 @@ Only a verified MCP allows tracker work to begin.
 Every skill invocation in a repo must run this sweep before doing any other tracker work, and only once preflight has verified the MCP.
 The sweep is tracker-agnostic: it finds issues from repository state, and only its closure action goes through the resolved tracker's adapter.
 
-The sweep checks whether any file under `.workbench/` references an issue whose pull request has since merged, using `gh pr view <branch> --json state,mergedAt` for each recorded branch; when several issues are outstanding, one `gh pr list --state all --json headRefName,state,mergedAt` call matched locally against the recorded branch names is cheaper than one call per issue.
+The sweep checks whether any file under `.workbench/` references an issue whose pull request has since merged, using `gh pr view <branch> --json state,mergedAt` for each recorded branch; when several issues are outstanding, one `gh pr list --state all --json headRefName,state,mergedAt` call matched locally against the recorded branch names is cheaper than one call per issue; pass `--limit` with a value comfortably above the repository's total pull request count, since the default caps at 30 and a capped listing would silently skip older recorded branches.
 Search the whole directory rather than only `tasks/`: depending on the resolved memory backend the per-issue record may be a plan document under `plans/` with no checklist file at all, and narrowing the search to `tasks/` silently skips those issues.
 When the sweep finds a merged pull request for an issue, read the issue's current state before writing to the tracker.
 When the issue is already complete, for example because a merge-closer Action or a native integration already closed it, skip the tracker write and apply only the stamp described below.

@@ -4,14 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - "plugins/*/skills/**"
-      - "plugins/*/.skillspector-baseline.yaml"
+      - "skills/**"
+      - ".skillspector-baseline.yaml"
       - "bin/scan-skills.sh"
       - ".github/workflows/skillspector.yml"
   pull_request:
     paths:
-      - "plugins/*/skills/**"
-      - "plugins/*/.skillspector-baseline.yaml"
+      - "skills/**"
+      - ".skillspector-baseline.yaml"
       - "bin/scan-skills.sh"
       - ".github/workflows/skillspector.yml"
   workflow_dispatch:

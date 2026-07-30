@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# Scan plugin skills with NVIDIA SkillSpector and fail on any non-suppressed finding.
+# Scan the skills under skills/ with NVIDIA SkillSpector and fail on any
+# non-suppressed finding.
 #
 # Usage:
-#   bin/scan-skills.sh [plugin ...]   # default: every plugin with a skills/ directory
+#   bin/scan-skills.sh [skill ...]   # default: every skills/<name>/ with a SKILL.md
 #
 # Environment:
 #   SKILLSPECTOR_LLM=1   also run the LLM semantic stage (requires provider credentials,
 #                        e.g. SKILLSPECTOR_PROVIDER=anthropic + ANTHROPIC_API_KEY)
 #   REPORT_DIR=<dir>     write per-skill JSON and Markdown reports into <dir>
 #
-# Known false positives are suppressed via each plugin's .skillspector-baseline.yaml,
+# Known false positives are suppressed via the repo-root .skillspector-baseline.yaml,
 # with an auditable reason per suppression. Suppressed findings still appear in the
 # JSON reports under "suppressed".
 #
@@ -26,14 +27,14 @@ if ! command -v skillspector >/dev/null 2>&1; then
   exit 1
 fi
 
-plugins=("$@")
-if [ ${#plugins[@]} -eq 0 ]; then
-  for d in plugins/*/skills; do
-    [ -d "$d" ] && plugins+=("$(basename "$(dirname "$d")")")
+skill_names=("$@")
+if [ ${#skill_names[@]} -eq 0 ]; then
+  for d in skills/*/; do
+    [ -f "$d/SKILL.md" ] && skill_names+=("$(basename "$d")")
   done
 fi
-if [ ${#plugins[@]} -eq 0 ]; then
-  echo "No plugins with a skills/ directory found." >&2
+if [ ${#skill_names[@]} -eq 0 ]; then
+  echo "No skills with a SKILL.md found under skills/." >&2
   exit 1
 fi
 
@@ -42,42 +43,39 @@ if [ "${SKILLSPECTOR_LLM:-0}" != "1" ]; then
   scan_flags+=(--no-llm)
 fi
 
+baseline_flags=()
+baseline=".skillspector-baseline.yaml"
+[ -f "$baseline" ] && baseline_flags=(--baseline "$baseline")
+
 [ -n "${REPORT_DIR:-}" ] && mkdir -p "$REPORT_DIR"
 
 failures=0
-for plugin in "${plugins[@]}"; do
-  skills_dir="plugins/$plugin/skills"
-  if [ ! -d "$skills_dir" ]; then
-    # Auto-discovered plugins always have a skills/ dir, so reaching here means
-    # an explicitly requested plugin is wrong (likely a typo). Fail rather than
+crashes=0
+scanned=0
+for skill in "${skill_names[@]}"; do
+  skill_dir="skills/$skill"
+  if [ ! -f "$skill_dir/SKILL.md" ]; then
+    # Auto-discovered names always have a SKILL.md, so reaching here means an
+    # explicitly requested skill is wrong (likely a typo). Fail rather than
     # risk a false "PASS" after scanning nothing.
-    echo "error: $skills_dir does not exist" >&2
+    echo "error: $skill_dir has no SKILL.md" >&2
     exit 1
   fi
-
-  baseline_flags=()
-  baseline="plugins/$plugin/.skillspector-baseline.yaml"
-  [ -f "$baseline" ] && baseline_flags=(--baseline "$baseline")
-
-  scanned=0
-  for skill_dir in "$skills_dir"/*/; do
-    [ -f "$skill_dir/SKILL.md" ] || continue
-    scanned=$((scanned + 1))
-    skill="$(basename "$skill_dir")"
-    json="$(mktemp)"
+  scanned=$((scanned + 1))
+  json="$(mktemp)"
 
     # skillspector is documented to always exit 0, but a crash (bad install,
     # provider error in the LLM stage) can still exit non-zero; under set -e an
     # unguarded call would kill the whole run with no summary and no reports.
     if ! skillspector scan "$skill_dir" ${scan_flags[@]+"${scan_flags[@]}"} ${baseline_flags[@]+"${baseline_flags[@]}"} \
       --format json --output "$json" >/dev/null; then
-      echo "ERROR: skillspector crashed while scanning $plugin/$skill" >&2
-      failures=$((failures + 1))
+      echo "ERROR: skillspector crashed while scanning $skill" >&2
+      crashes=$((crashes + 1))
       rm -f "$json"
       continue
     fi
 
-    summary="$(python3 - "$json" "$plugin/$skill" <<'PY'
+    summary="$(python3 - "$json" "$skill" <<'PY'
 import json, sys
 report = json.load(open(sys.argv[1]))
 risk = report["risk_assessment"]
@@ -98,12 +96,12 @@ PY
     echo "$summary"
 
     if [ -n "${REPORT_DIR:-}" ]; then
-      cp "$json" "$REPORT_DIR/$plugin-$skill.json"
+      cp "$json" "$REPORT_DIR/$skill.json"
       # Render the Markdown report from the same JSON rather than re-scanning:
       # a second scan doubles cost (twice per skill, including the LLM stage)
       # and, because the scanner is not fully deterministic, could produce a
       # report that contradicts the JSON that decided pass/fail.
-      python3 - "$json" "$plugin/$skill" > "$REPORT_DIR/$plugin-$skill.md" <<'PY'
+      python3 - "$json" "$skill" > "$REPORT_DIR/$skill.md" <<'PY'
 import json, sys
 report = json.load(open(sys.argv[1]))
 risk = report["risk_assessment"]
@@ -147,21 +145,26 @@ PY
     rm -f "$json"
 
     [ "$skill_ok" -ne 0 ] && failures=$((failures + 1))
-  done
-
-  if [ "$scanned" -eq 0 ]; then
-    # A skills/ dir with no SKILL.md underneath would otherwise print nothing
-    # and contribute to a false "PASS" after scanning nothing.
-    echo "error: no skills with a SKILL.md found under $skills_dir" >&2
-    exit 1
-  fi
 done
 
-if [ "$failures" -gt 0 ]; then
+if [ "$scanned" -eq 0 ]; then
+  # Belt and braces: reaching here with nothing scanned would otherwise print
+  # a false "PASS" after scanning nothing.
+  echo "error: no skills were scanned" >&2
+  exit 1
+fi
+
+if [ "$failures" -gt 0 ] || [ "$crashes" -gt 0 ]; then
   echo
-  echo "FAIL: $failures skill(s) have non-suppressed findings." >&2
-  echo "Fix the finding, or if it is a reviewed false positive, add a rule with a" >&2
-  echo "reason to the plugin's .skillspector-baseline.yaml." >&2
+  if [ "$failures" -gt 0 ]; then
+    echo "FAIL: $failures skill(s) have non-suppressed findings." >&2
+    echo "Fix the finding, or if it is a reviewed false positive, add a rule with a" >&2
+    echo "reason to .skillspector-baseline.yaml." >&2
+  fi
+  if [ "$crashes" -gt 0 ]; then
+    echo "FAIL: the scanner crashed on $crashes skill(s); those skills were NOT" >&2
+    echo "assessed. Check the install and provider credentials, then re-run." >&2
+  fi
   exit 1
 fi
 

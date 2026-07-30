@@ -1,23 +1,23 @@
-# claude-plugins
+# skills
 
-[![SkillSpector](https://github.com/crod951/claude-plugins/actions/workflows/skillspector.yml/badge.svg)](https://github.com/crod951/claude-plugins/actions/workflows/skillspector.yml)
+[![SkillSpector](https://github.com/crod951/skills/actions/workflows/skillspector.yml/badge.svg)](https://github.com/crod951/skills/actions/workflows/skillspector.yml)
 
-Custom Claude Code plugins for issue-driven development workflow automation.
-All plugin skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) on every change; the build fails on any non-suppressed security finding.
+Personal agent skills for issue-driven development workflow automation, installable as a Claude Code plugin or onto any agent via [skills.sh](https://www.skills.sh).
+All skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) on every change; the build fails on any non-suppressed security finding.
 
 ## Installation (30-second setup)
 
 **Claude Code** - run these inside a session for a managed install that updates when this repo ships:
 
 ```text
-/plugin marketplace add crod951/claude-plugins
+/plugin marketplace add crod951/skills
 /plugin install workbench@crod951
 ```
 
 **Kiro, Codex, and other agents** - use [skills.sh](https://www.skills.sh) for an editable copy on any agent:
 
 ```bash
-npx skills@latest add crod951/claude-plugins
+npx skills@latest add crod951/skills
 ```
 
 When the installer asks which skills to take, take all of them; `workbench-shared` carries the contract files the other two read.
@@ -72,7 +72,7 @@ scaffold these requirements
 Todo → In Progress (execute starts) → In Review (PR opened) → Done (PR merge)
 ```
 
-See the [full guide](./plugins/workbench/README.md) for setup, task memory, and the security boundary.
+See the [full guide](./docs/workbench.md) for setup, task memory, and the security boundary.
 
 ---
 
@@ -84,15 +84,15 @@ See the [full guide](./plugins/workbench/README.md) for setup, task memory, and 
 
 ## Security Scanning
 
-Every skill in `plugins/*/skills/` is scanned by [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) in CI, and the build fails on any non-suppressed finding.
+Every skill in `skills/` is scanned by [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) in CI, and the build fails on any non-suppressed finding.
 Run the same scan locally before committing:
 
 ```bash
 uv tool install git+https://github.com/NVIDIA/skillspector.git
-bin/scan-skills.sh <plugin-name>
+bin/scan-skills.sh            # all skills; or name specific ones: bin/scan-skills.sh execute
 ```
 
-When a finding is a reviewed false positive, suppress it in the plugin's `.skillspector-baseline.yaml` with a written reason; never suppress a finding you have not understood.
+When a finding is a reviewed false positive, suppress it in the repo-root `.skillspector-baseline.yaml` with a written reason; never suppress a finding you have not understood.
 
 ## License
 
