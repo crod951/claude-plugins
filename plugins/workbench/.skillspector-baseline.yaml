@@ -1,0 +1,13 @@
+version: 2
+
+# Reviewed findings accepted as false positives.
+# Docs: https://github.com/NVIDIA/SkillSpector/blob/main/docs/SUPPRESSION.md
+rules:
+  - id: "RA2"
+    path: "SKILL.md"
+    message: "*hand off to the execute skill*"
+    reason: >-
+      False positive: the "Session Persistence" pattern matched the scaffold
+      skill description's hand-off phrasing ("offers to hand off to the
+      execute skill"). The skill defines no cron jobs, startup scripts, or
+      cross-session state.

@@ -90,7 +90,7 @@ Run this setup procedure once per repository, then reuse its output on every lat
 Trigger setup when the repository has no `.workbench/config.md`.
 Before prompting the user, check other local branches for a newer `.workbench/config.md` and offer to reuse it instead of starting over.
 
-When no existing profile is found anywhere, the agent must run these four steps in order and must not skip any of them.
+When no existing profile is found anywhere, the agent must run these five steps in order and must not skip any of them.
 Each step must get the user's answer before the next step starts, and the profile must not be written until every step has an answer.
 Ask one question at a time; never present a later step's question, or any other pending question such as the issue draft, alongside an unanswered step from this sequence.
 Prefer the agent's structured question mechanism named in `agents.md` over free prose for each of these questions, since a list of concrete choices is harder to answer ambiguously.
@@ -118,8 +118,11 @@ When a user's reply could answer more than one pending question, or its target i
    Recording that as the profile's base would make every future issue in the repository, and every teammate who clones it, branch from and target one issue's unmerged work, and the resolution-time guard would never fire because the profile now holds an explicit answer.
    Offer the default branch in that case, and say why the current branch was excluded.
    Record the answer as `base-branch` in the profile.
+5. Confirm the approval mode.
+   Ask whether future runs should stop for approval at the usual points, or run straight through without asking.
+   Record the answer as `approval: ask` or `approval: auto` per `approval.md`, and say that the safety stops listed there fire either way, so choosing auto does not mean unattended risk.
 
-Save the confirmed profile to `.workbench/config.md` and commit that file only once all four steps above have an answer; include the confirmed default destination.
+Save the confirmed profile to `.workbench/config.md` and commit that file only once all five steps above have an answer; include the confirmed default destination.
 Never announce that setup will happen and then write a profile without having asked each of these questions.
 A profile written without confirmed answers for every step is a defect, not a shortcut.
 A per-invocation destination hint applies only to that invocation; change the profile's `default-destination` only when it is absent or when the user explicitly asks to change it.
@@ -131,6 +134,7 @@ Use this format for the profile:
 tracker: asana
 default-destination: Prototypes (1209000000000001)
 base-branch: main
+approval: ask
 state-mapping:
   inProgress: section "In Progress"
   inReview: section "Review"

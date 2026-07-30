@@ -17,6 +17,7 @@ It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and
 - [Setup, step by step](#setup-step-by-step)
 - [Using scaffold](#using-scaffold)
 - [Using execute](#using-execute)
+- [Approval modes](#approval-modes)
 - [Decision trees](#decision-trees)
 - [What lands in your repo](#what-lands-in-your-repo)
 - [How the tracker learns a PR merged](#how-the-tracker-learns-a-pr-merged)
@@ -31,7 +32,9 @@ It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and
 
 A run of the two skills back to back produces: a tracker issue with sub-issues, a feature branch, a plan document a reviewer can read before any code exists, one commit per unit of work, a pull request whose body links the issue and lists what was verified, and the issue sitting in review.
 
-The design goal is that **nothing is remembered between invocations**. Every run reads state from your repository and your tracker, so an interrupted run resumes by being re-invoked, on any machine, in either agent.
+The design goal is that **nothing is remembered between invocations**. Every run reads state from your repository and your tracker, so an interrupted run resumes by being re-invoked, in either agent.
+
+Resuming on a *different* machine works for whatever was committed and pushed. The checklist backend travels with each task commit; beads keeps its database out of git by design and shares only its export, so a beads run commits that export alongside each task for the same reason.
 
 **Requirements:** an Asana or Linear MCP connected in your agent, the GitHub CLI (`gh`) authenticated, and optionally the beads CLI (`bd`) for richer task memory.
 
@@ -107,7 +110,8 @@ The first time either skill runs in a repository it asks a short series of quest
 | Which destination? | The Asana project or Linear team new issues go to. |
 | How do your states map? | Your real board sections or workflow states get mapped to three phases: in progress, in review, done. |
 | How should the tracker learn a PR merged? | Asana and Linear differ; see [How the tracker learns a PR merged](#how-the-tracker-learns-a-pr-merged). |
-| Which base branch? | Feature branches start from it and pull requests target it. Defaults to your current branch. |
+| Which base branch? | Feature branches start from it and pull requests target it. Defaults to your current branch, unless that is itself a workbench branch. |
+| Stop for approval, or run straight through? | Sets the default approval mode for future runs. See [Approval modes](#approval-modes). |
 
 If your tracker has no state for a phase, which is common for review states in a fresh Linear team, the skill says so and offers real choices rather than silently picking the nearest state.
 
@@ -128,11 +132,11 @@ turn these requirements into an issue
 break this spec into tickets
 ```
 
-It reads a file when you point at one, rather than working from the filename. It then **reads your codebase before drafting**, so sub-issues name real files and follow patterns that already exist. It shows you a draft and creates nothing until you approve it.
+It reads a file when you point at one, rather than working from the filename. It then **reads your codebase before drafting**, so sub-issues name real files and follow patterns that already exist. In the default mode it shows you a draft and creates nothing until you approve it. In auto mode it creates the scaffold immediately and reports what it made.
 
 If your requirements are too thin to split sensibly, it will not invent a breakdown. It asks targeted questions instead, one at a time. Asking "make the cart better" gets you questions, not five fabricated tickets.
 
-When the scaffold exists, it offers to hand straight off to `execute`.
+When the scaffold exists, it offers to hand straight off to `execute`, or does so without asking in auto mode.
 
 ## Using execute
 
@@ -156,6 +160,32 @@ A run does this: verifies the tracker MCP, sweeps for merged work, resolves trac
 Re-invoking on the same issue resumes it. Guards see what already exists and skip it.
 
 **When tests cannot pass**, the run stops and holds: the work stays, the task stays open, and you get told what failed. It does not push broken work or a misleading pull request.
+
+## Approval modes
+
+Two modes, and the difference is only how many questions you get.
+
+**Ask mode**, the default, stops for the issue draft, the handoff, and any genuinely ambiguous choice.
+
+**Auto mode** runs straight through. It skips the draft approval, the handoff question, ties that the documented precedence can settle on its own, and any first-run answer that is unambiguous, such as a single available destination or state names that match the three phases exactly.
+
+Auto mode removes friction, not judgment. **Every safety stop still fires in both modes:**
+
+- An unverified or disabled tracker MCP still refuses and prints setup instructions.
+- A test failure that cannot be fixed still stops and holds, with the work kept and nothing pushed.
+- A conflict while updating from the base branch still stops, naming the conflicting files.
+- A pull request closed without merging still gets reported and asked about.
+- A phase with no matching tracker state still asks, rather than mapping review onto something that means something else.
+- An ambiguous setup answer still asks that one question, because a wrong destination misfiles every future issue in the repo.
+
+Set the default during first-run setup, or edit `approval` in `.workbench/config.md`. Override it per run from the prompt, in either direction:
+
+```
+scaffold these requirements, auto approve
+work on TES-5, ask me first
+```
+
+Every run states which mode it resolved and why, so the mode is never a silent assumption. When auto mode accepts a setup answer rather than having you confirm it, the profile records that it was auto-accepted, so a wrong value is traceable to the decision rather than looking like a human choice.
 
 ## Decision trees
 
@@ -193,6 +223,16 @@ Current branch is itself a workbench branch?    -> ask, never stack one issue on
 ```
 
 The base branch is always fetched before branching from it. Branching from a stale local copy is the usual cause of conflicts at merge time.
+
+### Which approval mode
+
+```
+Does the prompt say auto approve, or ask me first?  -> that, this run only
+Does .workbench/config.md set approval?             -> that
+Otherwise                                           -> ask
+```
+
+Whichever resolves, the safety stops above are unaffected.
 
 ### What happens to the tracker issue
 

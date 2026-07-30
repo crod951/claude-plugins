@@ -31,12 +31,13 @@ In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.k
 
 - `../shared/trackers.md` for the tracker contract and the tracker profile default destination.
 - `../shared/agents.md` for the per-agent notes, including the structured question mechanism to prefer whenever this procedure asks the user anything.
+- `../shared/approval.md` for the two approval modes, and for the stops that hold in both.
 
 If any of these files cannot be found and read, stop immediately and report which paths were tried - never improvise their contracts from memory or proceed without them.
 
 ## Procedure
 
-1. Run preflight verification as described in `../shared/trackers.md` before any other step; stop there when the tracker's MCP does not verify.
+1. Resolve the approval mode per `../shared/approval.md` and state it, then run preflight verification as described in `../shared/trackers.md`; stop there when the tracker's MCP does not verify.
 2. Run the done-on-merge sweep for the resolved tracker, whose mechanics are in `../shared/trackers/asana.md` and apply to Linear too; it is tracker work, so it only runs once preflight has verified the MCP.
 3. Resolve the tracker, then the destination.
    - There is no existing issue ref to infer the tracker from, so this step settles the tracker explicitly.
@@ -67,7 +68,8 @@ If any of these files cannot be found and read, stop immediately and report whic
    - Write a main issue title and a description that summarizes the requirements.
    - Infer the main issue's type from the requirements, one of feature, bug, chore, or docs, defaulting to feature when the requirements do not indicate one.
    - Break the requirements into three to seven sub-issue drafts, each sized as an independently implementable unit of work.
-   - Show the full draft, main issue title, type, description, and every sub-issue, to the user and wait for approval before creating anything.
+   - In ask mode, show the full draft, main issue title, type, description, and every sub-issue, to the user and wait for approval before creating anything.
+   - In auto mode, skip that approval: create the scaffold immediately and report the same draft content as what was created.
    - Draft approval must be the only open question in that turn; never show it alongside a setup question or any other unanswered question.
    - Apply any edits the user requests, then show the revised draft again until it is approved.
    - When a reply could answer more than one open question, or its target is unclear, stop and ask which question it answered; do not guess.
@@ -79,6 +81,6 @@ If any of these files cannot be found and read, stop immediately and report whic
    - Report each issue's ref using that tracker's issue ref scheme, as defined in that tracker's adapter file, and hand off using that ref; for Asana this is the short `asana-<last six digits of the GID>` form, never the full GID.
 9. A per-invocation destination hint applies only to the issue just created; do not overwrite the tracker profile's saved default because of it.
    Write `default-destination` into the tracker profile only when the profile currently has none, or when the user explicitly asks to change the default.
-10. Offer the handoff: ask "run execute on <ref> now?", where `<ref>` is the main issue just created.
+10. Hand off. In ask mode, ask "run execute on <ref> now?"; in auto mode, invoke the execute skill on that ref without asking and say that you are doing so.
    - When the user says yes, invoke the execute skill on that ref.
    - When the user says no, stop here and leave the issue in the tracker for a later run.

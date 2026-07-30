@@ -25,6 +25,7 @@ Every run begins by reading durable state from the repository and the tracker, n
 
 - Treat this as one resumable pass guarded by observable artifacts on disk and in the tracker, never by memory of a previous run.
 - After the first-run tracker profile is confirmed, proceed without further mid-run confirmation; only stop when this procedure says to stop.
+- Auto mode removes questions, never safety stops; every stop in `approval.md` fires in both modes.
 - The memory backend is the source of truth for task state; state flows one way from it to the tracker, never the reverse.
 - On an unfixable test failure, stop and hold rather than pushing partial or broken work forward.
 - Tracker access goes only through the connected tracker MCP; when it is missing, stop and say so; never hunt for credentials on disk or call tracker APIs directly.
@@ -40,12 +41,13 @@ In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.k
 - `../shared/memory.md` for the memory contract and backend resolution rules.
 - `../shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
 - `../shared/conventions.md` for staging safety, commit messages, the plan document, and progress reporting.
+- `../shared/approval.md` for the two approval modes, and for the stops that hold in both.
 
 If any of these files cannot be found and read, stop immediately and report which paths were tried - never improvise their contracts from memory or proceed without them.
 
 ## Procedure
 
-1. Run preflight verification as described in `../shared/trackers.md` before any other step.
+1. Resolve the approval mode per `../shared/approval.md` and state it, then run preflight verification as described in `../shared/trackers.md` before any other tracker step.
    Stop here, following that section's instructions, when the tracker's MCP does not verify.
 2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../shared/trackers/asana.md` and apply to Linear as well, since the sweep is tracker-agnostic once a merged pull request is found.
    This sweep is itself tracker work, so it only runs once preflight has verified the MCP.
