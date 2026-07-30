@@ -72,7 +72,7 @@ Analyzes codebases and generates tailored Claude Code skills. **11 specialized a
 
 ---
 
-### workbench (v3.0.0)
+### workbench (v1.0.0)
 
 Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from intake through an open pull request.
 It works with Asana or Linear as your issue tracker, and both skills run unchanged on Claude Code and Kiro.

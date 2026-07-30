@@ -1,6 +1,6 @@
 {
   "name": "workbench",
-  "version": "3.0.0",
+  "version": "1.0.0",
   "description": "Workbench provides the execute and scaffold skills for driving Asana or Linear tracker issues from requirements to an open PR. Agent-portable skills for Claude Code and Kiro with resumable, task-tracked implementation runs.",
   "author": {
     "name": "crod951",

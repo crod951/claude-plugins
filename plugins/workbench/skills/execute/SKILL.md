@@ -1,7 +1,7 @@
 ---
 name: execute
 description: This skill should be used when the user asks to "execute ONC-5", "run execute on this issue", "work on an issue", "start an issue", "implement this Asana/Linear issue", "take this issue to a PR", pastes an Asana task URL to build, or names a Linear issue key like ONC-5. Also use when the user says something like "the PR for <issue> merged", "clean up merged issues", "the PR was closed", "that PR got abandoned", or "close out merged work", to run the done-on-merge sweep on demand. Drives an existing tracker issue from breakdown through implementation to an open PR with resumable task tracking.
-version: 3.0.0
+version: 1.0.0
 ---
 
 # Execute
@@ -59,8 +59,8 @@ If any of these files cannot be found and read, stop immediately and report whic
    When the issue is already in the `done` phase or marked complete, do not start work: say so, report what the sweep found for it, and ask whether to reopen it or pick a different issue.
 6. Search the codebase and read the files that look relevant to this issue, noting existing patterns to follow during implementation.
 7. Ensure a feature branch exists for this issue; when one must be created, prefix its name from the issue type (`feat/` for a feature, `fix/` for a bug, `chore/` for a chore, `docs/` for docs, `feat/` by default) followed by the issue ref and a short title slug; skip creation when a matching branch already exists.
-   Branch from an up-to-date default branch: fetch first, then create the branch from the fetched default branch rather than from whatever happens to be checked out, since branching from a stale local copy is the usual cause of conflicts at merge time.
-   When the branch already exists and the default branch has moved on since, bring it up to date before implementing, and report that you did.
+   Resolve the base branch per the base-branch rules in `trackers.md`, then fetch it and create the new branch from the fetched remote copy rather than from a local copy that may be behind, since branching from a stale local copy is the usual cause of conflicts at merge time.
+   When the branch already exists and the base branch has moved on since, bring it up to date before implementing, and report that you did.
    When that update conflicts, stop and hold exactly as an unfixable test failure would: keep the work, leave the task in progress, report which files conflict, and let the user decide how to resolve them; never resolve a conflict by discarding either side's changes.
 8. Ensure the breakdown exists.
    - Skip the rest of this step when a breakdown already exists for this issue.
@@ -79,7 +79,7 @@ If any of these files cannot be found and read, stop immediately and report whic
     Print the per-task progress line from `conventions.md` after each close.
     Record status changes as they happen rather than summarizing them at the end of the loop.
     When the repository has no test framework or the touched code has no tests, say so once, write a test for the unit you just implemented using whatever the project already depends on, and treat that new test as the task's verification; when the project truly cannot run tests, state that plainly in the progress line and in the pull request body rather than implying the work was verified.
-11. Once `claimNext` returns none remaining, finish the issue: run the commit reconciliation from `conventions.md` and stop if the task and commit counts disagree, commit any leftover uncommitted change, close the parent task, push the branch, and open the pull request with the `gh` command-line tool unless one already exists, with a body containing `Closes <ref>` for a Linear issue or the task's URL for an Asana task, plus a summary, the list of completed tasks, and a test plan; call `updateState` to move the issue to the `inReview` phase; then post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push any changed or new task-state files under `.beads/` (including files its own tooling creates) and `.workbench/` as a final closing commit so the branch carries the completed state.
+11. Once `claimNext` returns none remaining, finish the issue: run the commit reconciliation from `conventions.md` and stop if the task and commit counts disagree, commit any leftover uncommitted change, close the parent task, push the branch, and open the pull request with the `gh` command-line tool against the resolved base branch unless one already exists, with a body containing `Closes <ref>` for a Linear issue or the task's URL for an Asana task, plus a summary, the list of completed tasks, and a test plan; call `updateState` to move the issue to the `inReview` phase; then post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push any changed or new task-state files under `.beads/` (including files its own tooling creates) and `.workbench/` as a final closing commit so the branch carries the completed state.
 12. Report a final summary: the issue, the pull request URL, the tracker's current phase, and the task counts from `status()`.
 
 ## Display overlay

@@ -1,7 +1,7 @@
 ---
 name: scaffold
 description: This skill should be used when the user asks to "scaffold these requirements", "scaffold an issue from this PRD or spec", "turn these requirements into an issue", "create an issue and sub-issues", or "break these requirements into tickets" for Asana or Linear. Creates a main issue plus linked sub-issues, then offers to hand off to the execute skill.
-version: 3.0.0
+version: 1.0.0
 ---
 
 # Scaffold

@@ -29,6 +29,20 @@ In particular, never infer a destination from tracker URLs found inside existing
 The agent may inspect existing task files or prior issues to offer a suggested default inside that same question, for example "previous issues in this repo used X, use that again?".
 Offering a suggestion does not replace asking; still ask the question and wait for the user's answer before creating anything.
 
+## Base branch resolution
+
+Feature branches start from, and pull requests target, one base branch.
+Resolve it in this order, first match winning.
+
+Use the base branch named in the invocation when the request specifies one, and treat that as applying to this run only.
+Otherwise use the profile's `base-branch` when it records one.
+Otherwise use the repository's current branch, and say which branch you resolved so the choice is visible.
+
+Guard against one trap: when the current branch is itself a workbench feature branch, meaning its name carries an issue ref and one of the branch prefixes, do not silently use it as a base.
+Building one issue's work on top of another's unmerged branch entangles two pull requests, so ask which base to use instead.
+
+Fetch the resolved base branch before creating anything from it, and create the new branch from the fetched remote copy rather than from a local copy that may be behind.
+
 ## Preflight verification
 
 Run this before any other tracker operation, on every invocation.
@@ -91,6 +105,9 @@ When a user's reply could answer more than one pending question, or its target i
 3. Run the tracker adapter's profile-load offers.
    For Asana, this is the merge-closer question described in that tracker's adapter file.
    Ask it and record the answer in the profile.
+4. Confirm the base branch that feature branches should start from and merge into.
+   Offer the repository's current branch as the default, since that is usually the integration branch the user is working from, and offer the repository's default branch as the alternative.
+   Record the answer as `base-branch` in the profile.
 
 Save the confirmed profile to `.workbench/config.md` and commit that file only once all three steps above have an answer; include the confirmed default destination.
 Never announce that setup will happen and then write a profile without having asked each of these questions.
@@ -103,6 +120,7 @@ Use this format for the profile:
 # workbench tracker profile
 tracker: asana
 default-destination: Prototypes (1209000000000001)
+base-branch: main
 state-mapping:
   inProgress: section "In Progress"
   inReview: section "Review"

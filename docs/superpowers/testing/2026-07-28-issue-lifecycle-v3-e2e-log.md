@@ -386,3 +386,15 @@ Defect A, closing a task in the tracker but not in the memory backend, is struct
 Defect B, reporting commits that were never made, had no structural guard, so two were added rather than another instruction. Closing a task must now record the implementing commit's short hash, in the checklist line or through the beads notes field, whose existence was verified against bd 0.49.0 rather than assumed. A real hash cannot be recorded for a commit that does not exist, which converts a narratable rule into one that fails loudly. The finish step now also reconciles the number of task commits on the branch against the number of tasks closed and stops rather than opening a pull request when they disagree, which catches both a missing commit and tasks batched into one.
 
 Neither new mechanism has been exercised yet; the next full run through the loop will be their first test.
+
+### Base branch resolution added
+
+Previously the skills always branched from, and targeted, the repository's default branch, which would give teams that integrate into develop or a release branch pull requests against the wrong base.
+
+Resolution order is now: a base branch named in the invocation, applying to that run only; otherwise the profile's `base-branch`; otherwise the repository's current branch, reported so the choice is visible. First-run setup gained a fourth question that offers the current branch and the default branch and records the answer.
+
+One guard came out of this project's own experience: when the current branch is itself a workbench feature branch, meaning it carries an issue ref and a branch prefix, the skill asks rather than silently using it, because building one issue on another's unmerged branch entangles two pull requests.
+
+### Version reset to 1.0.0
+
+The plugin carried 3.0.0 inherited from the issue-lifecycle lineage, which reads oddly for a newly named product whose 1.x and 2.x never existed. Reset across plugin.json, both skill frontmatters, the marketplace entry, and the root README via the repository's version-sync script.
