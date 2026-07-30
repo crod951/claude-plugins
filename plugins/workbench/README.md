@@ -167,7 +167,7 @@ Two modes, and the difference is only how many questions you get.
 
 **Ask mode**, the default, stops for the issue draft, the handoff, and any genuinely ambiguous choice.
 
-**Auto mode** runs straight through. It skips the draft approval, the handoff question, ties that the documented precedence can settle on its own, and any first-run answer that is unambiguous, such as a single available destination or state names that match the three phases exactly.
+**Auto mode** runs straight through. It skips the draft approval, the handoff question, ties that the documented precedence can settle on its own, and the two first-run answers that are genuinely determinate: exactly one available destination, or state names that match the three phases exactly. Everything else is asked even in auto mode.
 
 Auto mode removes friction, not judgment. **Every safety stop still fires in both modes:**
 
@@ -177,6 +177,7 @@ Auto mode removes friction, not judgment. **Every safety stop still fires in bot
 - A pull request closed without merging still gets reported and asked about.
 - A phase with no matching tracker state still asks, rather than mapping review onto something that means something else.
 - An ambiguous setup answer still asks that one question, because a wrong destination misfiles every future issue in the repo.
+- A reply whose target is unclear, an issue ref that disagrees with the branch, an issue already done, and requirements too thin to break down all still stop and ask.
 
 Set the default during first-run setup, or edit `approval` in `.workbench/config.md`. Override it per run from the prompt, in either direction:
 
@@ -218,8 +219,8 @@ An issue keeps the backend it started with for life. Adding beads to a repositor
 ```
 Named in the invocation?                        -> use it, this run only
 Recorded as base-branch in the profile?         -> use it
-Otherwise                                       -> the current branch, reported so you see it
 Current branch is itself a workbench branch?    -> ask, never stack one issue on another
+Otherwise                                       -> the current branch, reported so you see it
 ```
 
 The base branch is always fetched before branching from it. Branching from a stale local copy is the usual cause of conflicts at merge time.

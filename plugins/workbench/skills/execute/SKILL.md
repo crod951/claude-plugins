@@ -68,9 +68,9 @@ If any of these files cannot be found and read, stop immediately and report whic
 8. Ensure the breakdown exists.
    - Skip the rest of this step when a breakdown already exists for this issue.
    - Call `init` for the issue, then call `parentTask` for it.
-   - After every child task exists, add the parent's dependency edge on each child, so the parent cannot close before its children and "no open children" becomes a real signal rather than an assumption.
    - When the issue has no existing children, plan three to seven units of work, each sized so it can be implemented and verified on its own; for each one, call `createSubIssue` first, then call `createTask` with the newly created sub-issue's ref as `subIssueRef`, then write the returned task id back onto that sub-issue so the link reads both ways, since the task id does not exist until `createTask` returns, setting `deps` to the id of the task it builds on so tasks chain sequentially by default whenever order matters.
    - When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown; for each adopted sub-issue, still call `createTask`, passing that sub-issue's existing ref as `subIssueRef` and skipping `createSubIssue` since the sub-issue already exists, then write the returned task id back onto that sub-issue the same way, and setting `deps` the same way.
+   - After every child task exists, add the parent's dependency edge on each child, so the parent cannot close before its children and "no open children" becomes a real signal rather than an assumption.
    - Either way, write the plan document described in `conventions.md` and commit it with the breakdown.
    - Write `.workbench/tasks/<ISSUE-REF>.md` only when the resolved backend is the checklist adapter, since that file holds checkbox statuses; with beads active the statuses live in beads and no file belongs there, as `memory.md` states.
 9. Call `updateState` to move the issue to the `inProgress` phase.

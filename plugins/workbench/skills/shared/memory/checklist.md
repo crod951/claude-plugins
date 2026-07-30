@@ -2,7 +2,7 @@
 
 This adapter is backed by a single markdown file, `.workbench/tasks/<ISSUE-REF>.md`, committed inside the consumer's repo on the feature branch.
 Only use this adapter once `memory.md`'s resolution procedure has already chosen the checklist for this run.
-Commit the file with every change this adapter makes, including in-progress marker rewrites.
+Commit the file with every change this adapter makes, except the in-progress marker, which stays uncommitted until it rides the task's implementation commit.
 The file is the parent record for the issue and the durable store for every task under it; there is no second location for status.
 Keep the file after the PR merges; it stays in the repo permanently as the record of what was done.
 

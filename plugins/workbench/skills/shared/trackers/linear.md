@@ -65,7 +65,8 @@ The current-user verification call above, not the setup steps themselves, is wha
 
 ## Merge closer for Linear (optional)
 
-Offer this only when the workspace has no GitHub integration and the user recorded `merge-closer: sweep`, since an installed integration already does the job.
+Offer this only when the workspace has no GitHub integration, since a connected integration already does the job and the profile would record `native`.
+When the user accepts, record `installed`; when they decline, record `declined` and let the sweep handle closure.
 It needs a `LINEAR_API_KEY` repository secret, a personal API key from Linear's settings, and the workflow state id that the profile maps to the `done` phase.
 Read that state id from the same list-issue-statuses call used during first-run setup, and substitute it into the template before writing the file.
 

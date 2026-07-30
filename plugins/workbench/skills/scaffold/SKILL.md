@@ -18,7 +18,7 @@ Do not edit MCP or agent configuration.
 Treat a disabled server as a deliberate user decision, a stop condition, never an obstacle to route around.
 
 This skill turns requirements into a scaffolded tracker issue plus its linked sub-issues.
-Nothing is created in the tracker before the user approves the draft.
+In ask mode nothing is created in the tracker before the user approves the draft; in auto mode the scaffold is created without that approval, per `../shared/approval.md`.
 Tracker access goes only through the connected tracker MCP; when it is missing, stop and say so; never hunt for credentials on disk or call tracker APIs directly.
 This skill never writes task-memory or checklist files; the execute skill creates task memory when it runs its breakdown.
 
@@ -71,10 +71,10 @@ If any of these files cannot be found and read, stop immediately and report whic
    - In ask mode, show the full draft, main issue title, type, description, and every sub-issue, to the user and wait for approval before creating anything.
    - In auto mode, skip that approval: create the scaffold immediately and report the same draft content as what was created.
    - Draft approval must be the only open question in that turn; never show it alongside a setup question or any other unanswered question.
-   - Apply any edits the user requests, then show the revised draft again until it is approved.
+   - In ask mode, apply any edits the user requests, then show the revised draft again until it is approved.
    - When a reply could answer more than one open question, or its target is unclear, stop and ask which question it answered; do not guess.
-   - Treat only an explicit, unambiguous approval of the draft as permission to create anything; never treat an ambiguous or negative reply, such as a bare "decline", as draft approval.
-8. Create the approved scaffold.
+   - In ask mode, treat only an explicit, unambiguous approval of the draft as permission to create anything; never treat an ambiguous or negative reply, such as a bare "decline", as draft approval.
+8. Create the scaffold, once approved in ask mode or immediately in auto mode.
    - Call `createIssue` for the main issue using the approved title, description, type, and resolved destination.
    - Call `createSubIssue` once per approved sub-issue draft, linking each to the newly created main issue.
    - Report the result as a compact block listing the tracker, the main issue ref, title and URL, then one line per sub-issue with its ref and URL, so the scaffold is scannable at a glance.

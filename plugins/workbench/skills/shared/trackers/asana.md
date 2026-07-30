@@ -61,7 +61,7 @@ When the sweep finds a merged PR for an Asana task, read the task's current stat
 When the task is already complete, for example because the merge-closer Action already closed it, skip the tracker write and apply only the stamp described below.
 Otherwise apply the mapped `done` state and set the completed flag before proceeding with the rest of the run.
 For idempotency, append a `- Closed: <date>` line to that issue's file under `.workbench/`, whichever file the search found, since a beads-mode issue has a plan document and no checklist file immediately after closing the task, commit the file, and push that commit to the branch the merged pull request targeted, which is the resolved base branch and is not necessarily the repository's default branch once `base-branch` is configured.
-A stamp commit that is only made locally does not propagate: it never reaches the default branch, so a merge check runs at most once per issue only when the commit is pushed there.
+A stamp commit that is only made locally does not propagate: it never reaches the base branch, so a merge check runs at most once per issue only when the commit is pushed to that base branch.
 When the current checkout is on a feature branch, the stamp belongs to whichever `.workbench/` file records this issue for the merged issue, and it still must land on that base branch, not on a feature branch.
 Do not switch branches to place it while the run has uncommitted task state in the working tree, since a checkout or a stash can lose the in-progress marker that the memory contract treats as the truth.
 Apply the stamp before any task work begins, or from a separate clone or worktree, or defer it to the next invocation and say plainly that the stamp is pending.

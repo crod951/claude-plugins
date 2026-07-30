@@ -436,3 +436,23 @@ The attachments heuristic was asserting more than was observed. An empty attachm
 1. `createIssue` receives a `type` but neither adapter's mapping says what to do with it, so type survives only inside the issue description text. The branch prefix depends on type, which the skill derives separately, so nothing breaks today.
 2. Linear suggests its own branch names, such as `chris/tes-5-slug`, while workbench generates `feat/tes-5-slug`. A team using Linear's copy-branch-name button will see a mismatch.
 3. Kiro has not been run since the rename to workbench, the base-branch change, conventions.md, the commit-hash mechanism, or the reconciliation guard. Its symlinks resolve correctly to the renamed skill directories, so the wiring is right, but the behavior is unverified there. Kiro quota resets on the first of the month; a smoke test before any demo is the mitigation.
+
+## Final whole-branch review and its fix wave
+
+The final review returned Needs fixes with three criticals, eighteen importants, and ten minors, verifying its claims by execution rather than reasoning: it ran bd help, tested branch-name characters against git check-ref-format, and reproduced an Asana GID extraction table.
+
+Two findings had already happened during this project and were misdiagnosed at the time. The beads resume hard-fail was hit during the cartSummary run and worked around by hand, which produced a dual-close rule instead of the recognition that the adapter's claim call was wrong for resume. The Asana GID extraction failure applies to exactly the URL shape the user had pasted earlier, so the Action would have skipped silently on every merge.
+
+The three criticals, all fixed and verified: claimNext and status were repo-wide in beads mode, so a run could claim another issue's task, implement it on this issue's branch, and close the wrong sub-issue; the checklist close rule was unsatisfiable, since a file staged into a commit cannot carry that commit's hash, and claim commits inflated the count so the pre-PR reconciliation gate could never pass, meaning the documented no-beads path never opened a pull request; and both workflow templates interpolated the pull request head ref directly into a run block, which is command injection with a tracker token in scope.
+
+The scoped re-review confirmed all three criticals and twenty of twenty-one importants addressed, and found four new textual contradictions introduced by the fix wave plus the approval feature, all since fixed: a checklist header still requiring the claim marker to be committed, the Linear Action gated on a profile value the fix had retired, unqualified approval language that made auto mode unable to create anything, and a destination question with no auto-mode carve-out. It also identified three stop-and-ask points that neither approval list covered, which are now listed explicitly, with a rule that the never-skip list is exhaustive by intent.
+
+Mechanical verification after the fixes: both YAML templates parse, both run blocks pass bash -n, no interpolation remains inside either run block, every bd flag was checked against 0.49.0, GID extraction was tested against all four URL shapes, capability-language greps are clean on both skills, and both skills sit within their line ceilings.
+
+## Approval modes
+
+Added on request, modeled on the predecessor's create-immediately behavior but with the distinction that matters: auto mode skips preferences, never safety stops.
+
+Auto mode skips the issue draft approval, the handoff question, ties the documented precedence can settle, and the two first-run answers that are genuinely determinate. Ten stops fire in both modes, including the four that this project's own testing proved necessary: an unverified MCP, an unfixable test failure, a base-branch conflict, and an abandoned pull request.
+
+Mode resolution is invocation, then profile, then ask, with the invocation overriding in both directions, the resolved mode stated at the start of every run, and the mode carried across a skill handoff so a per-run override is not lost at the boundary.

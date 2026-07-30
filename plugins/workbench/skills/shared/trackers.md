@@ -16,7 +16,7 @@ Adapter files implement each one against a specific tracker's tools; treat the o
 | `listDestinations()` | List where a new top-level issue can be created (Asana projects, Linear teams), each as a stable id paired with a display name. |
 | `resolveDestination(hint?)` | Turn a caller-supplied hint, or the tracker profile's configured default when no hint is given, into one native destination id; return null when the result is ambiguous. |
 | `createIssue(title, description, type, destination)` | Create a new top-level issue in the given destination; return its ref and URL. |
-| `createSubIssue(parentRef, title, description)` | Create a new child issue under an existing parent; return its ref and URL. Include the paired task id in the description so the link reads in both directions, since a sub-issue that names its task lets anyone in the tracker find the work item without searching task memory. When an existing sub-issue is adopted rather than created, add that marker by editing the description when the tracker allows it, or by posting a comment when it does not. |
+| `createSubIssue(parentRef, title, description)` | Create a new child issue under an existing parent; return its ref and URL. Do not attempt to record the paired task id during this call; the task does not exist yet. The execute skill writes it back after `createTask` returns, using `comment` so no additional contract operation is needed. |
 | `updateState(ref, phase)` | Move an issue to the given phase, where phase is one of `inProgress`, `inReview`, or `done`; apply it through the tracker profile's state mapping rather than a hardcoded status name. |
 | `comment(ref, body)` | Post a comment on an issue. |
 
@@ -28,6 +28,7 @@ Do not substitute any other source of truth for that question.
 In particular, never infer a destination from tracker URLs found inside existing `.workbench/tasks/*.md` files, from prior issues in the repository, or from any other guess; a wrong inference silently files work in the wrong place, and even a right one takes the choice away from a user who may have several valid destinations.
 The agent may inspect existing task files or prior issues to offer a suggested default inside that same question, for example "previous issues in this repo used X, use that again?".
 Offering a suggestion does not replace asking; still ask the question and wait for the user's answer before creating anything.
+One exception, defined in `approval.md`: in auto mode, when `listDestinations` returns exactly one destination the answer is determinate, so record it and report it instead of asking. Any other number of destinations is ambiguous and is asked even in auto mode.
 
 ## Base branch resolution
 
@@ -132,7 +133,7 @@ Use this format for the profile:
 ```markdown
 # workbench tracker profile
 tracker: asana
-default-destination: Prototypes (1209000000000001)
+default-destination: Prototypes (1209000000000001)  # add "# auto-accepted" when auto mode chose it
 base-branch: main
 approval: ask
 state-mapping:
