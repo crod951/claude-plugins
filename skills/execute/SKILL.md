@@ -50,7 +50,7 @@ If any of these files cannot be found and read, stop immediately and report whic
 1. Resolve the approval mode per `../workbench-shared/approval.md` and state it, then run preflight verification as described in `../workbench-shared/trackers.md` before any other tracker step.
    Infer the preflight target from the invocation before verifying anything: an explicitly named tracker, or the shape of the issue ref from the invocation argument, a pasted URL, or the current branch name, in the same order of preference step 4 uses; only when none of those settles it fall back to the profile, then to the single connected MCP, per the shared precedence in `trackers.md`.
    This keeps preflight, the sweep, and the run itself on one tracker; verifying whatever the profile names while the invocation clearly targets the other tracker would sweep and verify the wrong one.
-   Stop here, following that section's instructions, when the tracker's MCP does not verify.
+   Stop here, following that section's instructions, when the tracker's MCP or the GitHub CLI does not verify.
 2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../workbench-shared/trackers.md` and are tracker-agnostic, with each adapter file defining only its own closure action for the merged path.
    This sweep is itself tracker work, so it only runs once preflight has verified the MCP.
    When the invocation itself was a cleanup phrase, run only this sweep, report what it found, then stop; do not continue into the rest of this procedure.

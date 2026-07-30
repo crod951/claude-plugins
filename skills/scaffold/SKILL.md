@@ -39,7 +39,7 @@ If any of these files cannot be found and read, stop immediately and report whic
 
 1. Resolve the approval mode per `../workbench-shared/approval.md` and state it.
    Then determine whether the tracker is already settled, in the shared precedence order from `../workbench-shared/trackers.md`: the invocation names one, a profile records one, or exactly one tracker MCP is connected; an invocation-named tracker wins over the profile.
-   When it is settled, run preflight verification against that tracker as described in `../workbench-shared/trackers.md`; stop there when the tracker's MCP does not verify.
+   When it is settled, run preflight verification against that tracker as described in `../workbench-shared/trackers.md`; stop there when the tracker's MCP or the GitHub CLI does not verify.
    When it is not settled, because no profile exists and both tracker MCPs are connected, do not guess which MCP to verify: defer preflight to step 3, which asks the tie-break question first and then runs preflight against the answer.
 2. Run the done-on-merge sweep for the resolved tracker, whose tracker-agnostic mechanics are in `../workbench-shared/trackers.md`; it is tracker work, so it only runs once preflight has verified the MCP.
    When preflight was deferred in step 1, defer this sweep with it; step 3 runs both once the tracker is chosen.

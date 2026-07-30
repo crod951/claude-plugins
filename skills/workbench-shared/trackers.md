@@ -66,8 +66,16 @@ When verification fails, do not start tracker work and do not attempt any workar
 Instead, output the setup instructions from that tracker's adapter file, tell the user to connect the MCP and re-invoke the skill, then stop.
 When the MCP is unverified, delivering setup instructions is the task; that is a genuinely helpful, complete action, not a fallback, and it is what keeps this procedure from improvising a bypass.
 
+The GitHub CLI is part of the same preflight.
+Verify it with one cheap read-only call, `gh auth status`, and treat a missing binary and an unauthenticated one the same way: unverified.
+Run this check in the same pass as the MCP check rather than after a failed stop, so a user missing both dependencies gets one stop naming everything to fix instead of discovering one failure per invocation.
+
+When `gh` does not verify, do not start the run and do not attempt any workaround: never call the GitHub HTTP API directly, and never read tokens from disk or the environment.
+Output the fix instead: install the CLI with `brew install gh` on macOS or the platform package listed at https://github.com/cli/cli#installation, authenticate with `gh auth login`, then re-invoke the skill.
+As with an unverified MCP, delivering these instructions is the task, not a fallback.
+
 On re-invocation, run preflight again from the top.
-Only a verified MCP allows tracker work to begin.
+Only a verified MCP and a verified `gh` allow the run to begin.
 
 ## Done-on-merge sweep
 

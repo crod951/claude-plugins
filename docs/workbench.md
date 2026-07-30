@@ -127,6 +127,8 @@ brew install gh
 gh auth login
 ```
 
+Preflight verifies `gh auth status` on every run alongside the tracker MCP, so a missing or unauthenticated CLI produces a clean stop with these instructions rather than a failed command mid-run.
+
 ### 3. Optionally install beads
 
 Without beads, task state lives in a markdown checklist committed on your branch, which is fine for solo work and small issues.
