@@ -12,10 +12,10 @@ Adapter files implement each one against a specific backend; treat the operation
 | --- | --- |
 | `init(issueRef)` | Prepare the backend for this issue's task set. |
 | `createTask(title, description, subIssueRef, deps)` | Create a task, tag it with the issue ref so all tasks for one issue can be listed directly, record `subIssueRef` on the task, and return its task id. |
-| `claimNext()` | Return and mark in-progress the first open task whose deps are all closed; return null when none remain. |
+| `claimNext()` | Return and mark in-progress this issue's first open task whose deps are all closed; null when none remain. Scope every call to the issue being worked: a backend able to see other issues' tasks must filter to this one, or the loop will implement another issue's work on this branch and close the wrong sub-issue. When an interrupted run left one of this issue's tasks in progress, return that task to be resumed rather than claiming a new one. |
 | `close(taskId)` | Mark a task done. |
-| `status()` | Return open/done counts and the current in-progress task. |
-| `parentTask(issueRef)` | Create or fetch the parent task representing the overarching issue, and make it depend on every child task so it cannot close before they do. |
+| `status()` | Return this issue's open and done counts and its current in-progress task, scoped to the issue exactly as `claimNext` is. |
+| `parentTask(issueRef)` | Create or fetch the parent task representing the overarching issue. Its dependency edges on the children are added after the children exist, not during this call, since at that point they do not. |
 
 ## Resolution
 
@@ -26,7 +26,8 @@ Follow this order:
 
 Check the issue's own state before the repository's state, because the per-issue signal decides that issue's backend.
 
-When `.workbench/tasks/<ISSUE-REF>.md` exists and contains task checkboxes, use the checklist adapter for this issue.
+When `.workbench/tasks/<ISSUE-REF>.md` exists, use the checklist adapter for this issue.
+The file's existence is the signal, not its contents: `init` creates it before any task lines are added, so requiring checkboxes would send a run that died between `init` and the first task into a different backend and fork that issue's status across both.
 Do this even when `.beads/` exists and even when `bd` is installed.
 An issue whose statuses already live in checkboxes keeps that backend for its whole life; adding beads to a repository later must never move an in-flight issue, which would orphan the statuses already recorded in its checklist file.
 
@@ -43,7 +44,8 @@ When a repository gains beads while checklist-mode issues are still open, those 
 Do not ask the user to choose a backend; resolution is a silent probe.
 Do state the resolved backend in the run summary whenever it differs from what the repository's other open issues are using, so a mixed-backend period is visible rather than surprising.
 
-Both backends store their state inside the repo, so any later session on any machine resumes correctly by reading the repo.
+Both backends store their state inside the repo, so a later session resumes by reading the repo rather than by remembering anything.
+Resuming on a different machine only works for state that was committed and pushed: the checklist file travels with each task commit, while beads keeps its database out of git deliberately and shares only its export, so a beads run must commit that export alongside each task rather than only at the finish, or an interrupted run's progress stays on the machine where it happened.
 Resume by reading the working tree, not the last commit.
 An in-progress marker may be uncommitted when a session dies, and the file on disk is the truth, not whatever was last committed.
 

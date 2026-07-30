@@ -30,18 +30,21 @@
     {
       "name": "workbench",
       "source": "./plugins/workbench",
-      "description": "Automates the full lifecycle of working on Linear issues — from planning through PR creation. Integrates Linear, Beads task tracking, and GitHub PRs with Conventional Commits.",
+      "description": "Two agent skills, scaffold and execute, that carry a tracker issue from requirements to an open pull request. Works with Asana or Linear, runs on Claude Code and Kiro, tracks tasks in beads or a committed markdown checklist, and resumes from repository state.",
       "version": "1.0.0",
       "author": {
         "name": "crod951"
       },
       "repository": "https://github.com/crod951/claude-plugins",
       "keywords": [
+        "asana",
         "linear",
+        "kiro",
         "beads",
         "github",
         "issue-tracking",
         "conventional-commits",
+        "pull-requests",
         "workflow",
         "automation"
       ]

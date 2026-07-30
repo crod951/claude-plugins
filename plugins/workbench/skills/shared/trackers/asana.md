@@ -60,13 +60,14 @@ Search the whole directory rather than only `tasks/`: depending on the resolved 
 When the sweep finds a merged PR for an Asana task, read the task's current state before writing to the tracker.
 When the task is already complete, for example because the merge-closer Action already closed it, skip the tracker write and apply only the stamp described below.
 Otherwise apply the mapped `done` state and set the completed flag before proceeding with the rest of the run.
-For idempotency, append a `- Closed: <date>` line to that checklist file immediately after closing the task, commit the file, and push that commit to the repo's default branch, the branch the merged PR targeted.
+For idempotency, append a `- Closed: <date>` line to that issue's file under `.workbench/`, whichever file the search found, since a beads-mode issue has a plan document and no checklist file immediately after closing the task, commit the file, and push that commit to the branch the merged pull request targeted, which is the resolved base branch and is not necessarily the repository's default branch once `base-branch` is configured.
 A stamp commit that is only made locally does not propagate: it never reaches the default branch, so a merge check runs at most once per issue only when the commit is pushed there.
-When the current checkout is on a feature branch, the stamp still belongs to the checklist file for the merged issue, and it still must land on the default branch, not on the feature branch.
-Commit and push it there directly, or via whatever mechanism the repo requires to update the default branch.
+When the current checkout is on a feature branch, the stamp belongs to whichever `.workbench/` file records this issue for the merged issue, and it still must land on that base branch, not on a feature branch.
+Do not switch branches to place it while the run has uncommitted task state in the working tree, since a checkout or a stash can lose the in-progress marker that the memory contract treats as the truth.
+Apply the stamp before any task work begins, or from a separate clone or worktree, or defer it to the next invocation and say plainly that the stamp is pending.
 When the push fails, for example because of missing permission, a protected branch, or being offline, report the failure to the user and continue the run.
 A failed stamp push must not abort the sweep, and it must not be retried silently in a loop.
-The sweep skips any checklist file that already carries a Closed line, so the merge check runs at most once per issue.
+The sweep skips any issue whose `.workbench/` file already carries a Closed line, so the merge check runs at most once per issue.
 
 ### Pull requests closed without merging
 
@@ -126,44 +127,53 @@ jobs:
       - name: Close Asana task for merged branch
         env:
           ASANA_TOKEN: ${{ secrets.ASANA_TOKEN }}
+          # Pass the branch through env, never into the script text: branch
+          # names may contain shell metacharacters, which would run as code.
+          BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           if [ -z "$ASANA_TOKEN" ]; then
             echo "No ASANA_TOKEN secret set, skipping."
             exit 0
           fi
 
-          BRANCH="${{ github.event.pull_request.head.ref }}"
-          TASK_FILE=$(grep -rl "$BRANCH" .workbench/ 2>/dev/null | head -n 1)
+          # sort makes the file choice deterministic; grep -r order is readdir order.
+          TASK_FILE=$(grep -rlF "$BRANCH" .workbench/ 2>/dev/null | sort | head -n 1)
 
           if [ -z "$TASK_FILE" ]; then
             echo "No file under .workbench/ references branch $BRANCH, skipping."
             exit 0
           fi
 
-          # Prefer a URL on a line that labels it as the issue, so a reordered
-          # file cannot make this close a sub-issue by accident.
-          TASK_URL=$(grep -iE '^[-* ]*(tracker|issue):' "$TASK_FILE" \
+          # Only a labeled line is trusted, so a URL sitting in prose cannot
+          # make this close the wrong task. Matches "- Ref: <url>" and
+          # "- **Issue** - <url>" style lines alike.
+          TASK_URL=$(grep -iE '^[[:space:]]*[-*]?[[:space:]]*(\*\*)?(tracker|issue|ref)(\*\*)?[[:space:]]*[:-]' "$TASK_FILE" \
             | grep -oE 'https://app\.asana\.com/[^ )>]+' | head -n 1)
-          if [ -z "$TASK_URL" ]; then
-            TASK_URL=$(grep -oE 'https://app\.asana\.com/[^ )>]+' "$TASK_FILE" | head -n 1)
-          fi
 
           if [ -z "$TASK_URL" ]; then
-            echo "No Asana task URL found in $TASK_FILE, skipping."
+            echo "No labeled Tracker, Issue, or Ref line carrying an Asana URL in $TASK_FILE, skipping."
             exit 0
           fi
 
-          TASK_GID=$(echo "$TASK_URL" | grep -oE '[0-9]+$')
+          # Anchor on the task segment: copy-link and focus URLs end in /f or
+          # ?focus=true, so matching trailing digits alone finds nothing.
+          TASK_GID=$(printf '%s' "$TASK_URL" | sed -nE 's#.*/task/([0-9]+).*#\1#p')
+          if [ -z "$TASK_GID" ]; then
+            TASK_GID=$(printf '%s' "$TASK_URL" | sed -nE 's#.*/([0-9]+)/?(f/?)?(\?.*)?$#\1#p')
+          fi
 
           if [ -z "$TASK_GID" ]; then
             echo "Could not extract a task GID from $TASK_URL, skipping."
             exit 0
           fi
 
-          curl -s -X PUT "https://app.asana.com/api/1.0/tasks/$TASK_GID" \
+          # -f so an auth or not-found error fails the job, instead of the job
+          # going green while the task stays open.
+          curl -sf -X PUT "https://app.asana.com/api/1.0/tasks/$TASK_GID" \
             -H "Authorization: Bearer $ASANA_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"data":{"completed":true}}'
+            -d '{"data":{"completed":true}}' \
+            || { echo "Asana API call failed for GID $TASK_GID"; exit 1; }
 ```
 
 The Action closes the task by setting the completed flag directly through the Asana API.

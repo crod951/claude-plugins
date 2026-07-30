@@ -61,7 +61,9 @@ Keep it current as the run proceeds when something material changes, but do not 
 ## Commit verification
 
 A task's close must carry the hash of the commit that implemented it.
-Read the short hash from the repository after committing, then record it with the close: in checklist mode append it to that task's line, and in beads attach it to the task using whatever note or comment field the backend offers.
+Read the short hash from the repository after committing, then record it with the close.
+In beads, attach it to the task with the backend's note field, which is a separate store and needs no further commit.
+In checklist mode the hash belongs on the task's line in a file that is itself part of that commit, so amend the commit to add it rather than creating a second commit; a file staged into a commit cannot contain that commit's own hash.
 When a backend cannot store it, state the hash in the progress line instead.
 
 The point is structural rather than cosmetic.
@@ -69,7 +71,9 @@ Recording a real hash is impossible when no commit was made, so this converts a 
 A progress line describes repository state, so never name a commit that does not exist in the log.
 
 Reconcile before finishing.
-Count the task commits on the branch and compare that count to the number of tasks closed for this issue.
+A task commit is one whose subject is scoped to this issue's ref and which implements a task; the breakdown commit, the plan document commit, and any task-state bookkeeping commit are not task commits.
+Count them over the range from the resolved base branch to the current head, not over all history, since a branch inherits its base's commits.
+Compare that count to the number of tasks closed for this issue.
 When the counts disagree, stop and report the discrepancy rather than opening a pull request: either a commit is missing, or tasks were combined into one commit, and both contradict the one-commit-per-task rule.
 
 ## Pull request test plan

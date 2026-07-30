@@ -33,7 +33,8 @@ Ask the user which arrangement applies; that answer is authoritative.
 An empty `attachments` field on an issue whose pull request already merged is a useful hint that no integration is linking pull requests, and that was how a missing integration was detected during testing.
 Treat the reverse as unverified: a populated `attachments` field has not been confirmed to mean the integration is connected, so never conclude `native` from attachments alone.
 When the integration is connected, record `native` and do not force a `done` transition at merge time, because the integration handles it.
-When it is not connected, record `sweep` and treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself and stamps the issue's file.
+Let the sweep still run as the backstop, exactly as it does for Asana's native arrangement: Linear's integration reacts to merges into the default branch, so an issue whose pull request targeted a configured `base-branch` other than the default will not be closed by it, and only the sweep will catch that.
+When it is not connected, record `installed` after adding the Action below, or `declined` when the user declines it, matching the values the Asana adapter uses so the profile field means one thing across trackers; in either case treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself and stamps the issue's file.
 A merge-closer Action is also available for Linear, using the template below rather than the Asana one, since the two APIs differ.
 Never leave the question unanswered, since an unanswered assumption is what leaves issues parked in review indefinitely.
 Still use `updateState` to move the issue into `inProgress` and `inReview` at the appropriate points, since those transitions are not handled by the GitHub integration.
@@ -68,7 +69,7 @@ Offer this only when the workspace has no GitHub integration and the user record
 It needs a `LINEAR_API_KEY` repository secret, a personal API key from Linear's settings, and the workflow state id that the profile maps to the `done` phase.
 Read that state id from the same list-issue-statuses call used during first-run setup, and substitute it into the template before writing the file.
 
-Write it to `.github/workflows/workbench-close.yml` and commit it with the profile.
+Write it to `.github/workflows/workbench-close.yml`, commit it with the profile, and record `merge-closer: installed` so the sweep knows the Action owns the closure and only backstops it.
 
 ```yaml
 name: workbench-close
@@ -88,50 +89,62 @@ jobs:
         env:
           LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
           DONE_STATE_ID: REPLACE_WITH_DONE_STATE_ID
+          # Pass the branch through env, never into the script text: branch
+          # names may contain shell metacharacters, which would run as code.
+          BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           if [ -z "$LINEAR_API_KEY" ]; then
             echo "No LINEAR_API_KEY secret set, skipping."
             exit 0
           fi
 
-          BRANCH="${{ github.event.pull_request.head.ref }}"
-          FILE=$(grep -rl "$BRANCH" .workbench/ 2>/dev/null | head -n 1)
+          if [ "$DONE_STATE_ID" = "REPLACE_WITH_DONE_STATE_ID" ]; then
+            echo "DONE_STATE_ID was never substituted; refusing to run with a placeholder."
+            exit 1
+          fi
+
+          # sort makes the file choice deterministic; grep -r order is readdir order.
+          FILE=$(grep -rlF "$BRANCH" .workbench/ 2>/dev/null | sort | head -n 1)
 
           if [ -z "$FILE" ]; then
             echo "No file under .workbench/ references branch $BRANCH, skipping."
             exit 0
           fi
 
-          # Prefer a line that labels the issue, so a reordered file cannot
-          # close the wrong one.
-          KEY=$(grep -iE '^[-* ]*(tracker|issue|ref):' "$FILE" \
+          # Only a labeled line is trusted. Matching any uppercase-dash-digits
+          # token anywhere would also match RFC-7231, ISO-8601, SHA-1 and the
+          # like, which appear legitimately in a plan document.
+          KEY=$(grep -iE '^[[:space:]]*[-*]?[[:space:]]*(\*\*)?(tracker|issue|ref)(\*\*)?[[:space:]]*[:-]' "$FILE" \
             | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -n 1)
-          if [ -z "$KEY" ]; then
-            KEY=$(grep -oE '[A-Z][A-Z0-9]+-[0-9]+' "$FILE" | head -n 1)
-          fi
 
           if [ -z "$KEY" ]; then
-            echo "No Linear issue key found in $FILE, skipping."
+            echo "No labeled Tracker, Issue, or Ref line carrying a Linear key in $FILE, skipping."
             exit 0
           fi
 
-          ISSUE_ID=$(curl -s https://api.linear.app/graphql \
+          RESPONSE=$(curl -sf https://api.linear.app/graphql \
             -H "Authorization: $LINEAR_API_KEY" \
             -H 'Content-Type: application/json' \
-            -d "{\"query\":\"query { issue(id: \\\"$KEY\\\") { id } }\"}" \
-            | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -n 1)
+            -d "{\"query\":\"mutation { issueUpdate(id: \\\"$KEY\\\", input: { stateId: \\\"$DONE_STATE_ID\\\" }) { success } }\"}") \
+            || { echo "Linear API call failed for $KEY"; exit 1; }
 
-          if [ -z "$ISSUE_ID" ]; then
-            echo "Could not resolve $KEY through the Linear API, skipping."
-            exit 0
-          fi
-
-          curl -s https://api.linear.app/graphql \
-            -H "Authorization: $LINEAR_API_KEY" \
-            -H 'Content-Type: application/json' \
-            -d "{\"query\":\"mutation { issueUpdate(id: \\\"$ISSUE_ID\\\", input: { stateId: \\\"$DONE_STATE_ID\\\" }) { success } }\"}"
+          # A GraphQL error arrives with HTTP 200, so -f alone is not enough.
+          case "$RESPONSE" in
+            *'"errors"'*)
+              echo "Linear returned an error for $KEY: $RESPONSE"
+              exit 1
+              ;;
+            *'"success":true'*)
+              echo "Closed $KEY."
+              ;;
+            *)
+              echo "Unexpected Linear response for $KEY: $RESPONSE"
+              exit 1
+              ;;
+          esac
 ```
 
 This template has not been run end to end; the Asana template has.
+It also assumes Linear's `issueUpdate` accepts a human key such as `TES-5` for its `id` argument; confirm that on the first run, and resolve the key to a UUID with a query first if it does not.
 Say so when offering it, and suggest verifying the first merge rather than assuming it worked.
 The `curl` usage here belongs to the Action running in CI with its own repository secret; it is never a licence for the agent to call the Linear API directly, which the absolute boundary forbids.

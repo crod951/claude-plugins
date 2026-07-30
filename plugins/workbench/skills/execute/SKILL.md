@@ -66,28 +66,30 @@ If any of these files cannot be found and read, stop immediately and report whic
 8. Ensure the breakdown exists.
    - Skip the rest of this step when a breakdown already exists for this issue.
    - Call `init` for the issue, then call `parentTask` for it.
-   - When the issue has no existing children, plan three to seven units of work, each sized so it can be implemented and verified on its own; for each one, call `createSubIssue` first, then call `createTask` with the newly created sub-issue's ref as `subIssueRef`, setting `deps` to the id of the task it builds on so tasks chain sequentially by default whenever order matters.
-   - When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown; for each adopted sub-issue, still call `createTask`, passing that sub-issue's existing ref as `subIssueRef` and skipping `createSubIssue` since the sub-issue already exists, and setting `deps` the same way.
+   - After every child task exists, add the parent's dependency edge on each child, so the parent cannot close before its children and "no open children" becomes a real signal rather than an assumption.
+   - When the issue has no existing children, plan three to seven units of work, each sized so it can be implemented and verified on its own; for each one, call `createSubIssue` first, then call `createTask` with the newly created sub-issue's ref as `subIssueRef`, then write the returned task id back onto that sub-issue so the link reads both ways, since the task id does not exist until `createTask` returns, setting `deps` to the id of the task it builds on so tasks chain sequentially by default whenever order matters.
+   - When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown; for each adopted sub-issue, still call `createTask`, passing that sub-issue's existing ref as `subIssueRef` and skipping `createSubIssue` since the sub-issue already exists, then write the returned task id back onto that sub-issue the same way, and setting `deps` the same way.
    - Either way, write the plan document described in `conventions.md` and commit it with the breakdown.
    - Write `.workbench/tasks/<ISSUE-REF>.md` only when the resolved backend is the checklist adapter, since that file holds checkbox statuses; with beads active the statuses live in beads and no file belongs there, as `memory.md` states.
 9. Call `updateState` to move the issue to the `inProgress` phase.
 10. Run the implementation loop until `claimNext` reports nothing claimable.
     Each pass through the loop does the following, in order.
     - Call `claimNext`, and record the claim in the memory backend's own format at claim time.
-    - Move the claimed task's linked sub-issue to the `inProgress` phase.
+    - Move the claimed task's linked sub-issue to the `inProgress` phase, subject to the adapter's own rules for sub-issues; the Asana adapter degrades this to a no-op on subtasks, so read its subtask section rather than assuming a state change happens.
+      Never redirect a sub-issue transition onto the main issue: closing a parent because one child finished would mark the whole issue done early.
     - Implement that one unit of work, following the codebase patterns found in step 6.
     - Run the tests covering that unit.
       When the repository has no test framework, or the touched code has no tests, say so once and write a test for the unit using whatever the project already depends on, then treat that test as this task's verification.
       When the project genuinely cannot run tests, say so plainly in the progress line and in the pull request body rather than implying the work was verified.
     - On a passing run, commit the change with a message referencing the issue ref and the task, staged and worded per `conventions.md`: never stage with a blanket pattern, and never stage a file that could carry a secret.
     - Confirm the commit exists before closing anything, and record its short hash with the close per the commit-verification rules in `conventions.md`.
-    - Close the task in the memory backend and move its sub-issue to `done`, recording the close as it happens rather than summarizing at the end of the loop.
+    - Close the task in the memory backend and move its sub-issue to `done`, again per the adapter's sub-issue rules, recording the close as it happens rather than summarizing at the end of the loop.
       A task is not closed until both its memory record and its sub-issue are closed; closing only the sub-issue leaves it claimable and `claimNext` will hand you the same task again.
     - Print the per-task progress line from `conventions.md`.
     - On a failure that cannot be fixed, stop and hold: keep the change, leave the task in progress, report the failure, and exit without continuing the loop.
     One commit per task, always, even when two tasks touch the same file.
 
-11. Once `claimNext` returns none remaining, finish the issue: run the commit reconciliation from `conventions.md` and stop if the task and commit counts disagree, commit any leftover uncommitted change, close the parent task, push the branch, and open the pull request with the `gh` command-line tool against the resolved base branch unless one already exists, with a body containing `Closes <ref>` for a Linear issue or the task's URL for an Asana task, plus a summary, the list of completed tasks, and a test plan; call `updateState` to move the issue to the `inReview` phase; then post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push any changed or new task-state files under `.beads/` (including files its own tooling creates) and `.workbench/` as a final closing commit so the branch carries the completed state.
+11. Once `claimNext` returns none remaining, finish the issue: run the commit reconciliation from `conventions.md` and stop if the task and commit counts disagree, commit any leftover uncommitted change that belongs to this issue's tasks, leaving unrelated working-tree edits alone rather than sweeping them into the pull request, close the parent task, push the branch, and open the pull request with the `gh` command-line tool against the resolved base branch unless one already exists, with a body containing `Closes <ref>` for a Linear issue or the task's URL for an Asana task, plus a summary, the list of completed tasks, and a test plan; record the pull request URL in this issue's file under `.workbench/`; call `updateState` to move the issue to the `inReview` phase; then post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push any changed or new task-state files under `.beads/` (including files its own tooling creates) and `.workbench/` as a final closing commit so the branch carries the completed state.
 12. Report a final summary: the issue, the pull request URL, the tracker's current phase, and the task counts from `status()`.
 
 ## Display overlay

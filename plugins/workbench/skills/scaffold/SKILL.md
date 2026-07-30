@@ -39,7 +39,8 @@ If any of these files cannot be found and read, stop immediately and report whic
 1. Run preflight verification as described in `../shared/trackers.md` before any other step; stop there when the tracker's MCP does not verify.
 2. Run the done-on-merge sweep for the resolved tracker, whose mechanics are in `../shared/trackers/asana.md` and apply to Linear too; it is tracker work, so it only runs once preflight has verified the MCP.
 3. Resolve the tracker, then the destination.
-   - There is no existing issue ref to infer the tracker from, so resolve it explicitly before anything else.
+   - There is no existing issue ref to infer the tracker from, so this step settles the tracker explicitly.
+   - Preflight and the sweep in the previous steps run against the tracker inferred from the profile, or from the single connected MCP when there is no profile; when neither settles it, do the tie-break question here first and then run preflight and the sweep against the answer before continuing.
    - Use the tracker the invocation names; otherwise the one the tracker profile records; otherwise check which tracker MCPs are connected.
    - With exactly one connected, use it; with both connected, ask the user once which one to use.
    - When neither tracker MCP is connected, stop and report a clear message naming both supported trackers, Asana and Linear.

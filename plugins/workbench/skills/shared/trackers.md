@@ -90,7 +90,7 @@ Run this setup procedure once per repository, then reuse its output on every lat
 Trigger setup when the repository has no `.workbench/config.md`.
 Before prompting the user, check other local branches for a newer `.workbench/config.md` and offer to reuse it instead of starting over.
 
-When no existing profile is found anywhere, the agent must run these three steps in order and must not skip any of them.
+When no existing profile is found anywhere, the agent must run these four steps in order and must not skip any of them.
 Each step must get the user's answer before the next step starts, and the profile must not be written until every step has an answer.
 Ask one question at a time; never present a later step's question, or any other pending question such as the issue draft, alongside an unanswered step from this sequence.
 Prefer the agent's structured question mechanism named in `agents.md` over free prose for each of these questions, since a list of concrete choices is harder to answer ambiguously.
@@ -108,14 +108,18 @@ When a user's reply could answer more than one pending question, or its target i
    Say which phase has nothing to map to, then offer the real choices: the user adds a state in the tracker and you re-read the states afterwards, or the phase maps onto another state with the loss of distinction stated plainly, or the phase stays unmapped so the skill skips that transition entirely.
    Record an unmapped phase in the profile as `unmapped` rather than omitting the line, so a later run knows the phase was considered and skipped rather than forgotten.
    Creating tracker states is the user's job; no adapter operation defines a workflow state, so never claim to have added one.
-3. Run the tracker adapter's profile-load offers.
-   For Asana, this is the merge-closer question described in that tracker's adapter file.
-   Ask it and record the answer in the profile.
+3. Run the resolved tracker adapter's profile-load offers.
+   Each adapter defines its own; for Asana and for Linear alike this is the merge-closer question described in that tracker's adapter file, since both need to know what closes an issue when a pull request merges.
+   Ask it and record the answer in the profile as `merge-closer`.
+   Run this check whenever the profile is loaded, not only during first-run setup, so a profile written before this question existed gets repaired rather than staying silent.
 4. Confirm the base branch that feature branches should start from and merge into.
    Offer the repository's current branch as the default, since that is usually the integration branch the user is working from, and offer the repository's default branch as the alternative.
+   Do not offer the current branch when it is itself a workbench feature branch, meaning its name carries an issue ref and one of the branch prefixes.
+   Recording that as the profile's base would make every future issue in the repository, and every teammate who clones it, branch from and target one issue's unmerged work, and the resolution-time guard would never fire because the profile now holds an explicit answer.
+   Offer the default branch in that case, and say why the current branch was excluded.
    Record the answer as `base-branch` in the profile.
 
-Save the confirmed profile to `.workbench/config.md` and commit that file only once all three steps above have an answer; include the confirmed default destination.
+Save the confirmed profile to `.workbench/config.md` and commit that file only once all four steps above have an answer; include the confirmed default destination.
 Never announce that setup will happen and then write a profile without having asked each of these questions.
 A profile written without confirmed answers for every step is a defect, not a shortcut.
 A per-invocation destination hint applies only to that invocation; change the profile's `default-destination` only when it is absent or when the user explicitly asks to change it.
