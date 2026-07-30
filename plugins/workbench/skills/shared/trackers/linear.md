@@ -24,7 +24,14 @@ When a tool name assumed below does not exist on the connected server, list the 
 Linear issue refs are native keys shaped like `ONC-5`, a short uppercase team prefix, a dash, and digits.
 Lowercase the key when building a branch name from it.
 Linear's GitHub integration automatically closes an issue when a pull request whose body contains `Closes ONC-5` (or `Fixes`, using the issue's own key) merges into the default branch.
-Because of that integration, do not force a `done` transition through `updateState` at PR-merge time; let the GitHub integration close the issue on merge instead.
+That integration is not present by default, and a fresh workspace has none until someone connects it.
+Verified live: a pull request whose body contained `Closes TES-5` merged into the default branch and the issue stayed in review, with an empty attachments list on the issue confirming no integration had linked the pull request.
+So do not assume it exists.
+
+During first-run setup, establish which arrangement this workspace uses and record it in the profile as `merge-closer`.
+Read the issue's `attachments` field after any prior merge, or simply ask: when the GitHub integration is connected, record `native` and do not force a `done` transition at merge time, because the integration handles it.
+When it is not connected, record `sweep` and treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself and stamps the issue's file, and the merge-closer Action is an option here too since the Linear API can set an issue's state.
+Never leave the question unanswered, since an unanswered assumption is what leaves issues parked in review indefinitely.
 Still use `updateState` to move the issue into `inProgress` and `inReview` at the appropriate points, since those transitions are not handled by the GitHub integration.
 
 That integration only reacts to a merge, so a pull request closed without merging leaves the issue parked in review here exactly as it does on Asana.

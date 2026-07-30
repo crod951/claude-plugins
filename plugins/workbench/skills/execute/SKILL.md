@@ -47,7 +47,8 @@ If any of these files cannot be found and read, stop immediately and report whic
 
 1. Run preflight verification as described in `../shared/trackers.md` before any other step.
    Stop here, following that section's instructions, when the tracker's MCP does not verify.
-2. Run the Asana done-on-merge sweep described in `../shared/trackers/asana.md`; this sweep is itself tracker work, so it only runs once preflight has verified the MCP.
+2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../shared/trackers/asana.md` and apply to Linear as well, since the sweep is tracker-agnostic once a merged pull request is found.
+   This sweep is itself tracker work, so it only runs once preflight has verified the MCP.
    When the invocation itself was a cleanup phrase, run only this sweep, report what it found, then stop; do not continue into the rest of this procedure.
    Treat any claim about a pull request's fate as a cleanup phrase, whether it says merged, closed, abandoned, landed, or shipped, and whether it names an issue or asks to clean up whatever is outstanding.
    Never act on the claim itself: confirm each referenced pull request's real state first, then apply the merged path or the closed-without-merging path accordingly, and say plainly when the confirmed state differs from what the user described.

@@ -398,3 +398,29 @@ One guard came out of this project's own experience: when the current branch is 
 ### Version reset to 1.0.0
 
 The plugin carried 3.0.0 inherited from the issue-lifecycle lineage, which reads oddly for a newly named product whose 1.x and 2.x never existed. Reset across plugin.json, both skill frontmatters, the marketplace entry, and the root README via the repository's version-sync script.
+
+## First live Linear run
+
+Fresh repo wb-linear-test, fresh Linear workspace test-crod, team Test (key TES), beads backend. This closed the last untested surface: every prior run in this project used Asana.
+
+Verified working
+- Preflight through the current-user call; Linear-only visibility confirmed the workspace switch, so no real Slickage team was at risk.
+- Team-based destination rather than an Asana project, resolved from the viewer's memberships.
+- Native issue keys used directly as refs, with no translation scheme needed, unlike Asana's short-GID form.
+- Sub-issues linked by parentId, adopted into beads tasks with the issue key as external ref.
+- Real state transitions, not the comment fallback Asana needs: Backlog to In Progress to In Review, each recorded in Linear's own state history.
+- No merge-closer question during setup, correctly, since the Asana Action offer is Asana-specific.
+- Base-branch resolution read `base-branch` from the profile and branched from the fetched origin/main.
+- Beads init with the short prefix and hooks skipped: prefix wbl, zero hooks installed.
+- Commit-hash recording worked through `bd update --notes`, readable back on the task.
+- The reconciliation guard passed with three tasks closed against three task commits, which is the mechanism that would have caught the previous run's missing commits.
+- Suite went from ten tests to eighteen, and the plan document's floating-point note proved warranted: the round-trip assertion needed a tolerance because 273.15 arithmetic is not exact.
+
+One significant finding, now fixed
+The Linear adapter assumed Linear's GitHub integration would close the issue on merge, since that is what the integration does when present. It is not present by default. The pull request merged with `Closes TES-5` in its body and the issue stayed in In Review, with an empty attachments array confirming nothing had linked the pull request to the issue.
+
+That is the same hole fixed earlier for Asana, hidden behind an assumption rather than stated. It also exposed a second problem: the sweep was documented as Asana-specific in both skills, so nothing would have caught the parked Linear issue either.
+
+Fixes: the sweep is now described as tracker-agnostic in both skills rather than Asana-only. The Linear adapter no longer assumes an integration; first-run setup establishes which arrangement the workspace uses and records `merge-closer` as `native` when the integration is connected, or `sweep` when it is not, in which case Linear is treated exactly like Asana and the sweep applies the mapped done state itself. The finding is recorded with the live evidence, including the empty attachments detail that identifies a missing integration.
+
+Applied to the fixture: profile records `merge-closer: sweep`, TES-5 was closed the way the sweep would close it, and its plan document carries the Closed stamp.
