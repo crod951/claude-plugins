@@ -113,6 +113,14 @@ print(f"- Recommendation: {risk['recommendation']}")
 print(f"- Active findings: {len(report['issues'])}")
 print(f"- Suppressed findings: {report['suppressed_count']}")
 
+def code_fence(text):
+    # A snippet containing a backtick run >= the fence length would terminate
+    # the fence early and corrupt the rest of the report, so pick a longer one.
+    n = 3
+    while "`" * n in text:
+        n += 1
+    return "`" * n
+
 def emit(title, findings, suppressed):
     print(f"\n## {title}\n")
     if not findings:
@@ -128,7 +136,8 @@ def emit(title, findings, suppressed):
         if suppressed and f.get("suppression_reason"):
             print(f"- **Suppression reason**: {f['suppression_reason']}")
         if f.get("code_snippet"):
-            print(f"\n```\n{f['code_snippet']}\n```")
+            fence = code_fence(f["code_snippet"])
+            print(f"\n{fence}\n{f['code_snippet']}\n{fence}")
         print()
 
 emit("Active findings", report["issues"], suppressed=False)
