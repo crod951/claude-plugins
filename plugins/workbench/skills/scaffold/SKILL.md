@@ -18,7 +18,7 @@ Do not edit MCP or agent configuration.
 Treat a disabled server as a deliberate user decision, a stop condition, never an obstacle to route around.
 
 This skill turns requirements into a scaffolded tracker issue plus its linked sub-issues.
-In ask mode nothing is created in the tracker before the user approves the draft; in auto mode the scaffold is created without that approval, per `../shared/approval.md`.
+In ask mode nothing is created in the tracker before the user approves the draft; in auto mode the scaffold is created without that approval, per `../workbench-shared/approval.md`.
 Tracker access goes only through the connected tracker MCP; when it is missing, stop and say so; never hunt for credentials on disk or call tracker APIs directly.
 This skill never writes task-memory or checklist files; the execute skill creates task memory when it runs its breakdown.
 
@@ -27,21 +27,21 @@ This skill never writes task-memory or checklist files; the execute skill create
 Before doing any tracker work, read:
 
 These paths are relative to the directory containing this SKILL.md file, not the current workspace.
-In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.kiro/skills/shared/trackers.md`); in a Claude Code plugin install they resolve inside the plugin's `skills/` directory.
+In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.kiro/skills/workbench-shared/trackers.md`); in a Claude Code plugin install they resolve inside the plugin's `skills/` directory.
 
-- `../shared/trackers.md` for the tracker contract and the tracker profile default destination.
-- `../shared/agents.md` for the per-agent notes, including the structured question mechanism to prefer whenever this procedure asks the user anything.
-- `../shared/approval.md` for the two approval modes, and for the stops that hold in both.
+- `../workbench-shared/trackers.md` for the tracker contract and the tracker profile default destination.
+- `../workbench-shared/agents.md` for the per-agent notes, including the structured question mechanism to prefer whenever this procedure asks the user anything.
+- `../workbench-shared/approval.md` for the two approval modes, and for the stops that hold in both.
 
 If any of these files cannot be found and read, stop immediately and report which paths were tried - never improvise their contracts from memory or proceed without them.
 
 ## Procedure
 
-1. Resolve the approval mode per `../shared/approval.md` and state it.
-   Then determine whether the tracker is already settled, in the shared precedence order from `../shared/trackers.md`: the invocation names one, a profile records one, or exactly one tracker MCP is connected; an invocation-named tracker wins over the profile.
-   When it is settled, run preflight verification against that tracker as described in `../shared/trackers.md`; stop there when the tracker's MCP does not verify.
+1. Resolve the approval mode per `../workbench-shared/approval.md` and state it.
+   Then determine whether the tracker is already settled, in the shared precedence order from `../workbench-shared/trackers.md`: the invocation names one, a profile records one, or exactly one tracker MCP is connected; an invocation-named tracker wins over the profile.
+   When it is settled, run preflight verification against that tracker as described in `../workbench-shared/trackers.md`; stop there when the tracker's MCP does not verify.
    When it is not settled, because no profile exists and both tracker MCPs are connected, do not guess which MCP to verify: defer preflight to step 3, which asks the tie-break question first and then runs preflight against the answer.
-2. Run the done-on-merge sweep for the resolved tracker, whose tracker-agnostic mechanics are in `../shared/trackers.md`; it is tracker work, so it only runs once preflight has verified the MCP.
+2. Run the done-on-merge sweep for the resolved tracker, whose tracker-agnostic mechanics are in `../workbench-shared/trackers.md`; it is tracker work, so it only runs once preflight has verified the MCP.
    When preflight was deferred in step 1, defer this sweep with it; step 3 runs both once the tracker is chosen.
 3. Resolve the tracker, then the destination.
    - There is no existing issue ref to infer the tracker from, so this step settles the tracker explicitly.
@@ -53,7 +53,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    - Otherwise resolve the tracker profile's configured default destination.
    - When there is no hint and no configured default, call `listDestinations`, list them to the user, and ask once which one to use; do not infer a destination from any other source.
    - A suggestion drawn from prior issues in the repo may accompany that question, but the question must still be asked and answered before anything is created.
-   - When the repository has no tracker profile at all, run first-run setup from `../shared/trackers.md` to completion before showing the issue draft: all five of its steps in order, confirming the destination, the state mapping, the adapter's profile-load offers such as the merge-closer question, the base branch, and the approval mode.
+   - When the repository has no tracker profile at all, run first-run setup from `../workbench-shared/trackers.md` to completion before showing the issue draft: all five of its steps in order, confirming the destination, the state mapping, the adapter's profile-load offers such as the merge-closer question, the base branch, and the approval mode.
      Ask each setup question on its own and get its answer before asking the next; never show the issue draft while a setup question is still unanswered.
 4. Gather the requirements before drafting.
    - Take them from the invocation itself when the text is there.

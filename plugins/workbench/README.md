@@ -56,23 +56,27 @@ Confirm both skills loaded by asking for the skill list; you should see `workben
 
 ### Kiro
 
-Kiro reads skills from a directory, so copy or symlink them.
-Keep `execute/`, `scaffold/`, and `shared/` as siblings at the destination's top level, because each skill reaches its shared references with `../shared/`.
+Install with the [skills CLI](https://www.skills.sh) - a 30-second setup:
+
+```bash
+npx skills@latest add crod951/claude-plugins -a kiro-cli
+```
+
+Select all three entries when prompted: `execute`, `scaffold`, and `workbench-shared`.
+The last one is not an invocable skill; it carries the contract files the other two read via `../workbench-shared/`, so an install without it stops at the first step.
+Kiro's default agent auto-loads everything under `~/.kiro/skills/`, so no further configuration is needed.
+Update later with `npx skills update`.
+
+Installing by hand still works; keep `execute/`, `scaffold/`, and `workbench-shared/` as siblings at the destination's top level:
 
 ```bash
 # global install, available in every workspace
 cp -r plugins/workbench/skills/. ~/.kiro/skills/
 
-# or workspace-only
-cp -r plugins/workbench/skills/. .kiro/skills/
-```
-
-Symlinking instead of copying is better while iterating, since edits take effect immediately:
-
-```bash
-ln -s "$PWD/plugins/workbench/skills/execute"  ~/.kiro/skills/execute
-ln -s "$PWD/plugins/workbench/skills/scaffold" ~/.kiro/skills/scaffold
-ln -s "$PWD/plugins/workbench/skills/shared"   ~/.kiro/skills/shared
+# or symlink while iterating, so edits take effect immediately
+ln -s "$PWD/plugins/workbench/skills/execute"          ~/.kiro/skills/execute
+ln -s "$PWD/plugins/workbench/skills/scaffold"         ~/.kiro/skills/scaffold
+ln -s "$PWD/plugins/workbench/skills/workbench-shared" ~/.kiro/skills/workbench-shared
 ```
 
 ## Setup, step by step
@@ -411,4 +415,4 @@ If the repo used beads, confirm `.beads/.gitignore` and `.gitattributes` exist, 
 
 Version 3 of the predecessor plugin removed its slash commands (`/issue-start`, `/issue-task`, `/commit`, `/issue-finish`).
 The `execute` skill covers the issue flow they formed: "execute TES-5" does what the whole sequence used to.
-The one gap is `/commit` as a standalone conventional-commit helper outside an issue run; workbench applies its commit conventions only inside execute runs, so for non-issue commits use your agent's normal commit flow, borrowing the rules in `skills/shared/conventions.md` if you want the same style.
+The one gap is `/commit` as a standalone conventional-commit helper outside an issue run; workbench applies its commit conventions only inside execute runs, so for non-issue commits use your agent's normal commit flow, borrowing the rules in `skills/workbench-shared/conventions.md` if you want the same style.

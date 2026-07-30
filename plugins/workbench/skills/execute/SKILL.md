@@ -35,23 +35,23 @@ Every run begins by reading durable state from the repository and the tracker, n
 Before doing any tracker or memory work, read:
 
 These paths are relative to the directory containing this SKILL.md file, not the current workspace.
-In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.kiro/skills/shared/trackers.md`); in a Claude Code plugin install they resolve inside the plugin's `skills/` directory.
+In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.kiro/skills/workbench-shared/trackers.md`); in a Claude Code plugin install they resolve inside the plugin's `skills/` directory.
 
-- `../shared/trackers.md` for the tracker contract, phase names, and first-run profile setup.
-- `../shared/memory.md` for the memory contract and backend resolution rules.
-- `../shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
-- `../shared/conventions.md` for staging safety, commit messages, the plan document, and progress reporting.
-- `../shared/approval.md` for the two approval modes, and for the stops that hold in both.
+- `../workbench-shared/trackers.md` for the tracker contract, phase names, and first-run profile setup.
+- `../workbench-shared/memory.md` for the memory contract and backend resolution rules.
+- `../workbench-shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
+- `../workbench-shared/conventions.md` for staging safety, commit messages, the plan document, and progress reporting.
+- `../workbench-shared/approval.md` for the two approval modes, and for the stops that hold in both.
 
 If any of these files cannot be found and read, stop immediately and report which paths were tried - never improvise their contracts from memory or proceed without them.
 
 ## Procedure
 
-1. Resolve the approval mode per `../shared/approval.md` and state it, then run preflight verification as described in `../shared/trackers.md` before any other tracker step.
+1. Resolve the approval mode per `../workbench-shared/approval.md` and state it, then run preflight verification as described in `../workbench-shared/trackers.md` before any other tracker step.
    Infer the preflight target from the invocation before verifying anything: an explicitly named tracker, or the shape of the issue ref from the invocation argument, a pasted URL, or the current branch name, in the same order of preference step 4 uses; only when none of those settles it fall back to the profile, then to the single connected MCP, per the shared precedence in `trackers.md`.
    This keeps preflight, the sweep, and the run itself on one tracker; verifying whatever the profile names while the invocation clearly targets the other tracker would sweep and verify the wrong one.
    Stop here, following that section's instructions, when the tracker's MCP does not verify.
-2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../shared/trackers.md` and are tracker-agnostic, with each adapter file defining only its own closure action for the merged path.
+2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../workbench-shared/trackers.md` and are tracker-agnostic, with each adapter file defining only its own closure action for the merged path.
    This sweep is itself tracker work, so it only runs once preflight has verified the MCP.
    When the invocation itself was a cleanup phrase, run only this sweep, report what it found, then stop; do not continue into the rest of this procedure.
    Treat any claim about a pull request's fate as a cleanup phrase, whether it says merged, closed, abandoned, landed, or shipped, and whether it names an issue or asks to clean up whatever is outstanding.
