@@ -29,8 +29,12 @@ Verified live: a pull request whose body contained `Closes TES-5` merged into th
 So do not assume it exists.
 
 During first-run setup, establish which arrangement this workspace uses and record it in the profile as `merge-closer`.
-Read the issue's `attachments` field after any prior merge, or simply ask: when the GitHub integration is connected, record `native` and do not force a `done` transition at merge time, because the integration handles it.
-When it is not connected, record `sweep` and treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself and stamps the issue's file, and the merge-closer Action is an option here too since the Linear API can set an issue's state.
+Ask the user which arrangement applies; that answer is authoritative.
+An empty `attachments` field on an issue whose pull request already merged is a useful hint that no integration is linking pull requests, and that was how a missing integration was detected during testing.
+Treat the reverse as unverified: a populated `attachments` field has not been confirmed to mean the integration is connected, so never conclude `native` from attachments alone.
+When the integration is connected, record `native` and do not force a `done` transition at merge time, because the integration handles it.
+When it is not connected, record `sweep` and treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself and stamps the issue's file.
+A merge-closer Action is also available for Linear, using the template below rather than the Asana one, since the two APIs differ.
 Never leave the question unanswered, since an unanswered assumption is what leaves issues parked in review indefinitely.
 Still use `updateState` to move the issue into `inProgress` and `inReview` at the appropriate points, since those transitions are not handled by the GitHub integration.
 
@@ -57,3 +61,77 @@ For Kiro, tell the user to add a Linear MCP server entry to `mcp.json`, using th
 
 Either way, tell the user to check for a `disabled` flag on an existing entry before assuming the server needs to be added from scratch; a disabled server presents to preflight the same as a missing one.
 The current-user verification call above, not the setup steps themselves, is what confirms the connection actually succeeded.
+
+## Merge closer for Linear (optional)
+
+Offer this only when the workspace has no GitHub integration and the user recorded `merge-closer: sweep`, since an installed integration already does the job.
+It needs a `LINEAR_API_KEY` repository secret, a personal API key from Linear's settings, and the workflow state id that the profile maps to the `done` phase.
+Read that state id from the same list-issue-statuses call used during first-run setup, and substitute it into the template before writing the file.
+
+Write it to `.github/workflows/workbench-close.yml` and commit it with the profile.
+
+```yaml
+name: workbench-close
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  close-linear-issue:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Close the Linear issue for the merged branch
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          DONE_STATE_ID: REPLACE_WITH_DONE_STATE_ID
+        run: |
+          if [ -z "$LINEAR_API_KEY" ]; then
+            echo "No LINEAR_API_KEY secret set, skipping."
+            exit 0
+          fi
+
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          FILE=$(grep -rl "$BRANCH" .workbench/ 2>/dev/null | head -n 1)
+
+          if [ -z "$FILE" ]; then
+            echo "No file under .workbench/ references branch $BRANCH, skipping."
+            exit 0
+          fi
+
+          # Prefer a line that labels the issue, so a reordered file cannot
+          # close the wrong one.
+          KEY=$(grep -iE '^[-* ]*(tracker|issue|ref):' "$FILE" \
+            | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -n 1)
+          if [ -z "$KEY" ]; then
+            KEY=$(grep -oE '[A-Z][A-Z0-9]+-[0-9]+' "$FILE" | head -n 1)
+          fi
+
+          if [ -z "$KEY" ]; then
+            echo "No Linear issue key found in $FILE, skipping."
+            exit 0
+          fi
+
+          ISSUE_ID=$(curl -s https://api.linear.app/graphql \
+            -H "Authorization: $LINEAR_API_KEY" \
+            -H 'Content-Type: application/json' \
+            -d "{\"query\":\"query { issue(id: \\\"$KEY\\\") { id } }\"}" \
+            | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -n 1)
+
+          if [ -z "$ISSUE_ID" ]; then
+            echo "Could not resolve $KEY through the Linear API, skipping."
+            exit 0
+          fi
+
+          curl -s https://api.linear.app/graphql \
+            -H "Authorization: $LINEAR_API_KEY" \
+            -H 'Content-Type: application/json' \
+            -d "{\"query\":\"mutation { issueUpdate(id: \\\"$ISSUE_ID\\\", input: { stateId: \\\"$DONE_STATE_ID\\\" }) { success } }\"}"
+```
+
+This template has not been run end to end; the Asana template has.
+Say so when offering it, and suggest verifying the first merge rather than assuming it worked.
+The `curl` usage here belongs to the Action running in CI with its own repository secret; it is never a licence for the agent to call the Linear API directly, which the absolute boundary forbids.

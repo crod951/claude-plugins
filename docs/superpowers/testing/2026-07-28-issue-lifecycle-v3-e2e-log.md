@@ -424,3 +424,15 @@ That is the same hole fixed earlier for Asana, hidden behind an assumption rathe
 Fixes: the sweep is now described as tracker-agnostic in both skills rather than Asana-only. The Linear adapter no longer assumes an integration; first-run setup establishes which arrangement the workspace uses and records `merge-closer` as `native` when the integration is connected, or `sweep` when it is not, in which case Linear is treated exactly like Asana and the sweep applies the mapped done state itself. The finding is recorded with the live evidence, including the empty attachments detail that identifies a missing integration.
 
 Applied to the fixture: profile records `merge-closer: sweep`, TES-5 was closed the way the sweep would close it, and its plan document carries the Closed stamp.
+
+### Two honesty gaps closed before the README rewrite
+
+The Linear adapter claimed a merge-closer Action was "an option here too" while only Asana had a template, so a Linear team recording merge-closer: sweep had nothing to install. A Linear-specific template now exists, using the GraphQL API with a LINEAR_API_KEY secret and the done-state id substituted from the same list-issue-statuses call used during setup. It resolves the issue key from a labeled line first, exactly like the hardened Asana template, so a reordered file cannot close the wrong issue. It is explicitly marked as never having been run end to end, unlike the Asana template, with instructions to say so when offering it and to verify the first merge.
+
+The attachments heuristic was asserting more than was observed. An empty attachments field on an issue whose pull request had merged was real evidence that no integration was linking pull requests, and that is how the missing integration was found. The reverse was never observed, so the adapter now says a populated attachments field must not be read as proof the integration is connected, and the user's answer is authoritative.
+
+### Known gaps carried into the README
+
+1. `createIssue` receives a `type` but neither adapter's mapping says what to do with it, so type survives only inside the issue description text. The branch prefix depends on type, which the skill derives separately, so nothing breaks today.
+2. Linear suggests its own branch names, such as `chris/tes-5-slug`, while workbench generates `feat/tes-5-slug`. A team using Linear's copy-branch-name button will see a mismatch.
+3. Kiro has not been run since the rename to workbench, the base-branch change, conventions.md, the commit-hash mechanism, or the reconciliation guard. Its symlinks resolve correctly to the renamed skill directories, so the wiring is right, but the behavior is unverified there. Kiro quota resets on the first of the month; a smoke test before any demo is the mitigation.
