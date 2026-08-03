@@ -6,7 +6,7 @@ Never call tracker tools directly from a core skill body; always go through the 
 
 ## The contract
 
-Use exactly these eight operations.
+Use exactly these nine operations.
 Adapter files implement each one against a specific tracker's tools; treat the operation names as the vocabulary for every other skill and adapter in this plugin.
 
 | Operation | Purpose |
@@ -22,6 +22,7 @@ It may bundle more than one native id when the tracker needs that; Linear's carr
 | `createSubIssue(parentRef, title, description)` | Create a new child issue under an existing parent; return its ref and URL. Do not attempt to record the paired task id during this call; the task does not exist yet. The execute skill writes it back after `createTask` returns, using `comment` so no additional contract operation is needed. |
 | `updateState(ref, phase)` | Move an issue to the given phase, where phase is one of `inProgress`, `inReview`, or `done`; apply it through the tracker profile's state mapping rather than a hardcoded status name. |
 | `comment(ref, body)` | Post a comment on an issue. |
+| `listComments(ref)` | List an issue's existing comments, newest first, returning at least each comment's body text. This exists so the sweep can read markers this plugin wrote on an earlier run; it is not for summarizing discussion. When the connected MCP exposes no comment-listing tool, treat the operation as unavailable and follow the fallback the sweep section defines rather than guessing. |
 
 ### Destination resolution
 

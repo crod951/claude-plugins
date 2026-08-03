@@ -18,6 +18,7 @@ When a tool name assumed below does not exist on the connected server, list the 
 | `createSubIssue(parentRef, title, description)` | Create the issue with the parent's native id set as its parent; do not pass a team, since Linear inherits the team from the parent issue. Capture the created issue's key and its URL from the tool response, and return both to the caller. |
 | `updateState(ref, phase)` | Look up the workflow state name saved in the tracker profile's state mapping for the given phase, then update the issue's state to that name. When the profile explicitly records this phase as unmapped, a decision first-run setup captured from the user, skip the state mutation as a documented no-op rather than guessing a state. Never hardcode a status name here; always go through the mapping saved during first-run setup. |
 | `comment(ref, body)` | Create a comment using the issue's native id and the comment body. |
+| `listComments(ref)` | List the issue's comments using a list-comments-style tool scoped to the issue's native UUID or key, and return each comment's body, newest first. Some builds return comments as part of a get-issue call rather than exposing a separate tool; when they do, read them from the response already saved by `getIssue` instead of making a second call. When neither path is available, treat this operation as unavailable and report that. |
 
 ## Notes
 
