@@ -53,12 +53,17 @@ Sub-issue state transitions degrade to the completed flag instead: moving a subt
 
 ## Done on merge
 
-Asana has no PR-merge integration comparable to Linear's GitHub integration.
-At PR open, move the main task to the mapped `inReview` state and post a comment stating that the task will be closed by the next skill run after the PR merges.
-The done-on-merge sweep itself, including its handling of pull requests closed without merging, is tracker-agnostic and defined in `../trackers.md`; run it exactly as written there.
+Asana has no review-merge integration comparable to Linear's GitHub integration.
+At review open, move the main task to the mapped `inReview` state and post a comment stating that the task will be closed by the next skill run after the review merges.
+When the resolved forge declares `reviewLookup: none`, no later run can detect the merge, so say instead that closing the task is a manual step; promising a sweep that cannot run would misstate what happens next.
+The done-on-merge sweep itself, including its handling of reviews closed without merging, is tracker-agnostic and defined in `../trackers.md`; run it exactly as written there.
 This adapter's closure action for the sweep's merged path: apply the mapped `done` state and set the task's completed flag.
 
 ## Closing on merge without any workbench machinery
+
+Everything in this section and the next assumes the resolved forge is GitHub.
+Both arrangements below are GitHub-specific: one is a GitHub App, the other is a GitHub Actions workflow.
+When the resolved forge declares no `ciHooks`, skip both, record `merge-closer: none (forge has no hooks)`, and let the sweep be the sole closure mechanism, exactly as `../trackers.md` directs.
 
 Asana ships a free native GitHub integration, a GitHub App, that links a pull request to a task when the PR body contains the task URL or the branch name contains the task id.
 Paired with an Asana rule of the form "when a GitHub pull request is merged, mark the task complete", that combination closes the task server-side with no Action from this plugin, no sweep, and no agent involved.
@@ -74,7 +79,12 @@ Treat `native` exactly like `installed` afterwards: never ask again, and let the
 Run this check whenever the tracker profile is loaded or created for this repository, not only during first-run setup.
 First-run setup triggers the same load-time check as part of creating the profile; it does not run a separate ask.
 When the tracker is Asana, check the profile for a `merge-closer:` line.
-When that line is absent, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on PR merge, then record the answer in the profile right away.
+
+Before asking anything, read the resolved forge's declared `ciHooks` capability.
+When it is false, do not ask: record `merge-closer: none (forge has no hooks)` and stop here.
+Asking anyway is worse than skipping, because a yes writes a workflow file that will never execute and records `installed`, which tells the sweep that something else owns closure when nothing does.
+
+When that line is absent and the forge declares `ciHooks`, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on review merge, then record the answer in the profile right away.
 Ask whenever no `merge-closer:` line is on record; once one is recorded, never ask again for this repository.
 When the answer is yes, write `.github/workflows/workbench-close.yml` from the template below, record `merge-closer: installed` in the tracker profile, and commit both together.
 Tell the user to add an `ASANA_TOKEN` repository secret, an Asana personal access token, since the workflow cannot post to the Asana API without it.

@@ -40,7 +40,7 @@ Kiro: use an equivalent structured prompt when the workspace exposes one; otherw
 
 ## Permissions
 
-For smooth autonomous runs, pre-approve these command families ahead of time: `git`, `gh`, `bd`, and whichever tool names the runtime discovery step in the previous section resolves for the connected tracker MCP server.
+For smooth autonomous runs, pre-approve these command families ahead of time: `git`, `bd`, the CLI named by the resolved forge adapter (`gh` for GitHub, and whatever a repo-local `.workbench/forge.md` names), and whichever tool names the runtime discovery step in the previous section resolves for the connected tracker MCP server.
 
 Claude Code: add these to the permissions allowlist in settings (project or user settings.json).
 Kiro: add these to its trusted/allowed command configuration.

@@ -24,6 +24,10 @@ When a tool name assumed below does not exist on the connected server, list the 
 
 Linear issue refs are native keys shaped like `ONC-5`, a short uppercase team prefix, a dash, and digits.
 Lowercase the key when building a branch name from it.
+Everything in this section about automatic closure assumes the resolved forge is GitHub.
+Linear's integration is a GitHub integration; it observes GitHub pull requests and nothing else.
+When the resolved forge is not GitHub, skip the whole arrangement question, record `merge-closer: none (forge has no hooks)` when the forge also declares no `ciHooks`, and let the sweep close issues through `updateState` as the sole mechanism.
+
 Linear's GitHub integration automatically closes an issue when a pull request whose body contains `Closes ONC-5` (or `Fixes`, using the issue's own key) merges into the default branch.
 That integration is not present by default, and a fresh workspace has none until someone connects it.
 Verified live: a pull request whose body contained `Closes TES-5` merged into the default branch and the issue stayed in review, with an empty attachments list on the issue confirming no integration had linked the pull request.
@@ -35,13 +39,13 @@ An empty `attachments` field on an issue whose pull request already merged is a 
 Treat the reverse as unverified: a populated `attachments` field has not been confirmed to mean the integration is connected, so never conclude `native` from attachments alone.
 When the integration is connected, record `native` and do not force a `done` transition at merge time, because the integration handles it.
 Let the sweep still run as the backstop, exactly as it does for Asana's native arrangement: Linear's integration reacts to merges into the default branch, so an issue whose pull request targeted a configured `base-branch` other than the default will not be closed by it, and only the sweep will catch that.
-When it is not connected, record `installed` after adding the Action below, or `declined` when the user declines it, matching the values the Asana adapter uses so the profile field means one thing across trackers; in either case treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself and stamps the issue's file.
+When it is not connected, record `installed` after adding the Action below, or `declined` when the user declines it, matching the values the Asana adapter uses so the profile field means one thing across trackers; in either case treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself.
 A merge-closer Action is also available for Linear, using the template below rather than the Asana one, since the two APIs differ.
 Never leave the question unanswered, since an unanswered assumption is what leaves issues parked in review indefinitely.
 Still use `updateState` to move the issue into `inProgress` and `inReview` at the appropriate points, since those transitions are not handled by the GitHub integration.
 
-That integration only reacts to a merge, so a pull request closed without merging leaves the issue parked in review here exactly as it does on Asana.
-Apply the rule described under "Pull requests closed without merging" in `../trackers.md`: never mark the issue done, never silently change its phase, tell the user which issue and which pull request were abandoned, and record the observation once in that issue's file under `.workbench/`, committing and pushing that record before the sweep returns exactly as `asana.md` requires, since an unpersisted marker re-reports the same abandoned pull request on every later run.
+That integration only reacts to a merge, so a review closed without merging leaves the issue parked in review here exactly as it does on Asana.
+Apply the rule described under "Reviews closed without merging" in `../trackers.md`: never mark the issue done, never silently change its phase, tell the user which issue and which review were abandoned, and record the observation once as a sentinel comment on the issue, since an unrecorded marker re-reports the same abandoned review on every later run.
 
 ## First-run profile for Linear
 

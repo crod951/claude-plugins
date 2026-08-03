@@ -40,12 +40,16 @@ Auto mode exists to remove friction, not judgment, so every one of them still fi
 
 - **An unverified tracker MCP.** Still refuse and deliver setup instructions.
   Auto mode is not permission to work around a missing or disabled server.
+  This stop is about the tracker only. An unverified forge is not a stop: it selects a capability tier per `forges.md`, and the run continues in that tier with the tier stated.
 - **A test failure that cannot be fixed.** Still stop and hold.
-  Never push broken work or open a pull request that implies verification that did not happen.
+  Never push broken work or open a review that implies verification that did not happen.
 - **A conflict while updating from the base branch.** Still stop and hold, naming the conflicting files.
   Resolving a conflict unattended means silently discarding someone's changes.
-- **A pull request closed without merging.** Still report it and ask.
+- **A review closed without merging.** Still report it and ask.
   Whether to retry, rescope, or drop the work is a judgment call with no safe default.
+  This now fires once per abandoned review rather than on every run, because the marker is recorded on the tracker instead of pushed to the base branch.
+- **Accepting a forge CLI found by the tier-2 probe.** Still ask.
+  Auto mode must never drive an unfamiliar CLI against the user's server unattended; anything executed against a forge comes from a written adapter, never an inference made in the moment.
 - **A phase with no matching tracker state.** Still ask.
   The alternative is silently mapping review onto a state that means something else.
 - **An ambiguous first-run setup answer.** Still ask that specific question.
