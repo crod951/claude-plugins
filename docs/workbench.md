@@ -1,9 +1,9 @@
 # Workbench
 
-Workbench is a pair of agent skills that carry a tracker issue from requirements to an open pull request.
+Workbench is a pair of agent skills that carry a tracker issue from requirements to an open code review.
 
 - **scaffold** turns requirements into a tracker issue plus linked sub-issues.
-- **execute** drives an existing issue through implementation to a pull request, one task at a time.
+- **execute** drives an existing issue through implementation to a code review, one task at a time.
 
 It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and **Kiro** because both follow the open Agent Skills standard.
 
@@ -20,7 +20,8 @@ It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and
 - [Approval modes](#approval-modes)
 - [Decision trees](#decision-trees)
 - [What lands in your repo](#what-lands-in-your-repo)
-- [How the tracker learns a PR merged](#how-the-tracker-learns-a-pr-merged)
+- [Forges](#forges)
+- [How the tracker learns a review merged](#how-the-tracker-learns-a-review-merged)
 - [Working conventions](#working-conventions)
 - [Security boundary](#security-boundary)
 - [Troubleshooting](#troubleshooting)
@@ -30,7 +31,7 @@ It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and
 
 ## What you get
 
-A run of the two skills back to back produces: a tracker issue with sub-issues, a feature branch, a plan document a reviewer can read before any code exists, one commit per unit of work, a pull request whose body links the issue and lists what was verified, and the issue sitting in review.
+A run of the two skills back to back produces: a tracker issue with sub-issues, a feature branch, a plan document a reviewer can read before any code exists, one commit per unit of work, a code review whose body links the issue and lists what was verified, and the issue sitting in review.
 
 The design goal is that **nothing is remembered between invocations**.
 Every run reads state from your repository and your tracker, so an interrupted run resumes by being re-invoked, in either agent.
@@ -38,7 +39,8 @@ Every run reads state from your repository and your tracker, so an interrupted r
 Resuming on a *different* machine works for whatever was committed and pushed.
 The checklist backend travels with each task commit; beads keeps its database out of git by design and shares only its export, so a beads run commits that export alongside each task for the same reason.
 
-**Requirements:** an Asana or Linear MCP connected in your agent, the GitHub CLI (`gh`) authenticated, and optionally the beads CLI (`bd`) for richer task memory.
+**Requirements:** an Asana or Linear MCP connected in your agent, and optionally the beads CLI (`bd`) for richer task memory.
+On GitHub, the GitHub CLI (`gh`) authenticated. On another forge, an adapter — see [Forges](#forges); without one, runs still work and hand the review off to you.
 
 ## Install (30-second setup)
 
@@ -118,16 +120,17 @@ If a server exists but is disabled, that counts as missing: the skills refuse to
 For Asana specifically, prefer the **V2** server (`https://mcp.asana.com/v2/mcp`).
 The V1 beta server is deprecated and, in testing, exposed no tool for moving a task between board sections, which downgrades phase transitions to comments.
 
-### 2. Authenticate the GitHub CLI
+### 2. Set up your forge
 
-`execute` opens pull requests with `gh`, so this is not optional.
+On GitHub, authenticate the CLI:
 
 ```bash
 brew install gh
 gh auth login
 ```
 
-Preflight verifies `gh auth status` on every run alongside the tracker MCP, so a missing or unauthenticated CLI produces a clean stop with these instructions rather than a failed command mid-run.
+Preflight verifies the forge on every run alongside the tracker MCP.
+Unlike the tracker, an unverified forge does not stop the run — it selects a tier, and the run says which one it picked. See [Forges](#forges) for what each tier does and how to support a forge that is not GitHub.
 
 ### 3. Optionally install beads
 
@@ -149,8 +152,9 @@ Because that file is committed, **teammates who clone the repo are never asked a
 | Which tracker? | Only when both MCPs are connected and nothing else settles it. |
 | Which destination? | The Asana project or Linear team new issues go to. |
 | How do your states map? | Your real board sections or workflow states get mapped to three phases: in progress, in review, done. |
-| How should the tracker learn a PR merged? | Asana and Linear differ; see [How the tracker learns a PR merged](#how-the-tracker-learns-a-pr-merged). |
-| Which base branch? | Feature branches start from it and pull requests target it. Defaults to your current branch, unless that is itself a workbench branch. |
+| Which forge? | Where your reviews live. Seeded from your `origin` remote, then from CLIs on your `PATH`. See [Forges](#forges). |
+| How should the tracker learn a review merged? | Asana and Linear differ; skipped entirely when your forge has no CI hooks. See [How the tracker learns a review merged](#how-the-tracker-learns-a-review-merged). |
+| Which base branch? | Feature branches start from it and reviews target it. Defaults to your current branch, unless that is itself a workbench branch. |
 | Stop for approval, or run straight through? | Sets the default approval mode for future runs. See [Approval modes](#approval-modes). |
 
 If your tracker has no state for a phase, which is common for review states in a fresh Linear team, the skill says so and offers real choices rather than silently picking the nearest state.
@@ -158,7 +162,7 @@ If your tracker has no state for a phase, which is common for review states in a
 ### 5. Pre-approve the commands
 
 Autonomous runs stall on permission prompts.
-Pre-approve `git`, `gh`, `bd`, and your tracker MCP's tools: in Claude Code through the permissions allowlist, in Kiro through trusted commands.
+Pre-approve `git`, `bd`, your forge's CLI (`gh` on GitHub), and your tracker MCP's tools: in Claude Code through the permissions allowlist, in Kiro through trusted commands.
 
 Read [Security boundary](#security-boundary) before blanket-approving shell access.
 
@@ -194,8 +198,8 @@ run execute on this issue
 ```
 
 It also handles cleanup on demand.
-Tell it a pull request merged, was closed, or was abandoned, and it runs only the sweep.
-It confirms the real state with `gh` rather than trusting the claim, and tells you when reality differs from what you said:
+Tell it a review merged, was closed, or was abandoned, and it runs only the sweep.
+It confirms the real state through the forge rather than trusting the claim, and tells you when reality differs from what you said:
 
 ```text
 the PR for TES-5 merged
@@ -205,13 +209,13 @@ that PR got abandoned
 
 A run does this: verifies the tracker MCP, sweeps for merged work, resolves tracker and task memory, fetches the issue, reads relevant code, creates the branch from a freshly fetched base, builds the breakdown and plan document, moves the issue to in progress, then loops one task at a time.
 Each task gets claimed, implemented, tested, committed on its own, and closed in both task memory and the tracker.
-At the end it pushes, opens the pull request, and moves the issue to in review.
+At the end it pushes, opens the review, and moves the issue to in review.
 
 Re-invoking on the same issue resumes it.
 Guards see what already exists and skip it.
 
 **When tests cannot pass**, the run stops and holds: the work stays, the task stays open, and you get told what failed.
-It does not push broken work or a misleading pull request.
+It does not push broken work or open a misleading review.
 
 ## Approval modes
 
@@ -229,7 +233,8 @@ Auto mode removes friction, not judgment.
 - An unverified or disabled tracker MCP still refuses and prints setup instructions.
 - A test failure that cannot be fixed still stops and holds, with the work kept and nothing pushed.
 - A conflict while updating from the base branch still stops, naming the conflicting files.
-- A pull request closed without merging still gets reported and asked about.
+- A review closed without merging still gets reported and asked about.
+- Accepting a forge CLI found on your `PATH` still asks; auto mode never drives an unfamiliar CLI unattended.
 - A phase with no matching tracker state still asks, rather than mapping review onto something that means something else.
 - An ambiguous setup answer still asks that one question, because a wrong destination misfiles every future issue in the repo.
 - A reply whose target is unclear, an issue ref that disagrees with the branch, an issue already done, and requirements too thin to break down all still stop and ask.
@@ -297,43 +302,75 @@ Whichever resolves, the safety stops above are unaffected.
 ### What happens to the tracker issue
 
 ```
-Work starts                     -> in progress
-Pull request opened             -> in review
-Pull request merged             -> done, by whichever closer you configured
-Pull request closed unmerged    -> nothing automatic; you are told and asked what to do
-Tests cannot pass               -> stays in progress, run stops and holds
+Work starts               -> in progress
+Review opened             -> in review
+Review merged             -> done, by whichever closer you configured
+Review closed unmerged    -> nothing automatic; you are told once and asked what to do
+Tests cannot pass         -> stays in progress, run stops and holds
 ```
+
+In the manual tier the "review merged" line never fires, because nothing can observe the review. The run tells you that at handoff.
 
 ## What lands in your repo
 
 | Path | What it is |
 | --- | --- |
-| `.workbench/config.md` | The committed profile: tracker, destination, state mapping, base branch, closer choice. |
+| `.workbench/config.md` | The committed profile: tracker, forge, destination, state mapping, base branch, closer choice. |
+| `.workbench/forge.md` | Only if you wrote an adapter for a forge workbench does not ship. See [Forges](#forges). |
 | `.workbench/plans/<ref>.md` | The per-issue plan: issue link, codebase context, approach, tasks, testing strategy. Written for people, never carries status. |
 | `.workbench/tasks/<ref>.md` | Task statuses as checkboxes. Only when the checklist backend is active. |
 | `.beads/` | Beads task database and its JSONL export, when beads is the backend. |
-| `.github/workflows/workbench-close.yml` | Only if you accepted the optional merge-closer Action. |
+| `.github/workflows/workbench-close.yml` | Only if you accepted the optional merge-closer Action. GitHub only; never offered on a forge without CI hooks. |
 
-Plans and task files stay after the pull request merges; they are the record of how the work was broken down.
+Plans and task files stay after the review merges; they are the record of how the work was broken down.
 
-## How the tracker learns a PR merged
+## Forges
+
+The forge is where your reviews live: the system that receives the branch and holds the code review. It is resolved separately from the tracker, and GitHub is one option rather than an assumption.
+
+Workbench drives the forge through five operations — verify, resolve base, open review, publish review, read review state — and each adapter declares what its forge can actually do. Capabilities differ in kind, not just in command names, so an adapter that declares no CI hooks simply never gets offered a workflow file.
+
+### The three tiers
+
+Every run lands in one tier and says which:
+
+| Tier | When | What you get |
+| --- | --- | --- |
+| **Adapter** | An adapter resolved and verified | Everything. Reviews opened automatically, issues closed on merge by the sweep. |
+| **Assisted** | No adapter, but a forge CLI is on your `PATH` | The branch is pushed, then you are asked whether to use that CLI once, write an adapter, or hand off manually. Never used unattended. |
+| **Manual** | No adapter and no candidate, or you pinned `forge: none` | The branch is pushed and you get the branch, base, title, and body to open the review yourself. The sweep does not run. |
+
+The manual tier has one consequence worth knowing up front: **nothing can observe the review, so no later run will move the issue to done.** Issues accumulate in review until you close them. The run says this at handoff rather than leaving you to discover it.
+
+### Supporting a forge workbench does not ship
+
+Internal and self-hosted forges are the reason the contract exists. Workbench cannot ship an adapter for a forge whose name and CLI it has never seen — but you can write one.
+
+Copy `skills/workbench-shared/forges/TEMPLATE.md` to `.workbench/forge.md` in your repository, fill in the five operations against your forge's CLI, declare the capability table, and commit it. A repo-local adapter beats every bundled one, so nothing else changes and this plugin never needs forking. Your teammates who clone the repo get it automatically.
+
+A partial adapter is fine and often correct. One that opens reviews but declares `reviewLookup: none` still does the useful part; it just leaves the sweep off. That is far better than an adapter that guesses at review state, because a wrong guess marks abandoned work as shipped.
+
+Two rules the skills hold to, no matter the tier: **anything executed against a forge comes from a written adapter file, never from an inference made in the moment**, and credentials are never scavenged from disk, environment, or token caches.
+
+## How the tracker learns a review merged
 
 Linear can close issues natively, Asana cannot, so workbench supports several arrangements.
-It asks once which one you use and records the answer.
+It asks once which one you use and records the answer — unless your forge declares no CI hooks, in which case the question is skipped and the sweep is the only mechanism.
 
-1. **The tracker's own GitHub integration.** Linear closes an issue when a pull request body contains `Closes TES-5`.
+1. **The tracker's own forge integration.** On GitHub, Linear closes an issue when a review body contains `Closes TES-5`.
    Asana can do the equivalent with its free GitHub App plus a rule that completes a task when its linked pull request merges.
    Nothing from this plugin runs.
    Best option when your organization allows the app.
-2. **The optional merge-closer Action.** If you cannot install an integration, the skills offer a small workflow that closes the issue on merge using a repository secret.
+2. **The optional merge-closer Action.** If you cannot install an integration, the skills offer a small GitHub Actions workflow that closes the issue on merge using a repository secret.
    Server-side, no agent needed at merge time.
-3. **The sweep.** Whatever you choose, every run checks the repository for issues whose pull requests have since merged and closes anything the first two missed.
-   This is the backstop.
+   Offered only on a forge with CI hooks; on any other, accepting it would write a file that never runs.
+3. **The sweep.** Whatever you choose, every run looks up each recorded review by id and closes anything the first two missed.
+   This is the backstop, and it is unavailable in the manual tier.
 
-You can also just say so, and the skill verifies with `gh` before acting.
+You can also just say so, and the skill confirms the real state through the forge before acting.
 
-A pull request **closed without merging** is never treated as done.
-You get told which issue and pull request were abandoned and asked whether to resume or move the issue back, and the observation is recorded so you are not told twice.
+A review **closed without merging** is never treated as done.
+You get told which issue and review were abandoned and asked whether to resume or move the issue back. The observation is recorded as a comment on the tracker issue, so you are told once rather than on every run — and because it lives on the tracker, it works even when your base branch is protected.
 
 ## Working conventions
 
@@ -389,8 +426,13 @@ This is expected and handled, but the V2 server does support real section moves.
 **Listing destinations hangs.** On some Asana builds a workspace-wide project listing never returns.
 The skills prefer listing per team for this reason; if a call stalls rather than errors, that is the one.
 
-**A merged pull request did not close the issue.** Either no integration is connected, or its secret is missing.
+**A merged review did not close the issue.** Either no integration is connected, or its secret is missing.
 Ask the skill to clean up merged issues and it will close anything outstanding, then fix the arrangement so it happens automatically next time.
+In the manual tier this is expected rather than a fault: nothing can observe the review, so closing is yours to do.
+
+**The same abandoned review is reported on every run.** This was a real defect in earlier versions, where the marker was pushed to the base branch and any branch protection made the push fail silently.
+The marker is now a comment on the tracker issue, so it needs no branch write access.
+If you still see repeats, your tracker's MCP may expose no way to list comments, which falls back to the old file-based marker; the run says so when it takes that path.
 
 **My edits to the plugin are not taking effect.** Marketplace installs copy the plugin into the agent's cache.
 See [Developing this plugin](#developing-this-plugin).
@@ -404,7 +446,8 @@ See [Developing this plugin](#developing-this-plugin).
 - **The issue type passed to `createIssue` is not stored as a tracker field.** It survives in the issue description and drives the branch prefix, but Linear labels and Asana custom fields are not set from it.
 - **Linear suggests its own branch names**, such as `chris/tes-5-slug`, while workbench generates `feat/tes-5-slug`.
   Using Linear's copy-branch-name button will not match.
-- **No CI awareness.** Once the pull request is open, a failing CI run is not noticed or reported.
+- **No CI awareness.** Once the review is open, a failing CI run is not noticed or reported.
+- **Forges other than GitHub need an adapter you write.** Workbench ships GitHub and a generic-git fallback; anything else is a `.workbench/forge.md` you author. See [Forges](#forges).
 - **Jira is not supported.** Only Asana and Linear.
 
 ## Developing this plugin
@@ -438,6 +481,8 @@ Repos set up by an earlier version need four things renamed or added:
 2. Rename `.github/workflows/issue-lifecycle-close.yml` to `.github/workflows/workbench-close.yml`, and update the path it greps to `.workbench/`.
 3. Change the profile's first line to `# workbench tracker profile`.
 4. Add `base-branch` to the profile, or let the next run ask.
+
+Repos set up before forge support need nothing. The next run asks which forge you use and adds `forge` to the profile, exactly as it repairs any other missing field. Existing `.workbench/` records that carry a branch and no review id keep working — the sweep falls back to matching by branch and rewrites the record with an id when it finds one.
 
 If the repo used beads, confirm `.beads/.gitignore` and `.gitattributes` exist, since the beads tooling writes both, and untrack any beads runtime files an earlier version committed.
 

@@ -28,14 +28,14 @@ When the installer asks which skills to take, take all of them; `workbench-share
 
 ### workbench (v1.0.0)
 
-Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from requirements to an open pull request.
+Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from requirements to an open code review, on GitHub or any other forge with an adapter.
 It works with Asana or Linear as your issue tracker, and both skills run unchanged on Claude Code and Kiro.
 
 #### Prerequisites
 
 - An Asana or Linear MCP plugin installed and authenticated
 - [Beads CLI](https://github.com/steveyegge/beads) installed (`bd` command available); optional, but recommended for the richest task memory
-- [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available)
+- A forge adapter for wherever your reviews live. GitHub ships built in and needs the [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available); for any other forge, write a `.workbench/forge.md` from the bundled template. Without either, runs still work and hand the review off to you.
 
 #### Install
 
