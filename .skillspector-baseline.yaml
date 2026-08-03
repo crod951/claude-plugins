@@ -66,7 +66,9 @@ rules:
       False positive: the line documents merge-closer Action setup and
       tells the USER to add an ASANA_TOKEN repository secret in GitHub
       settings. The skill never reads or handles the token; the absolute
-      boundary in both entry skills forbids credential access.
+      boundary in both entry skills forbids credential access. The offer
+      is now gated on the resolved forge declaring ciHooks, so it is only
+      reachable on a forge that can run the workflow at all.
 
   - id: "E1"
     path: "trackers/asana.md"
@@ -74,10 +76,11 @@ rules:
     reason: >-
       Reviewed, intentional: the flagged curl is inside the OPTIONAL
       merge-closer GitHub Action template that the user may install into
-      their own repo. It posts a task-completion update to Asana's
-      documented API using a repository secret the user configured for
-      exactly that purpose. The skills themselves never run it; the
-      absolute boundary forbids them from calling tracker HTTP APIs.
+      their own repo, and is only offered when the resolved forge declares
+      ciHooks. It posts a task-completion update to Asana's documented API
+      using a repository secret the user configured for exactly that
+      purpose. The skills themselves never run it; the absolute boundary
+      forbids them from calling tracker HTTP APIs.
 
   - id: "E1"
     path: "trackers/linear.md"
