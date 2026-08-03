@@ -38,6 +38,7 @@ These paths are relative to the directory containing this SKILL.md file, not the
 In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.kiro/skills/workbench-shared/trackers.md`); in a Claude Code plugin install they resolve inside the plugin's `skills/` directory.
 
 - `../workbench-shared/trackers.md` for the tracker contract, phase names, and first-run profile setup.
+- `../workbench-shared/forges.md` for the forge contract, adapter resolution, the capability tiers, and base-branch resolution.
 - `../workbench-shared/memory.md` for the memory contract and backend resolution rules.
 - `../workbench-shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
 - `../workbench-shared/conventions.md` for staging safety, commit messages, the plan document, and progress reporting.
@@ -64,7 +65,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    When the issue is already in the `done` phase or marked complete, do not start work: say so, report what the sweep found for it, and ask whether to reopen it or pick a different issue.
 6. Search the codebase and read the files that look relevant to this issue, noting existing patterns to follow during implementation.
 7. Ensure a feature branch exists for this issue; when one must be created, prefix its name from the issue type (`feat/` for a feature, `fix/` for a bug, `chore/` for a chore, `docs/` for docs, `feat/` by default) followed by the issue ref and a short title slug; skip creation when a matching branch already exists.
-   Resolve the base branch per the base-branch rules in `trackers.md`, then fetch it and create the new branch from the fetched remote copy rather than from a local copy that may be behind, since branching from a stale local copy is the usual cause of conflicts at merge time.
+   Resolve the base branch per the base-branch rules in `../workbench-shared/forges.md`, then fetch it and create the new branch from the fetched remote copy rather than from a local copy that may be behind, since branching from a stale local copy is the usual cause of conflicts at merge time.
    When the branch already exists and the base branch has moved on since, bring it up to date before implementing, and report that you did.
    When that update conflicts, stop and hold exactly as an unfixable test failure would: keep the work, leave the task in progress, report which files conflict, and let the user decide how to resolve them; never resolve a conflict by discarding either side's changes.
 8. Ensure the breakdown exists.
