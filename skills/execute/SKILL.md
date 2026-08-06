@@ -102,15 +102,16 @@ If any of these files cannot be found and read, stop immediately and report whic
     Close the parent task in the memory backend (a no-op for the checklist adapter, whose file is the parent record).
 
     Then open the review through the forge contract in `../workbench-shared/forges.md`, never by invoking a forge CLI directly from this procedure.
-    - Push the branch first, unless the resolved adapter declares `pushesForYou`; when it does, `openReview` owns the push and pushing here would produce a wrong branch state.
+    - Confirm the resolved base with `resolveBase` first, as the contract requires, before anything is created against it.
+    - Push the branch, unless the resolved adapter declares `pushesForYou`; when it does, `openReview` owns the push and pushing here would produce a wrong branch state.
     - Call `openReview` with the branch, the resolved base, a title, and a body containing `Closes <ref>` for a Linear issue or the task's URL for an Asana task, plus a summary, the list of completed tasks, and a test plan.
     - Skip this when a review already exists for the branch, and reuse that one; resuming an issue must never open a second review.
     - Call `publishReview` with the returned id.
     - Record `- Review: <id> <url>` in this issue's file under `.workbench/`, alongside the existing `- PR:` line, since the sweep looks issues up by id.
     - Call `updateState` to move the issue to the `inReview` phase.
 
-    In the manual tier there is no review to open: `openReview` prints the handoff instead of creating anything and returns no id.
-    Still record what exists, still apply `inReview`, and say plainly that no later run will move this issue to `done` on its own because the forge cannot be observed, so closing it is now a manual step.
+    When `openReview` returns the manual-handoff result instead of an id, there is no review object: skip `publishReview`, record no review id, print the handoff.
+    Still apply `inReview`, and say plainly that no later run will move this issue to `done` on its own because the forge cannot be observed, so closing it is now a manual step.
 
     Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.workbench/`; never sweep `.beads/` or `.workbench/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
 12. Report a final summary: the issue, the review URL when one was opened or the resolved tier when one was not, the tracker's current phase, and the task counts from `status()`.

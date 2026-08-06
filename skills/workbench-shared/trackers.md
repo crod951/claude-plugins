@@ -66,6 +66,7 @@ Run this check in the same pass as the MCP check rather than after a failed stop
 
 An unverified forge does not stop the run.
 Unlike the tracker, which has no substitute, the forge has a documented degraded path: an unverified or unresolvable forge selects a capability tier per `forges.md`, and the run continues in that tier.
+A resolved adapter that fails `verifyForge` selects the manual tier for that run, per the failed-verification rule in `forges.md`; no further calls go through the failed adapter.
 State the resolved tier before doing any work, along with the fix for reaching a higher one, so the user knows what this run will and will not do.
 
 What an unverified forge must never do is provoke a workaround.
@@ -91,7 +92,8 @@ Look each id up directly; never list a forge's reviews and match them locally.
 A listing has to be bounded, and any bound silently drops the oldest records once a repository has more reviews than the bound allows, which is a defect that grows quietly with the repository's age.
 
 Records written before review ids were recorded carry a branch name and no id.
-For those, fall back to the branch-matching lookup the adapter offers, and rewrite the record with the id once one is known, so the fallback path drains over time rather than becoming permanent.
+For those, fall back to the optional `findReviewByBranch` operation defined in `forges.md`, and rewrite the record with the id once one is known, so the fallback path drains over time rather than becoming permanent.
+When the resolved adapter does not implement that operation, the record cannot be swept: report that once, naming the record, rather than guessing or treating a branch name as a review id.
 
 When `getReviewState` returns `merged`, read the issue's current state before writing to the tracker.
 When the issue is already complete, for example because a merge-closer Action or a native integration already closed it, do nothing further for that issue.
@@ -186,7 +188,7 @@ When a user's reply could answer more than one pending question, or its target i
    Run this check whenever the profile is loaded, not only during first-run setup, so a profile written before this question existed gets repaired rather than staying silent.
 4. Run the resolved tracker adapter's profile-load offers.
    Each adapter defines its own; for Asana and for Linear alike this is the merge-closer question described in that tracker's adapter file, since both need to know what closes an issue when a review merges.
-   Ask it only when the resolved forge declares `ciHooks`.
+   Ask it only when the resolved forge declares `ciHooks` and the closure arrangements that adapter file offers actually apply to the resolved forge; both trackers' native integrations and Action templates are GitHub-specific, so on any other forge offer only what that adapter documents as working there, and record `merge-closer: none` naming the reason when nothing does.
    When the forge declares no CI hooks there is nothing to install, so skip the question entirely and record `merge-closer: none (forge has no hooks)`.
    Asking it anyway would be worse than skipping it: accepting the offer writes a workflow file that never executes and records `installed`, which tells the sweep that something else owns closure when nothing does.
    Otherwise ask it and record the answer in the profile as `merge-closer`.

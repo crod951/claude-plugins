@@ -98,7 +98,7 @@ Worse than the above, because the merged path had tracker state to fall back on 
 
 **Fix:** the marker is now a comment on the tracker issue carrying a sentinel:
 
-```
+```text
 workbench: review-closed-unmerged <review url> <date>
 ```
 
@@ -140,7 +140,7 @@ The merge-closer question is skipped entirely on a forge with no CI hooks, recor
 
 Tier 2 probes `PATH` for forge CLIs, which sits close to the Absolute boundary in `execute/SKILL.md:9-18` — the rule that a missing tool is a user decision, not an obstacle to route around. The reconciliation, stated in `forges.md` itself and not only in planning docs:
 
-> **Anything the agent executes against a forge comes from a written adapter file. Never from an inference made in the moment.**
+> **Anything the agent executes against a forge is authorized by a written adapter file, or by the user's explicit acceptance at the assisted-tier stop of a named candidate for a single run. Never by an inference made in the moment.**
 
 The probe reports what it found and stops. Its best outcome is a committed `.workbench/forge.md` the team can review and correct. Accepting a probed CLI is classified in `approval.md` as a stop that fires in **both** approval modes — auto mode removes questions, never safety stops.
 

@@ -63,6 +63,7 @@ This adapter's closure action for the sweep's merged path: apply the mapped `don
 
 Everything in this section and the next assumes the resolved forge is GitHub.
 Both arrangements below are GitHub-specific: one is a GitHub App, the other is a GitHub Actions workflow.
+When the resolved forge is not GitHub, skip both regardless of what `ciHooks` declares, record `merge-closer: none (forge is not GitHub)`, and let the sweep be the sole closure mechanism; a non-GitHub forge with CI hooks still cannot run a GitHub App or reach these templates' assumptions.
 When the resolved forge declares no `ciHooks`, skip both, record `merge-closer: none (forge has no hooks)`, and let the sweep be the sole closure mechanism, exactly as `../trackers.md` directs.
 
 Asana ships a free native GitHub integration, a GitHub App, that links a pull request to a task when the PR body contains the task URL or the branch name contains the task id.

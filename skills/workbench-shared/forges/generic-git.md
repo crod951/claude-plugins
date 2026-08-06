@@ -43,7 +43,7 @@ Confirm the branch exists on the remote with `git ls-remote --exit-code --heads 
 
 Push the branch; `pushesForYou` is false, so the caller performs the push, exactly as it does on any other adapter.
 
-There is no review to create, so this operation produces a handoff instead.
+There is no review to create, so this operation returns the contract's manual-handoff result instead of an id.
 Print what a human needs to open the review by hand:
 
 - The branch that was pushed.

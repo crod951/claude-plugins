@@ -65,4 +65,5 @@
 # - linear.api_key  → use LINEAR_API_KEY env var instead
 # - github.token    → use GITHUB_TOKEN env var instead
 
-sync.remote: "git+ssh://git@github.com/crod951/skills.git"
+# sync.remote is per-clone: set it locally with `bd config set sync.remote <url>`.
+# A committed value would point every fork and clone at this repository's remote.

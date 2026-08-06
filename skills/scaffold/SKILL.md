@@ -54,7 +54,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    - Otherwise resolve the tracker profile's configured default destination.
    - When there is no hint and no configured default, call `listDestinations`, list them to the user, and ask once which one to use; do not infer a destination from any other source.
    - A suggestion drawn from prior issues in the repo may accompany that question, but the question must still be asked and answered before anything is created.
-   - When the repository has no tracker profile at all, run first-run setup from `../workbench-shared/trackers.md` to completion before showing the issue draft: all five of its steps in order, confirming the destination, the state mapping, the adapter's profile-load offers such as the merge-closer question, the base branch, and the approval mode.
+   - When the repository has no tracker profile at all, run first-run setup from `../workbench-shared/trackers.md` to completion before showing the issue draft: all six of its steps in order, confirming the destination, the state mapping, the forge, the adapter's profile-load offers such as the merge-closer question, the base branch, and the approval mode.
      Ask each setup question on its own and get its answer before asking the next; never show the issue draft while a setup question is still unanswered.
 4. Gather the requirements before drafting.
    - Take them from the invocation itself when the text is there.

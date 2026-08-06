@@ -5,6 +5,7 @@ A repo-local adapter wins over every bundled one, so nothing else needs to chang
 
 Read `../forges.md` for the contract these operations implement.
 Read `github.md` for a complete worked example, and `generic-git.md` for the minimum viable one.
+Those three references resolve inside the plugin's `skills/workbench-shared/forges/` directory, so read them before copying this file; from the copy at `.workbench/forge.md` they will not resolve, which is fine because the finished adapter needs none of them at runtime.
 
 Guidance is in `>` blockquotes throughout. Delete the blockquotes as you fill each section in.
 

@@ -10,7 +10,7 @@ When a tool name assumed below does not exist on the connected server, list the 
 
 | Contract operation | Linear MCP behavior |
 | --- | --- |
-| `getIssue(ref)` | Fetch the issue by its key (for example `ONC-5`) using a get-issue-style tool. Save the native UUID, the issue URL, its labels, and its current workflow state from the response; later operations that need the native id should reuse the saved UUID rather than re-fetching. |
+| `getIssue(ref)` | Fetch the issue by its key (for example `ONC-5`) using a get-issue-style tool. Save the native UUID, the issue URL, its labels, and its current workflow state from the response; later operations that need the native id should reuse the saved UUID rather than re-fetching. When the response carries the issue's comments, save their bodies in the order returned as well, since on builds with no separate comment-listing tool `listComments` reads from this saved response. |
 | `listSubIssues(ref)` | List issues filtered by parent, using the native UUID or key of the issue from `getIssue`. Return each child's id, title, and state. |
 | `listDestinations()` | List the viewer's team memberships using the current-user tool, not a full workspace team list. For each team the viewer belongs to, list that team's projects when a destination narrower than the team is needed. Never call a tool that lists every team in the workspace. |
 | `resolveDestination(hint?)` | Match a given hint against a team's key or name to resolve its native UUID. When the hint also names a project, validate that the project exists under the resolved team before returning it. When no hint is given, resolve the tracker profile's configured default destination the same way. Return the team UUID and any resolved project id together as this adapter's one destination value, per the contract's adapter-owned destination rule. Return null when the hint matches more than one team or project ambiguously. |
@@ -26,7 +26,7 @@ Linear issue refs are native keys shaped like `ONC-5`, a short uppercase team pr
 Lowercase the key when building a branch name from it.
 Everything in this section about automatic closure assumes the resolved forge is GitHub.
 Linear's integration is a GitHub integration; it observes GitHub pull requests and nothing else.
-When the resolved forge is not GitHub, skip the whole arrangement question, record `merge-closer: none (forge has no hooks)` when the forge also declares no `ciHooks`, and let the sweep close issues through `updateState` as the sole mechanism.
+When the resolved forge is not GitHub, skip the whole arrangement question regardless of what `ciHooks` declares — the integration and the Action template below are both GitHub-specific — record `merge-closer: none (forge is not GitHub)`, and let the sweep close issues through `updateState` as the sole mechanism.
 
 Linear's GitHub integration automatically closes an issue when a pull request whose body contains `Closes ONC-5` (or `Fixes`, using the issue's own key) merges into the default branch.
 That integration is not present by default, and a fresh workspace has none until someone connects it.

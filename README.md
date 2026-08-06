@@ -34,8 +34,8 @@ It works with Asana or Linear as your issue tracker, and both skills run unchang
 #### Prerequisites
 
 - An Asana or Linear MCP plugin installed and authenticated
-- [Beads CLI](https://github.com/steveyegge/beads) installed (`bd` command available); optional, but recommended for the richest task memory
-- A forge adapter for wherever your reviews live. GitHub ships built in and needs the [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available); for any other forge, write a `.workbench/forge.md` from the bundled template. Without either, runs still work and hand the review off to you.
+- [Beads CLI](https://github.com/gastownhall/beads) installed (`bd` command available); optional, but recommended for the richest task memory
+- A forge adapter for wherever your reviews live. Two ship built in: GitHub, which needs the [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available), and a generic-git fallback that pushes the branch and hands the review off to you. Write a `.workbench/forge.md` from the bundled template only for a forge workbench does not ship.
 
 #### Install
 
@@ -65,7 +65,7 @@ scaffold these requirements
 - **Task memory** - beads-backed when available, with a plain checklist file fallback
 - **Conventional Commits** - one commit per task, referencing the issue ref
 - **Tracker-only access** - tracker work only happens through the connected tracker MCP; when it is missing, the skill refuses and stops
-- **Forge-portable** - reviews go through a five-operation forge contract; GitHub ships built in, and any other forge is a `.workbench/forge.md` you write without forking
+- **Forge-portable** - reviews go through a five-operation forge contract; GitHub and a generic-git fallback ship built in, and any other forge is a `.workbench/forge.md` you write without forking
 
 #### Tracker Status Lifecycle
 

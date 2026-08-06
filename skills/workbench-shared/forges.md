@@ -14,7 +14,7 @@ Adapter files implement each one against a specific forge's tools; treat the ope
 | --- | --- |
 | `verifyForge()` | Cheap read-only preflight check that the forge is reachable and authenticated; returns verified or unverified and nothing else. |
 | `resolveBase(branch)` | Confirm the named base branch exists on the remote and is a valid merge target. |
-| `openReview(branch, base, title, body)` | Create the review for a branch against a base. Return a stable review id and the review's URL. |
+| `openReview(branch, base, title, body)` | Create the review for a branch against a base. Return a stable review id and the review's URL — or, on a forge where no review can be created, the manual-handoff result defined below. |
 | `publishReview(id)` | Move a draft review to the notified-review state, where the forge distinguishes the two. A no-op everywhere else. |
 | `getReviewState(id)` | Return one of `open`, `merged`, `closed-unmerged`, or `unknown`, plus a merge timestamp when merged. |
 
@@ -24,6 +24,14 @@ The `pushesForYou` capability tells the caller which arrangement it is in; the c
 
 The review id returned by `openReview` must be something `getReviewState` can look up directly on a later run, from a different clone, without a listing call.
 A branch name is not a review id.
+
+`openReview` has one other legitimate outcome, the **manual-handoff result**: no id at all, plus the four things a human needs to open the review by hand — the pushed branch, the base, a suggested title, and a suggested body in full.
+An adapter that cannot create reviews (see `generic-git.md`) returns this instead of an id, and it is a typed outcome of the contract rather than a failure.
+A caller receiving it must not call `publishReview`, must not record a review id, and must say plainly that opening the review is now the user's step.
+
+One optional operation exists beyond the five, for legacy records only: `findReviewByBranch(branch)`, which resolves a review id from a head branch name where the forge can do that (`github.md` implements it with a bounded head-branch listing).
+Adapters that cannot implement it simply omit it.
+The sweep uses it solely to repair records written before review ids were recorded; when the resolved adapter omits it, such a record cannot be swept, and the sweep reports that once instead of guessing.
 
 ## Declared capabilities
 
@@ -92,6 +100,10 @@ The tier is stated at the start of a run so the user knows what will and will no
 An adapter resolved, bundled or repo-local, and `verifyForge()` passed.
 All five operations are available, and the declared capability table governs which paths run.
 
+A resolved adapter whose `verifyForge()` fails is not tier 1 and does not stay ambiguous: that run operates in the manual tier.
+Make no further calls through the failed adapter, hand the review off exactly as tier 3 does, and name the failed check plus its fix so the user can restore tier 1 for the next run.
+Do not drop to tier 2 instead; the tier-2 offers presume no adapter exists, and driving a resolved-but-unverified adapter risks half-authenticated operations against the user's server.
+
 **Tier 2, assisted.**
 No adapter resolved, but a candidate forge CLI was found on `PATH`.
 Push the branch, then offer three choices: use the candidate for this run only, write `.workbench/forge.md` now so later runs are tier 1, or fall through to the manual tier.
@@ -109,12 +121,13 @@ It is the manual tier made permanent, so a repository that will never have an au
 
 The tier-2 probe sits close to a boundary this plugin does not cross, so state the rule plainly.
 
-**Anything the agent executes against a forge comes from a written adapter file. Never from an inference made in the moment.**
+**Anything the agent executes against a forge is authorized by a written adapter file, or by the user's explicit acceptance at this stop of a named candidate for a single run. Never by an inference made in the moment.**
 
 The probe produces a suggestion, not an execution path.
 An agent that discovers an unfamiliar CLI and drives it unattended can push the wrong ref, publish a draft to a reviewer group before the work is ready, or file a review in the wrong project, and it does all of that with the user's credentials against the user's server.
 So the probe reports what it found and stops, and the user's answer is what authorizes anything further.
 Accepting a candidate for one run is a stop that fires in both approval modes; auto mode removes questions, never safety stops.
+That acceptance covers exactly the run it was given in, with the CLI named at the stop; anything durable, and anything unattended, requires the written adapter file.
 
 Everything the Absolute boundary in `execute/SKILL.md:9-18` already forbids continues to apply here without exception.
 Never search for or read forge credentials in files, environment variables, or token caches.

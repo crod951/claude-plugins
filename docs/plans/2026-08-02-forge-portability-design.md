@@ -100,7 +100,7 @@ Tier 2 exists in tension with the Absolute boundary (`execute/SKILL.md:9-18`, `t
 
 The rule that resolves the tension:
 
-> **Anything the agent executes against a forge comes from a written adapter file. Never from an inference made in the moment.**
+> **Anything the agent executes against a forge is authorized by a written adapter file, or by the user's explicit acceptance at the tier-2 stop of a named candidate for a single run. Never by an inference made in the moment.**
 
 Tier 2's probe therefore produces a *suggestion*, and its best outcome is a committed `.workbench/forge.md` the team can review and correct. The probe is an on-ramp to tier 1, not a parallel improvisation path. Everything else the boundary already forbids continues to apply without exception: no credential scavenging, no direct HTTP API calls, no editing agent or MCP configuration.
 
@@ -118,7 +118,7 @@ Two changes: key on review id rather than branch name, and stop pushing stamps t
 
 At `openReview`, record the returned review id alongside the URL in the issue's file under `.workbench/`:
 
-```
+```text
 - Review: <id> <url>
 ```
 

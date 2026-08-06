@@ -32,6 +32,7 @@ It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and
 ## What you get
 
 A run of the two skills back to back produces: a tracker issue with sub-issues, a feature branch, a plan document a reviewer can read before any code exists, one commit per unit of work, a code review whose body links the issue and lists what was verified, and the issue sitting in review.
+On a forge without an adapter the last step is a handoff rather than an opened review: the branch is pushed and you get the base, title, and body to open it yourself — see [Forges](#forges) for the tiers.
 
 The design goal is that **nothing is remembered between invocations**.
 Every run reads state from your repository and your tracker, so an interrupted run resumes by being re-invoked, in either agent.
@@ -40,7 +41,7 @@ Resuming on a *different* machine works for whatever was committed and pushed.
 The checklist backend travels with each task commit; beads keeps its database out of git by design and shares only its export, so a beads run commits that export alongside each task for the same reason.
 
 **Requirements:** an Asana or Linear MCP connected in your agent, and optionally the beads CLI (`bd`) for richer task memory.
-On GitHub, the GitHub CLI (`gh`) authenticated. On another forge, an adapter — see [Forges](#forges); without one, runs still work and hand the review off to you.
+On GitHub, the GitHub CLI (`gh`) authenticated. On another forge, an adapter you write — or nothing at all: the bundled generic-git fallback still pushes the branch and hands the review off to you. See [Forges](#forges).
 
 ## Install (30-second setup)
 
@@ -199,7 +200,8 @@ run execute on this issue
 
 It also handles cleanup on demand.
 Tell it a review merged, was closed, or was abandoned, and it runs only the sweep.
-It confirms the real state through the forge rather than trusting the claim, and tells you when reality differs from what you said:
+It confirms the real state through the forge rather than trusting the claim, and tells you when reality differs from what you said.
+That confirmation needs an adapter that can look reviews up (`reviewLookup: by-id`); in the manual tier nothing can observe a review, so the claim cannot be confirmed, the sweep does not run, and the run says so instead of acting on the claim:
 
 ```text
 the PR for TES-5 merged
@@ -209,7 +211,7 @@ that PR got abandoned
 
 A run does this: verifies the tracker MCP, sweeps for merged work, resolves tracker and task memory, fetches the issue, reads relevant code, creates the branch from a freshly fetched base, builds the breakdown and plan document, moves the issue to in progress, then loops one task at a time.
 Each task gets claimed, implemented, tested, committed on its own, and closed in both task memory and the tracker.
-At the end it pushes, opens the review, and moves the issue to in review.
+At the end it pushes, opens the review — or, in the manual tier, hands you everything needed to open it — and moves the issue to in review.
 
 Re-invoking on the same issue resumes it.
 Guards see what already exists and skip it.
@@ -350,7 +352,7 @@ Copy `skills/workbench-shared/forges/TEMPLATE.md` to `.workbench/forge.md` in yo
 
 A partial adapter is fine and often correct. One that opens reviews but declares `reviewLookup: none` still does the useful part; it just leaves the sweep off. That is far better than an adapter that guesses at review state, because a wrong guess marks abandoned work as shipped.
 
-Two rules the skills hold to, no matter the tier: **anything executed against a forge comes from a written adapter file, never from an inference made in the moment**, and credentials are never scavenged from disk, environment, or token caches.
+Two rules the skills hold to, no matter the tier: **anything executed against a forge is authorized by a written adapter file or by your explicit one-run acceptance of a named candidate at the assisted-tier stop, never by an inference made in the moment**, and credentials are never scavenged from disk, environment, or token caches.
 
 ## How the tracker learns a review merged
 
