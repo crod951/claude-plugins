@@ -48,7 +48,7 @@ Auto mode exists to remove friction, not judgment, so every one of them still fi
 - **A review closed without merging.** Still report it and ask.
   Whether to retry, rescope, or drop the work is a judgment call with no safe default.
   This now fires once per abandoned review rather than on every run, because the marker is recorded on the tracker instead of pushed to the base branch.
-  The once guarantee holds only when the tracker can list comments; on the file-marker fallback the marker must land on the base branch to be seen from other clones, so a protected branch or a different clone can make the same review report again.
+  The one-time guarantee holds only when the tracker can list comments; on the file-marker fallback the marker must land on the base branch to be seen from other clones, so a protected branch or a different clone can make the same review report again.
 - **Accepting a forge CLI found by the tier-2 probe.** Still ask.
   Auto mode must never drive an unfamiliar CLI against the user's server unattended; anything executed against a forge is authorized by a written adapter, or by the user's explicit one-run acceptance of a named candidate at this stop, never by an inference made in the moment.
 - **A phase with no matching tracker state.** Still ask.
