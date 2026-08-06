@@ -20,6 +20,7 @@ When an assumed tool name below does not exist on the connected server, list the
 | `createSubIssue(parentRef, title, description)` | Create the task with the parent's GID set as its parent; do not pass a project, since Asana inherits project membership from the parent task. Capture the created subtask's GID and its permalink URL from the tool response, and return both to the caller. |
 | `updateState(ref, phase)` | Apply this only to the main task, never to a subtask. Look up the tracker profile's state mapping for the given phase, then follow this fallback chain in order: (a) if the connected MCP exposes a section-move or add-to-section tool, move the main task to the mapped section; (b) else if the profile maps a status custom field and a task-update tool can set that field, set the field to the mapped value; (c) else post a comment stating the phase transition, for example "Phase: In Review - <PR url>". When the phase is `done`, always set the task's completed flag to true regardless of which branch of the chain applied. Skipping the transition silently is not allowed; the fallback comment in step (c) is the minimum required action. The chain handles missing tools, not missing mappings: when the profile explicitly records this phase as unmapped, a decision first-run setup captured from the user, treat the transition as a documented no-op instead of running the chain, and still set the completed flag when the phase is `done`. Never hardcode a section or status name here; always go through the mapping saved during first-run setup. |
 | `comment(ref, body)` | Post a story (comment) on the task using its GID and the comment body. |
+| `listComments(ref)` | List the task's stories using a list-stories-style tool scoped to the task GID, and return each story's text, newest first. Asana calls comments "stories", and the same endpoint also returns system-generated stories for field changes and section moves, so filter to comment-type stories rather than treating every story as a comment. When the connected server exposes no story-listing tool, treat this operation as unavailable and report that; do not substitute a task fetch, since the task body does not contain its comments. |
 
 The deprecated V1 server (mcp.asana.com/sse, shutdown 2026-11-05) lacks a section-move tool, so the V2 server (mcp.asana.com/v2/mcp) is recommended for full section-move support.
 
@@ -52,12 +53,18 @@ Sub-issue state transitions degrade to the completed flag instead: moving a subt
 
 ## Done on merge
 
-Asana has no PR-merge integration comparable to Linear's GitHub integration.
-At PR open, move the main task to the mapped `inReview` state and post a comment stating that the task will be closed by the next skill run after the PR merges.
-The done-on-merge sweep itself, including its handling of pull requests closed without merging, is tracker-agnostic and defined in `../trackers.md`; run it exactly as written there.
+Asana has no review-merge integration comparable to Linear's GitHub integration.
+At review open, move the main task to the mapped `inReview` state and post a comment stating that the task will be closed by the next skill run after the review merges.
+When the resolved forge declares `reviewLookup: none`, no later run can detect the merge, so say instead that closing the task is a manual step; promising a sweep that cannot run would misstate what happens next.
+The done-on-merge sweep itself, including its handling of reviews closed without merging, is tracker-agnostic and defined in `../trackers.md`; run it exactly as written there.
 This adapter's closure action for the sweep's merged path: apply the mapped `done` state and set the task's completed flag.
 
 ## Closing on merge without any workbench machinery
+
+Everything in this section and the next assumes the resolved forge is GitHub.
+Both arrangements below are GitHub-specific: one is a GitHub App, the other is a GitHub Actions workflow.
+When the resolved forge is not GitHub, skip both regardless of what `ciHooks` declares, record `merge-closer: none (forge is not GitHub)`, and let the sweep be the sole closure mechanism; a non-GitHub forge with CI hooks still cannot run a GitHub App or reach these templates' assumptions.
+When the resolved forge declares no `ciHooks`, skip both, record `merge-closer: none (forge has no hooks)`, and let the sweep be the sole closure mechanism, exactly as `../trackers.md` directs.
 
 Asana ships a free native GitHub integration, a GitHub App, that links a pull request to a task when the PR body contains the task URL or the branch name contains the task id.
 Paired with an Asana rule of the form "when a GitHub pull request is merged, mark the task complete", that combination closes the task server-side with no Action from this plugin, no sweep, and no agent involved.
@@ -73,7 +80,12 @@ Treat `native` exactly like `installed` afterwards: never ask again, and let the
 Run this check whenever the tracker profile is loaded or created for this repository, not only during first-run setup.
 First-run setup triggers the same load-time check as part of creating the profile; it does not run a separate ask.
 When the tracker is Asana, check the profile for a `merge-closer:` line.
-When that line is absent, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on PR merge, then record the answer in the profile right away.
+
+Before asking anything, read the resolved forge's declared `ciHooks` capability.
+When it is false, do not ask: record `merge-closer: none (forge has no hooks)` and stop here.
+Asking anyway is worse than skipping, because a yes writes a workflow file that will never execute and records `installed`, which tells the sweep that something else owns closure when nothing does.
+
+When that line is absent and the forge declares `ciHooks`, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on review merge, then record the answer in the profile right away.
 Ask whenever no `merge-closer:` line is on record; once one is recorded, never ask again for this repository.
 When the answer is yes, write `.github/workflows/workbench-close.yml` from the template below, record `merge-closer: installed` in the tracker profile, and commit both together.
 Tell the user to add an `ASANA_TOKEN` repository secret, an Asana personal access token, since the workflow cannot post to the Asana API without it.

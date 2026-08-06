@@ -75,11 +75,13 @@ A task commit is one whose subject is scoped to this issue's ref and which imple
 Count them over the range from the resolved base branch to the current head, not over all history, since a branch inherits its base's commits.
 Compare that count to the number of tasks closed for this issue.
 Check the recorded hashes as well: every hash recorded at close must name a commit inside that same range, and each closed task's hash must be distinct, which catches a mismatch that subject-line counting can misclassify.
-When the counts disagree, stop and report the discrepancy rather than opening a pull request: either a commit is missing, or tasks were combined into one commit, and both contradict the one-commit-per-task rule.
+When the counts disagree, stop and report the discrepancy rather than opening a review: either a commit is missing, or tasks were combined into one commit, and both contradict the one-commit-per-task rule.
 
-## Pull request test plan
+This check guards a hazard that is universal across forges rather than specific to any one of them: every forge reviews committed work only, so anything left staged or uncommitted is silently absent from the review, with no error raised anywhere.
 
-Give every pull request a test plan with the same shape, so a reviewer reads the same structure each time.
+## Review test plan
+
+Give every review a test plan with the same shape, so a reviewer reads the same structure each time.
 
 State the command a reviewer runs, in a fenced block.
 State the observed result as counts, for example how many tests passed and how the total changed.

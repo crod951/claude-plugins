@@ -6,7 +6,7 @@ Never call tracker tools directly from a core skill body; always go through the 
 
 ## The contract
 
-Use exactly these eight operations.
+Use exactly these nine operations.
 Adapter files implement each one against a specific tracker's tools; treat the operation names as the vocabulary for every other skill and adapter in this plugin.
 
 | Operation | Purpose |
@@ -22,6 +22,7 @@ It may bundle more than one native id when the tracker needs that; Linear's carr
 | `createSubIssue(parentRef, title, description)` | Create a new child issue under an existing parent; return its ref and URL. Do not attempt to record the paired task id during this call; the task does not exist yet. The execute skill writes it back after `createTask` returns, using `comment` so no additional contract operation is needed. |
 | `updateState(ref, phase)` | Move an issue to the given phase, where phase is one of `inProgress`, `inReview`, or `done`; apply it through the tracker profile's state mapping rather than a hardcoded status name. |
 | `comment(ref, body)` | Post a comment on an issue. |
+| `listComments(ref)` | List an issue's existing comments, newest first, returning at least each comment's body text. This exists so the sweep can read markers this plugin wrote on an earlier run; it is not for summarizing discussion. When the connected MCP exposes no comment-listing tool, treat the operation as unavailable and follow the fallback the sweep section defines rather than guessing. |
 
 ### Destination resolution
 
@@ -36,17 +37,10 @@ Any other number of destinations is ambiguous and is asked even in auto mode.
 
 ## Base branch resolution
 
-Feature branches start from, and pull requests target, one base branch.
-Resolve it in this order, first match winning.
+Base branch resolution lives in `forges.md`, not here.
+It is a forge concern: it decides what a review targets and what a feature branch is cut from, and nothing about it varies by tracker.
 
-Use the base branch named in the invocation when the request specifies one, and treat that as applying to this run only.
-Otherwise use the profile's `base-branch` when it records one.
-Otherwise use the repository's current branch, and say which branch you resolved so the choice is visible.
-
-Guard against one trap: when the current branch is itself a workbench feature branch, meaning its name carries an issue ref and one of the branch prefixes, do not silently use it as a base.
-Building one issue's work on top of another's unmerged branch entangles two pull requests, so ask which base to use instead.
-
-Fetch the resolved base branch before creating anything from it, and create the new branch from the fetched remote copy rather than from a local copy that may be behind.
+The profile's `base-branch` field is still written and read by the first-run setup below, since the profile is one file; only the resolution rules moved.
 
 ## Preflight verification
 
@@ -66,53 +60,80 @@ When verification fails, do not start tracker work and do not attempt any workar
 Instead, output the setup instructions from that tracker's adapter file, tell the user to connect the MCP and re-invoke the skill, then stop.
 When the MCP is unverified, delivering setup instructions is the task; that is a genuinely helpful, complete action, not a fallback, and it is what keeps this procedure from improvising a bypass.
 
-The GitHub CLI is part of the same preflight.
-Verify it with one cheap read-only call, `gh auth status`, and treat a missing binary and an unauthenticated one the same way: unverified.
-Run this check in the same pass as the MCP check rather than after a failed stop, so a user missing both dependencies gets one stop naming everything to fix instead of discovering one failure per invocation.
+The forge is part of the same preflight.
+Resolve the forge adapter as `forges.md` directs, then call its `verifyForge` operation, and read that adapter's declared capabilities for the rest of the run.
+Run this check in the same pass as the MCP check rather than after a failed stop, so a user missing both dependencies gets one report naming everything to fix instead of discovering one failure per invocation.
 
-When `gh` does not verify, do not start the run and do not attempt any workaround: never call the GitHub HTTP API directly, and never read tokens from disk or the environment.
-Output the fix instead: install the CLI with `brew install gh` on macOS or the platform package listed at https://github.com/cli/cli#installation, authenticate with `gh auth login`, then re-invoke the skill.
-As with an unverified MCP, delivering these instructions is the task, not a fallback.
+An unverified forge does not stop the run.
+Unlike the tracker, which has no substitute, the forge has a documented degraded path: an unverified or unresolvable forge selects a capability tier per `forges.md`, and the run continues in that tier.
+A resolved adapter that fails `verifyForge` selects the manual tier for that run, per the failed-verification rule in `forges.md`; no further calls go through the failed adapter.
+State the resolved tier before doing any work, along with the fix for reaching a higher one, so the user knows what this run will and will not do.
+
+What an unverified forge must never do is provoke a workaround.
+Never call a forge's HTTP API directly, never read tokens from disk or the environment, and never install or authenticate a forge CLI on the user's behalf.
+Those prohibitions hold in every tier; the tier decides what the run attempts, never how it authenticates.
 
 On re-invocation, run preflight again from the top.
-Only a verified MCP and a verified `gh` allow the run to begin.
+A verified tracker MCP is what allows the run to begin; the forge decides in which tier it begins.
 
 ## Done-on-merge sweep
 
 Every skill invocation in a repo must run this sweep before doing any other tracker work, and only once preflight has verified the MCP.
 The sweep is tracker-agnostic: it finds issues from repository state, and only its closure action goes through the resolved tracker's adapter.
 
-The sweep checks whether any file under `.workbench/` references an issue whose pull request has since merged, using `gh pr view <branch> --json state,mergedAt` for each recorded branch; when several issues are outstanding, one `gh pr list --state all --json headRefName,state,mergedAt` call matched locally against the recorded branch names is cheaper than one call per issue; pass `--limit` with a value comfortably above the repository's total pull request count, since the default caps at 30 and a capped listing would silently skip older recorded branches.
+The sweep runs only when the resolved forge declares `reviewLookup: by-id`.
+When it declares `none`, there is no way to observe what happened to a review, so skip the sweep and say once that it was skipped and why; never report a clean sweep that did not run.
+
+Find the outstanding issues by searching `.workbench/` for recorded reviews.
 Search the whole directory rather than only `tasks/`: depending on the resolved memory backend the per-issue record may be a plan document under `plans/` with no checklist file at all, and narrowing the search to `tasks/` silently skips those issues.
-When the sweep finds a merged pull request for an issue, read the issue's current state before writing to the tracker.
-When the issue is already complete, for example because a merge-closer Action or a native integration already closed it, skip the tracker write and apply only the stamp described below.
+
+For each issue the search finds, call `getReviewState` once with that issue's recorded review id and act on what it returns.
+Look each id up directly; never list a forge's reviews and match them locally.
+A listing has to be bounded, and any bound silently drops the oldest records once a repository has more reviews than the bound allows, which is a defect that grows quietly with the repository's age.
+
+Records written before review ids were recorded carry a branch name and no id.
+For those, fall back to the optional `findReviewByBranch` operation defined in `forges.md`, and rewrite the record with the id once one is known, so the fallback path drains over time rather than becoming permanent.
+When the resolved adapter does not implement that operation, the record cannot be swept: report that once, naming the record, rather than guessing or treating a branch name as a review id.
+
+When `getReviewState` returns `merged`, read the issue's current state before writing to the tracker.
+When the issue is already complete, for example because a merge-closer Action or a native integration already closed it, do nothing further for that issue.
 Otherwise apply the mapped `done` state through `updateState`, plus any closure action the adapter defines for the merged path, before proceeding with the rest of the run.
 
-For idempotency, append a `- Closed: <date>` line to that issue's file under `.workbench/`, whichever file the search found, since a beads-mode issue has a plan document and no checklist file, commit the file, and push that commit to the branch the merged pull request targeted, which is the resolved base branch and is not necessarily the repository's default branch once `base-branch` is configured.
-A stamp commit that is only made locally does not propagate: it never reaches the base branch, so the merge check runs at most once per issue only when the commit is pushed to that base branch.
-When the current checkout is on a feature branch, the stamp still must land on that base branch, not on a feature branch.
-Do not switch branches to place it while the run has uncommitted task state in the working tree, since a checkout or a stash can lose the in-progress marker that the memory contract treats as the truth.
-Apply the stamp before any task work begins, or from a separate clone or worktree, or defer it to the next invocation and say plainly that the stamp is pending.
-When the push fails, for example because of missing permission, a protected branch, or being offline, report the failure to the user and continue the run.
-A failed stamp push must not abort the sweep, and it must not be retried silently in a loop.
-The sweep skips any issue whose `.workbench/` file already carries a Closed line, so the merge check runs at most once per issue.
+That state read is the whole idempotency mechanism for the merged path.
+An issue that is already `done` produces no write on any later run, so nothing needs to be recorded anywhere and nothing needs to be pushed.
+Do not write a stamp, a marker, or any other file to record a merge.
 
-### Pull requests closed without merging
+### Reviews closed without merging
 
-A merged pull request is not the only way a pull request ends, and the other way is silent by default.
-A merge-closer Action or native integration deliberately ignores a pull request that was closed without merging, since the work was not delivered, and the merged path above also ignores it because `mergedAt` is null.
+A merged review is not the only way a review ends, and the other way is silent by default.
+A merge-closer Action or native integration deliberately ignores a review that was closed without merging, since the work was not delivered, and the merged path above ignores it too.
 That combination leaves the issue parked in the `inReview` phase forever while the branch is abandoned, so the tracker misstates reality and nobody is told.
 
-During the sweep, treat a referenced pull request whose state is closed with a null `mergedAt` as an abandoned attempt, and handle it as follows.
+During the sweep, treat a `closed-unmerged` result as an abandoned attempt, and handle it as follows.
 Never mark the issue done, because nothing shipped.
-Never silently move the phase back either, because whether to retry, rescope, or drop the work is the user's decision, not an inference from a closed pull request.
-Report it instead: name the issue, name the pull request, say it was closed without merging, and ask whether to resume the work on a fresh branch or move the issue back to the `inProgress` phase.
+Never silently move the phase back either, because whether to retry, rescope, or drop the work is the user's decision, not an inference from a closed review.
+Report it instead: name the issue, name the review, say it was closed without merging, and ask whether to resume the work on a fresh branch or move the issue back to the `inProgress` phase.
 
-Record the observation in that issue's file under `.workbench/` as a line such as `- PR closed unmerged: <date> <pr url>` so the same abandoned pull request is reported once rather than on every later run.
-Commit that recorded line and push it before the sweep returns, under the same branch-placement and uncommitted-state cautions as the Closed stamp above: a marker that exists only in a working tree, or only in a local commit, does not survive to other clones or later runs, and the same abandoned pull request would be re-reported every time.
-When the push fails, report the failure and continue, exactly as a failed stamp push is handled, and expect the pull request to be reported again until a push succeeds; that repetition is the honest outcome of unpersisted state, not a bug to suppress.
-Report it again when a different pull request for the same issue is later closed unmerged, since that is new information.
-A recorded abandonment does not close the issue and does not stop a later merge from closing it normally; when a fresh pull request for the same issue merges, apply the usual done state and Closed stamp.
+Unlike the merged path, this one has no tracker state to key on: the issue sits in `inReview` whether or not it has already been reported, so without a marker the same dead review is reported on every later run.
+Record the observation as a comment on the issue through `comment`, carrying a sentinel line such as:
+
+```
+workbench: review-closed-unmerged <review url> <date>
+```
+
+Before reporting, call `listComments` and skip any issue whose comments already contain the sentinel for that review.
+Match the sentinel as a substring anywhere in the comment stream, not by inspecting only the newest comment; users reply in comment threads, and a later reply must not hide the marker.
+
+The tracker holds this marker rather than a file for one reason: the marker has to survive to other clones and later runs, and a file-based marker only does that when it is pushed to the base branch.
+Most shared repositories protect that branch, so the push fails, the marker never lands, and the report repeats forever as a stop that fires in both approval modes.
+A comment needs no branch write access and is visible from every clone.
+
+When the resolved tracker cannot list comments, fall back to recording `- Review closed unmerged: <date> <review url>` in that issue's file under `.workbench/`, committed and pushed to the base branch.
+Say plainly, when taking that fallback, that the marker depends on write access to the base branch and that the review will be re-reported on every run if the push fails.
+Keep reading legacy `- PR closed unmerged:` lines as valid markers, so records written before this change are not re-reported.
+
+Report it again when a different review for the same issue is later closed unmerged, since that is new information.
+A recorded abandonment does not close the issue and does not stop a later merge from closing it normally; when a fresh review for the same issue merges, apply the usual done state.
 
 ## Runtime resolution
 
@@ -142,7 +163,7 @@ Run this setup procedure once per repository, then reuse its output on every lat
 Trigger setup when the repository has no `.workbench/config.md`.
 Before prompting the user, check other local branches for a newer `.workbench/config.md` and offer to reuse it instead of starting over.
 
-When no existing profile is found anywhere, the agent must run these five steps in order and must not skip any of them.
+When no existing profile is found anywhere, the agent must run these six steps in order and must not skip any of them.
 Each step must get the user's answer before the next step starts, and the profile must not be written until every step has an answer.
 Ask one question at a time; never present a later step's question, or any other pending question such as the issue draft, alongside an unanswered step from this sequence.
 Prefer the agent's structured question mechanism named in `agents.md` over free prose for each of these questions, since a list of concrete choices is harder to answer ambiguously.
@@ -160,21 +181,29 @@ When a user's reply could answer more than one pending question, or its target i
    Say which phase has nothing to map to, then offer the real choices: the user adds a state in the tracker and you re-read the states afterwards, or the phase maps onto another state with the loss of distinction stated plainly, or the phase stays unmapped so the skill skips that transition entirely.
    Record an unmapped phase in the profile as `unmapped` rather than omitting the line, so a later run knows the phase was considered and skipped rather than forgotten.
    Creating tracker states is the user's job; no adapter operation defines a workflow state, so never claim to have added one.
-3. Run the resolved tracker adapter's profile-load offers.
-   Each adapter defines its own; for Asana and for Linear alike this is the merge-closer question described in that tracker's adapter file, since both need to know what closes an issue when a pull request merges.
-   Ask it and record the answer in the profile as `merge-closer`.
+3. Confirm the forge.
+   Ask which forge hosts this repository's reviews, following the first-run forge question in `forges.md`, and record the answer as `forge` in the profile.
+   Seed the question from the `origin` remote's host and then from a `PATH` probe, but never let detection answer it by itself.
+   Ask this before the next step, since what the next step may offer depends on the resolved forge's declared capabilities.
    Run this check whenever the profile is loaded, not only during first-run setup, so a profile written before this question existed gets repaired rather than staying silent.
-4. Confirm the base branch that feature branches should start from and merge into.
+4. Run the resolved tracker adapter's profile-load offers.
+   Each adapter defines its own; for Asana and for Linear alike this is the merge-closer question described in that tracker's adapter file, since both need to know what closes an issue when a review merges.
+   Ask it only when the resolved forge declares `ciHooks` and the closure arrangements that adapter file offers actually apply to the resolved forge; both trackers' native integrations and Action templates are GitHub-specific, so on any other forge offer only what that adapter documents as working there, and record `merge-closer: none` naming the reason when nothing does.
+   When the forge declares no CI hooks there is nothing to install, so skip the question entirely and record `merge-closer: none (forge has no hooks)`.
+   Asking it anyway would be worse than skipping it: accepting the offer writes a workflow file that never executes and records `installed`, which tells the sweep that something else owns closure when nothing does.
+   Otherwise ask it and record the answer in the profile as `merge-closer`.
+   Run this check whenever the profile is loaded, not only during first-run setup, so a profile written before this question existed gets repaired rather than staying silent.
+5. Confirm the base branch that feature branches should start from and merge into.
    Offer the repository's current branch as the default, since that is usually the integration branch the user is working from, and offer the repository's default branch as the alternative.
    Do not offer the current branch when it is itself a workbench feature branch, meaning its name carries an issue ref and one of the branch prefixes.
    Recording that as the profile's base would make every future issue in the repository, and every teammate who clones it, branch from and target one issue's unmerged work, and the resolution-time guard would never fire because the profile now holds an explicit answer.
    Offer the default branch in that case, and say why the current branch was excluded.
    Record the answer as `base-branch` in the profile.
-5. Confirm the approval mode.
+6. Confirm the approval mode.
    Ask whether future runs should stop for approval at the usual points, or run straight through without asking.
    Record the answer as `approval: ask` or `approval: auto` per `approval.md`, and say that the safety stops listed there fire either way, so choosing auto does not mean unattended risk.
 
-Save the confirmed profile to `.workbench/config.md` and commit that file only once all five steps above have an answer; include the confirmed default destination.
+Save the confirmed profile to `.workbench/config.md` and commit that file only once all six steps above have an answer; include the confirmed default destination.
 Never announce that setup will happen and then write a profile without having asked each of these questions.
 A profile written without confirmed answers for every step is a defect, not a shortcut.
 A per-invocation destination hint applies only to that invocation; change the profile's `default-destination` only when it is absent or when the user explicitly asks to change it.
@@ -184,9 +213,11 @@ Use this format for the profile:
 ```markdown
 # workbench tracker profile
 tracker: asana
+forge: github          # a bundled adapter name, "local" for .workbench/forge.md, or "none"
 default-destination: Prototypes (1209000000000001)  # add "# auto-accepted" when auto mode chose it
 base-branch: main
 approval: ask
+merge-closer: native   # "none (forge has no hooks)" when the forge declares no ciHooks
 state-mapping:
   inProgress: section "In Progress"
   inReview: section "Review"

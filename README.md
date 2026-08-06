@@ -26,16 +26,16 @@ When the installer asks which skills to take, take all of them; `workbench-share
 
 ## Available Plugins
 
-### workbench (v1.0.0)
+### workbench (v1.1.0)
 
-Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from requirements to an open pull request.
+Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from requirements to an open code review, on GitHub or any other forge with an adapter.
 It works with Asana or Linear as your issue tracker, and both skills run unchanged on Claude Code and Kiro.
 
 #### Prerequisites
 
 - An Asana or Linear MCP plugin installed and authenticated
-- [Beads CLI](https://github.com/steveyegge/beads) installed (`bd` command available); optional, but recommended for the richest task memory
-- [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available)
+- [Beads CLI](https://github.com/gastownhall/beads) installed (`bd` command available); optional, but recommended for the richest task memory
+- A forge adapter for wherever your reviews live. Two ship built in: GitHub, which needs the [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available), and a generic-git fallback that pushes the branch and hands the review off to you. Write a `.workbench/forge.md` from the bundled template only for a forge workbench does not ship.
 
 #### Install
 
@@ -47,7 +47,7 @@ It works with Asana or Linear as your issue tracker, and both skills run unchang
 
 | Skill | Description |
 |-------|-------------|
-| `execute` | Drives one tracker issue through a single resumable pass: breakdown, implementation, tests, commits, and an open PR. |
+| `execute` | Drives one tracker issue through a single resumable pass: breakdown, implementation, tests, commits, and an open code review. |
 | `scaffold` | Turns requirements text into a scaffolded main issue plus linked sub-issues, then offers to hand off to execute. |
 
 Talk to either skill in plain language; there are no slash commands to memorize.
@@ -65,11 +65,12 @@ scaffold these requirements
 - **Task memory** - beads-backed when available, with a plain checklist file fallback
 - **Conventional Commits** - one commit per task, referencing the issue ref
 - **Tracker-only access** - tracker work only happens through the connected tracker MCP; when it is missing, the skill refuses and stops
+- **Forge-portable** - reviews go through a five-operation forge contract; GitHub and a generic-git fallback ship built in, and any other forge is a `.workbench/forge.md` you write without forking
 
 #### Tracker Status Lifecycle
 
 ```text
-Todo → In Progress (execute starts) → In Review (PR opened) → Done (PR merge)
+Todo → In Progress (execute starts) → In Review (review opened) → Done (review merged)
 ```
 
 See the [full guide](./docs/workbench.md) for setup, task memory, and the security boundary.

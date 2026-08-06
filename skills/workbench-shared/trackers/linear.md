@@ -10,7 +10,7 @@ When a tool name assumed below does not exist on the connected server, list the 
 
 | Contract operation | Linear MCP behavior |
 | --- | --- |
-| `getIssue(ref)` | Fetch the issue by its key (for example `ONC-5`) using a get-issue-style tool. Save the native UUID, the issue URL, its labels, and its current workflow state from the response; later operations that need the native id should reuse the saved UUID rather than re-fetching. |
+| `getIssue(ref)` | Fetch the issue by its key (for example `ONC-5`) using a get-issue-style tool. Save the native UUID, the issue URL, its labels, and its current workflow state from the response; later operations that need the native id should reuse the saved UUID rather than re-fetching. When the response carries the issue's comments, save their bodies in the order returned as well, since on builds with no separate comment-listing tool `listComments` reads from this saved response. |
 | `listSubIssues(ref)` | List issues filtered by parent, using the native UUID or key of the issue from `getIssue`. Return each child's id, title, and state. |
 | `listDestinations()` | List the viewer's team memberships using the current-user tool, not a full workspace team list. For each team the viewer belongs to, list that team's projects when a destination narrower than the team is needed. Never call a tool that lists every team in the workspace. |
 | `resolveDestination(hint?)` | Match a given hint against a team's key or name to resolve its native UUID. When the hint also names a project, validate that the project exists under the resolved team before returning it. When no hint is given, resolve the tracker profile's configured default destination the same way. Return the team UUID and any resolved project id together as this adapter's one destination value, per the contract's adapter-owned destination rule. Return null when the hint matches more than one team or project ambiguously. |
@@ -18,11 +18,16 @@ When a tool name assumed below does not exist on the connected server, list the 
 | `createSubIssue(parentRef, title, description)` | Create the issue with the parent's native id set as its parent; do not pass a team, since Linear inherits the team from the parent issue. Capture the created issue's key and its URL from the tool response, and return both to the caller. |
 | `updateState(ref, phase)` | Look up the workflow state name saved in the tracker profile's state mapping for the given phase, then update the issue's state to that name. When the profile explicitly records this phase as unmapped, a decision first-run setup captured from the user, skip the state mutation as a documented no-op rather than guessing a state. Never hardcode a status name here; always go through the mapping saved during first-run setup. |
 | `comment(ref, body)` | Create a comment using the issue's native id and the comment body. |
+| `listComments(ref)` | List the issue's comments using a list-comments-style tool scoped to the issue's native UUID or key, and return each comment's body, newest first. Some builds return comments as part of a get-issue call rather than exposing a separate tool; when they do, read them from the response already saved by `getIssue` instead of making a second call. When neither path is available, treat this operation as unavailable and report that. |
 
 ## Notes
 
 Linear issue refs are native keys shaped like `ONC-5`, a short uppercase team prefix, a dash, and digits.
 Lowercase the key when building a branch name from it.
+Everything in this section about automatic closure assumes the resolved forge is GitHub.
+Linear's integration is a GitHub integration; it observes GitHub pull requests and nothing else.
+When the resolved forge is not GitHub, skip the whole arrangement question regardless of what `ciHooks` declares — the integration and the Action template below are both GitHub-specific — record `merge-closer: none (forge is not GitHub)`, and let the sweep close issues through `updateState` as the sole mechanism.
+
 Linear's GitHub integration automatically closes an issue when a pull request whose body contains `Closes ONC-5` (or `Fixes`, using the issue's own key) merges into the default branch.
 That integration is not present by default, and a fresh workspace has none until someone connects it.
 Verified live: a pull request whose body contained `Closes TES-5` merged into the default branch and the issue stayed in review, with an empty attachments list on the issue confirming no integration had linked the pull request.
@@ -34,13 +39,13 @@ An empty `attachments` field on an issue whose pull request already merged is a 
 Treat the reverse as unverified: a populated `attachments` field has not been confirmed to mean the integration is connected, so never conclude `native` from attachments alone.
 When the integration is connected, record `native` and do not force a `done` transition at merge time, because the integration handles it.
 Let the sweep still run as the backstop, exactly as it does for Asana's native arrangement: Linear's integration reacts to merges into the default branch, so an issue whose pull request targeted a configured `base-branch` other than the default will not be closed by it, and only the sweep will catch that.
-When it is not connected, record `installed` after adding the Action below, or `declined` when the user declines it, matching the values the Asana adapter uses so the profile field means one thing across trackers; in either case treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself and stamps the issue's file.
+When it is not connected, record `installed` after adding the Action below, or `declined` when the user declines it, matching the values the Asana adapter uses so the profile field means one thing across trackers; in either case treat Linear exactly like Asana: the done-on-merge sweep applies the mapped `done` state itself.
 A merge-closer Action is also available for Linear, using the template below rather than the Asana one, since the two APIs differ.
 Never leave the question unanswered, since an unanswered assumption is what leaves issues parked in review indefinitely.
 Still use `updateState` to move the issue into `inProgress` and `inReview` at the appropriate points, since those transitions are not handled by the GitHub integration.
 
-That integration only reacts to a merge, so a pull request closed without merging leaves the issue parked in review here exactly as it does on Asana.
-Apply the rule described under "Pull requests closed without merging" in `../trackers.md`: never mark the issue done, never silently change its phase, tell the user which issue and which pull request were abandoned, and record the observation once in that issue's file under `.workbench/`, committing and pushing that record before the sweep returns exactly as `asana.md` requires, since an unpersisted marker re-reports the same abandoned pull request on every later run.
+That integration only reacts to a merge, so a review closed without merging leaves the issue parked in review here exactly as it does on Asana.
+Apply the rule described under "Reviews closed without merging" in `../trackers.md`: never mark the issue done, never silently change its phase, tell the user which issue and which review were abandoned, and record the observation once as a sentinel comment on the issue, since an unrecorded marker re-reports the same abandoned review on every later run.
 
 ## First-run profile for Linear
 

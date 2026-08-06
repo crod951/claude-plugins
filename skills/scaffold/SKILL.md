@@ -39,7 +39,8 @@ If any of these files cannot be found and read, stop immediately and report whic
 
 1. Resolve the approval mode per `../workbench-shared/approval.md` and state it.
    Then determine whether the tracker is already settled, in the shared precedence order from `../workbench-shared/trackers.md`: the invocation names one, a profile records one, or exactly one tracker MCP is connected; an invocation-named tracker wins over the profile.
-   When it is settled, run preflight verification against that tracker as described in `../workbench-shared/trackers.md`; stop there when the tracker's MCP or the GitHub CLI does not verify.
+   When it is settled, run preflight verification against that tracker as described in `../workbench-shared/trackers.md`; stop there when the tracker's MCP does not verify.
+   This skill creates tracker issues and never opens a review, so the forge's state does not gate it; a repository with no usable forge can still be scaffolded.
    When it is not settled, because no profile exists and both tracker MCPs are connected, do not guess which MCP to verify: defer preflight to step 3, which asks the tie-break question first and then runs preflight against the answer.
 2. Run the done-on-merge sweep for the resolved tracker, whose tracker-agnostic mechanics are in `../workbench-shared/trackers.md`; it is tracker work, so it only runs once preflight has verified the MCP.
    When preflight was deferred in step 1, defer this sweep with it; step 3 runs both once the tracker is chosen.
@@ -53,7 +54,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    - Otherwise resolve the tracker profile's configured default destination.
    - When there is no hint and no configured default, call `listDestinations`, list them to the user, and ask once which one to use; do not infer a destination from any other source.
    - A suggestion drawn from prior issues in the repo may accompany that question, but the question must still be asked and answered before anything is created.
-   - When the repository has no tracker profile at all, run first-run setup from `../workbench-shared/trackers.md` to completion before showing the issue draft: all five of its steps in order, confirming the destination, the state mapping, the adapter's profile-load offers such as the merge-closer question, the base branch, and the approval mode.
+   - When the repository has no tracker profile at all, run first-run setup from `../workbench-shared/trackers.md` to completion before showing the issue draft: all six of its steps in order, confirming the destination, the state mapping, the forge, the adapter's profile-load offers such as the merge-closer question, the base branch, and the approval mode.
      Ask each setup question on its own and get its answer before asking the next; never show the issue draft while a setup question is still unanswered.
 4. Gather the requirements before drafting.
    - Take them from the invocation itself when the text is there.
