@@ -14,18 +14,23 @@ Adapter files implement each one against a specific forge's tools; treat the ope
 | --- | --- |
 | `verifyForge()` | Cheap read-only preflight check that the forge is reachable and authenticated; returns verified or unverified and nothing else. |
 | `resolveBase(branch)` | Confirm the named base branch exists on the remote and is a valid merge target. |
-| `openReview(branch, base, title, body)` | Create the review for a branch against a base. Return a stable review id and the review's URL — or, on a forge where no review can be created, the manual-handoff result defined below. |
+| `openReview(branch, base, title, body)` | Create the review for a branch against a base. Return a stable review id and the review's URL - or, on a forge where no review can be created, the manual-handoff result defined below. |
 | `publishReview(id)` | Move a draft review to the notified-review state, where the forge distinguishes the two. A no-op everywhere else. |
 | `getReviewState(id)` | Return one of `open`, `merged`, `closed-unmerged`, or `unknown`, plus a merge timestamp when merged. |
 
-`openReview` owns the push.
-Some forges' review CLIs push the review ref themselves, and running `git push` alongside them produces a wrong branch state, so whether a push happens is the adapter's decision and not the calling skill's.
-The `pushesForYou` capability tells the caller which arrangement it is in; the caller must never push when it is true.
+`openReview` owns the push that opens the review.
+Some forges' review CLIs push the review ref themselves, and running `git push` alongside them produces a wrong branch state, so whether that push happens is the adapter's decision and not the calling skill's.
+The `pushesForYou` capability tells the caller which arrangement it is in; the caller must never perform that push when it is true.
+
+That ownership is scoped to `openReview` and does not extend to the whole branch.
+Commits the caller makes after the review is open, including the final closing commit that carries completed task state, are the caller's to push, on every adapter and whatever `pushesForYou` declares.
+The contract has no operation for publishing them, and it deliberately does not need one: they are ordinary commits on a branch the forge already knows about, so an ordinary `git push` of that branch is correct.
+Reading `pushesForYou: true` as "never push this branch again" is the failure this paragraph exists to prevent, because it leaves the closing commit sitting in the local clone while the review looks complete.
 
 The review id returned by `openReview` must be something `getReviewState` can look up directly on a later run, from a different clone, without a listing call.
 A branch name is not a review id.
 
-`openReview` has one other legitimate outcome, the **manual-handoff result**: no id at all, plus the four things a human needs to open the review by hand — the pushed branch, the base, a suggested title, and a suggested body in full.
+`openReview` has one other legitimate outcome, the **manual-handoff result**: no id at all, plus the four things a human needs to open the review by hand - the pushed branch, the base, a suggested title, and a suggested body in full.
 An adapter that cannot create reviews (see `generic-git.md`) returns this instead of an id, and it is a typed outcome of the contract rather than a failure.
 A caller receiving it must not call `publishReview`, must not record a review id, and must say plainly that opening the review is now the user's step.
 
@@ -51,7 +56,7 @@ Forges differ in kind, not only in command names, which is the same lesson `agen
 A capability that is false is a fact to design around, not a gap to work around.
 
 `stackedReviews` is declared and unused.
-It is recorded now because the difference is real — `retarget` describes a forge where stacking is branch retargeting with automatic retarget when the upstream merges, and `declared-dependency` describes one where stacking is an explicit dependency plus a manually scoped commit range with no auto-rebase — and because adding a capability key later means revisiting every adapter file.
+It is recorded now because the difference is real - `retarget` describes a forge where stacking is branch retargeting with automatic retarget when the upstream merges, and `declared-dependency` describes one where stacking is an explicit dependency plus a manually scoped commit range with no auto-rebase - and because adding a capability key later means revisiting every adapter file.
 
 ## Adapter resolution
 
@@ -62,8 +67,13 @@ An internal forge on an unrecognized host matches no bundled adapter, so remote-
 Resolve in this order, first match winning.
 
 Use `.fathom/forge.md` when the repository contains one; a repo-local adapter wins over everything.
-Otherwise use the bundled adapter named by the profile's `forge` field, for example `forges/github.md` for `forge: github`.
+Otherwise, when the profile records `forge: local`, stop.
+`local` names the repo-local adapter and nothing else, so a profile that says `local` with no `.fathom/forge.md` present describes an adapter that is missing rather than one to go looking for.
+Say which file is absent, that the profile points at it, and that the fix is to restore `.fathom/forge.md` from `forges/TEMPLATE.md` or to change the profile's `forge` field to a bundled adapter or to `none`.
+Never resolve `local` to a bundled adapter file, since `forges/local.md` does not exist and treating the field as a filename would look up a path that never resolves.
 Otherwise, when the profile records `forge: none`, run in the manual tier described below and make no offers.
+Otherwise use the bundled adapter named by the profile's `forge` field, for example `forges/github.md` for `forge: github`.
+Stop the same way when that named file does not exist: report the missing adapter and the profile field that named it rather than continuing with no adapter resolved.
 Otherwise the repository has no forge answer yet, so run the first-run forge question.
 
 Never infer a forge from the presence of a CLI on `PATH` alone, and never infer one from another repository's profile.

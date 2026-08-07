@@ -91,10 +91,19 @@ When the answer is yes, write `.github/workflows/fathom-close.yml` from the temp
 Tell the user to add an `ASANA_TOKEN` repository secret, an Asana personal access token, since the workflow cannot post to the Asana API without it.
 When the answer is no, record `merge-closer: declined` in the tracker profile.
 The passive sweep and the on-demand cleanup trigger described in the execute skill keep working either way; this Action is an additive fast path, not a replacement.
+
+Never asking again applies to the question, not to the file.
+When the profile records `merge-closer: installed` and does not record a declined template rewrite, compare the repository's `.github/workflows/fathom-close.yml` against the template below on profile load, and when the file-discovery block differs, offer once to rewrite the file from the current template.
+An installed workflow is a copy taken at install time, so a repository that accepted it before a template fix keeps running the old copy forever and never benefits from the fix.
+State what differs and that the rewrite only replaces the workflow file.
+On a yes, rewrite it and leave `merge-closer: installed` as it stands.
+On a no, record `merge-closer: installed (template-rewrite declined)`, so the offer is not repeated on every later load, and treat that value exactly like `installed` everywhere else.
+Recording the decline is what makes this a one-time offer rather than a prompt on every run, matching how every other question here is asked once and answered in the profile.
 The curl call to the Asana API in the template below exists exclusively for this GitHub Action running in CI, authenticated with its own repository secret.
 The agent must never run that curl call, or any other direct call to the Asana API, interactively.
 The agent must never borrow the `ASANA_TOKEN` secret or any other token from disk to reach the Asana API itself; the connected Asana MCP is the only channel the agent uses at runtime.
 The file-discovery and ref-extraction block in this template is intentionally identical to the one in `linear.md`'s template; a change to either copy must be applied to both.
+Three differences are expected and not drift: the marker comment names the other file, this copy names its selected file `TASK_FILE` where `linear.md` names it `FILE`, and the leading comment says task where the other says issue.
 
 ```yaml
 name: fathom-close
@@ -122,27 +131,73 @@ jobs:
             exit 0
           fi
 
+          # fathom:discovery-block start
+          # Everything between these markers is shared verbatim with linear.md.
           # A branch must map to exactly one record; closing a task picked
           # arbitrarily from several matches could complete the wrong issue.
-          MATCHES=$(grep -rlF "$BRANCH" .fathom/ 2>/dev/null | sort)
+          # Only a labeled Branch line is trusted, and it must equal the branch
+          # exactly. An unanchored search also hits the branch name quoted in
+          # another issue's prose, and a bare substring makes feat/tes-5 match
+          # feat/tes-50; either one yields a false multi-match that refuses to
+          # close anything, or picks the wrong record.
+          BRANCH_RE=$(printf '%s' "$BRANCH" | sed 's/[][\^$.*+?(){}|]/\\&/g')
+          LABELED='^[[:space:]]*[-*]?[[:space:]]*(\*\*)?[Bb]ranch(\*\*)?[[:space:]]*[:-][[:space:]]*`?'
+          MATCHES=$(grep -rlE "${LABELED}${BRANCH_RE}\`?[[:space:]]*$" .fathom/ 2>/dev/null | sort || true)
           MATCH_COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
+
+          # Records written before the labeled Branch line was required still
+          # resolve through the original unanchored search, so upgrading does
+          # not silently stop closing issues that were already in flight.
+          if [ "$MATCH_COUNT" -eq 0 ]; then
+            MATCHES=$(grep -rlF "$BRANCH" .fathom/ 2>/dev/null | sort || true)
+            MATCH_COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
+            if [ "$MATCH_COUNT" -gt 0 ]; then
+              echo "No labeled Branch line matched $BRANCH; using the legacy unanchored search over:"
+              echo "$MATCHES"
+              # This fallback is deliberately the pre-fix unanchored search, so
+              # it still substring-matches feat/tes-50 for branch feat/tes-5.
+              # Migrate legacy records to a labeled Branch line rather than
+              # relying on it.
+            fi
+          fi
 
           if [ "$MATCH_COUNT" -eq 0 ]; then
             echo "No file under .fathom/ references branch $BRANCH, skipping."
             exit 0
           fi
-          if [ "$MATCH_COUNT" -gt 1 ]; then
-            echo "Multiple files under .fathom/ reference branch $BRANCH; refusing to guess:"
+
+          # One issue legitimately has two records: the plan document under
+          # plans/ and, in checklist mode, the task file under tasks/. Both are
+          # named <ISSUE-REF>.md, so collapse on the file name before judging
+          # ambiguity. Counting files instead would refuse every checklist-mode
+          # merge, since both records carry the same labeled Branch line.
+          STEMS=$(printf '%s\n' "$MATCHES" | sed 's#.*/##' | sort -u)
+          STEM_COUNT=$(printf '%s' "$STEMS" | grep -c . || true)
+          if [ "$STEM_COUNT" -gt 1 ]; then
+            echo "Files under .fathom/ for branch $BRANCH name different issues; refusing to guess:"
             echo "$MATCHES"
             exit 1
           fi
-          TASK_FILE="$MATCHES"
+
+          # Prefer the task file when both exist; it also carries the review id.
+          # Anchor the prefix rather than matching /tasks/ anywhere: grep -r
+          # descends into dot-directories, so a repo left holding a nested
+          # .fathom/.workbench/tasks/ from a botched rename would otherwise sort
+          # ahead of the live record and select the stale copy.
+          # Every grep above that can legitimately match nothing ends in
+          # || true. Actions' default shell is bash -e with pipefail OFF, but a
+          # consumer who adds shell: bash or a defaults.run block gets pipefail,
+          # and there a no-match grep would abort the job instead of taking the
+          # skip path: a red check that closes nothing.
+          TASK_FILE=$(printf '%s\n' "$MATCHES" | grep '^\.fathom/tasks/' | head -n 1 || true)
+          [ -n "$TASK_FILE" ] || TASK_FILE=$(printf '%s\n' "$MATCHES" | head -n 1)
+          # fathom:discovery-block end
 
           # Only a labeled line is trusted, so a URL sitting in prose cannot
           # make this close the wrong task. Matches "- Ref: <url>" and
           # "- **Issue** - <url>" style lines alike.
           TASK_URL=$(grep -iE '^[[:space:]]*[-*]?[[:space:]]*(\*\*)?(tracker|issue|ref)(\*\*)?[[:space:]]*[:-]' "$TASK_FILE" \
-            | grep -oE 'https://app\.asana\.com/[^ )>]+' | head -n 1)
+            | grep -oE 'https://app\.asana\.com/[^ )>]+' | head -n 1 || true)
 
           if [ -z "$TASK_URL" ]; then
             echo "No labeled Tracker, Issue, or Ref line carrying an Asana URL in $TASK_FILE, skipping."

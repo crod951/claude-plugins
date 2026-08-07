@@ -319,7 +319,7 @@ In the manual tier the "review merged" line never fires, because nothing can obs
 | --- | --- |
 | `.fathom/config.md` | The committed profile: tracker, forge, destination, state mapping, base branch, closer choice. |
 | `.fathom/forge.md` | Only if you wrote an adapter for a forge Fathom does not ship. See [Forges](#forges). |
-| `.fathom/plans/<ref>.md` | The per-issue plan: issue link, codebase context, approach, tasks, testing strategy. Written for people, never carries status. |
+| `.fathom/plans/<ref>.md` | The per-issue plan: issue link, branch, codebase context, approach, tasks, testing strategy. Written for people, never carries status. The branch sits on its own `- Branch:` line, which the merge-closer matches to find this issue. |
 | `.fathom/tasks/<ref>.md` | Task statuses as checkboxes. Only when the checklist backend is active. |
 | `.beads/` | Beads task database and its JSONL export, when beads is the backend. |
 | `.github/workflows/fathom-close.yml` | Only if you accepted the optional merge-closer Action. GitHub only; never offered on a forge without CI hooks. |
@@ -368,6 +368,10 @@ It asks once which one you use and records the answer - unless your forge declar
    Offered only on a forge with CI hooks; on any other, accepting it would write a file that never runs.
 3. **The sweep.** Whatever you choose, every run looks up each recorded review by id and closes anything the first two missed.
    This is the backstop, and it is unavailable in the manual tier.
+
+An installed merge-closer is a copy of the template taken when you accepted it, so a fix to the template does not reach a repository that already has one.
+From 2.1.0 a run that finds an out-of-date copy offers once to rewrite it, and records your answer either way so the offer is not repeated.
+Accepting replaces only `.github/workflows/fathom-close.yml`.
 
 You can also just say so, and the skill confirms the real state through the forge before acting.
 

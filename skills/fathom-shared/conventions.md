@@ -48,7 +48,12 @@ This document is a reference artifact for people, never resume state; task statu
 
 Include these sections:
 
-- **Issue** - the title, the tracker URL, the ref, and the branch.
+- **Issue** - the title, the tracker URL, the ref, and the branch, each on its own labeled line.
+  Use these exact labels: `- Issue: <tracker url>`, `- Ref: <issue ref>`, and `- Branch: <branch>`.
+  The labels are load-bearing rather than cosmetic.
+  The merge-closer Action finds this issue's record by matching the `Branch` line exactly, then reads the tracker id only from a line labeled `Tracker`, `Issue`, or `Ref`.
+  A label that reads more naturally, such as `Issue link` or `Tracker URL`, matches neither, and the Action then exits successfully having closed nothing.
+  This matters most on a beads-backed issue, where the plan document is the only record the Action has, since no checklist file exists.
 - **Issue description** - what the issue asks for, in your own words.
 - **Codebase context** - the files, modules, and existing patterns this work touches, with paths.
 - **Implementation approach** - how the change will be made, including anything deliberately out of scope.

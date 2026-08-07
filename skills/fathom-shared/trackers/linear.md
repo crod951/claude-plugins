@@ -26,7 +26,7 @@ Linear issue refs are native keys shaped like `ONC-5`, a short uppercase team pr
 Lowercase the key when building a branch name from it.
 Everything in this section about automatic closure assumes the resolved forge is GitHub.
 Linear's integration is a GitHub integration; it observes GitHub pull requests and nothing else.
-When the resolved forge is not GitHub, skip the whole arrangement question regardless of what `ciHooks` declares — the integration and the Action template below are both GitHub-specific — record `merge-closer: none (forge is not GitHub)`, and let the sweep close issues through `updateState` as the sole mechanism.
+When the resolved forge is not GitHub, skip the whole arrangement question regardless of what `ciHooks` declares - the integration and the Action template below are both GitHub-specific - record `merge-closer: none (forge is not GitHub)`, and let the sweep close issues through `updateState` as the sole mechanism.
 
 Linear's GitHub integration automatically closes an issue when a pull request whose body contains `Closes ONC-5` (or `Fixes`, using the issue's own key) merges into the default branch.
 That integration is not present by default, and a fresh workspace has none until someone connects it.
@@ -76,7 +76,17 @@ It needs a `LINEAR_API_KEY` repository secret, a personal API key from Linear's 
 Read that state id from the same list-issue-statuses call used during first-run setup, and substitute it into the template before writing the file.
 
 Write it to `.github/workflows/fathom-close.yml`, commit it with the profile, and record `merge-closer: installed` so the sweep knows the Action owns the closure and only backstops it.
+
+Never asking again applies to the question, not to the file.
+When the profile records `merge-closer: installed` and does not record a declined template rewrite, compare the repository's `.github/workflows/fathom-close.yml` against the template below on profile load, and when the file-discovery block differs, offer once to rewrite the file from the current template.
+An installed workflow is a copy taken at install time, so a repository that accepted it before a template fix keeps running the old copy forever and never benefits from the fix.
+State what differs and that the rewrite only replaces the workflow file.
+On a yes, rewrite it and leave `merge-closer: installed` as it stands.
+On a no, record `merge-closer: installed (template-rewrite declined)`, so the offer is not repeated on every later load, and treat that value exactly like `installed` everywhere else.
+Recording the decline is what makes this a one-time offer rather than a prompt on every run, matching how every other question here is asked once and answered in the profile.
+
 The file-discovery and ref-extraction block in this template is intentionally identical to the one in `asana.md`'s template; a change to either copy must be applied to both.
+Three differences are expected and not drift: the marker comment names the other file, this copy names its selected file `FILE` where `asana.md` names it `TASK_FILE`, and the leading comment says issue where the other says task.
 
 ```yaml
 name: fathom-close
@@ -110,27 +120,73 @@ jobs:
             exit 1
           fi
 
+          # fathom:discovery-block start
+          # Everything between these markers is shared verbatim with asana.md.
           # A branch must map to exactly one record; closing an issue picked
           # arbitrarily from several matches could complete the wrong one.
-          MATCHES=$(grep -rlF "$BRANCH" .fathom/ 2>/dev/null | sort)
+          # Only a labeled Branch line is trusted, and it must equal the branch
+          # exactly. An unanchored search also hits the branch name quoted in
+          # another issue's prose, and a bare substring makes feat/tes-5 match
+          # feat/tes-50; either one yields a false multi-match that refuses to
+          # close anything, or picks the wrong record.
+          BRANCH_RE=$(printf '%s' "$BRANCH" | sed 's/[][\^$.*+?(){}|]/\\&/g')
+          LABELED='^[[:space:]]*[-*]?[[:space:]]*(\*\*)?[Bb]ranch(\*\*)?[[:space:]]*[:-][[:space:]]*`?'
+          MATCHES=$(grep -rlE "${LABELED}${BRANCH_RE}\`?[[:space:]]*$" .fathom/ 2>/dev/null | sort || true)
           MATCH_COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
+
+          # Records written before the labeled Branch line was required still
+          # resolve through the original unanchored search, so upgrading does
+          # not silently stop closing issues that were already in flight.
+          if [ "$MATCH_COUNT" -eq 0 ]; then
+            MATCHES=$(grep -rlF "$BRANCH" .fathom/ 2>/dev/null | sort || true)
+            MATCH_COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
+            if [ "$MATCH_COUNT" -gt 0 ]; then
+              echo "No labeled Branch line matched $BRANCH; using the legacy unanchored search over:"
+              echo "$MATCHES"
+              # This fallback is deliberately the pre-fix unanchored search, so
+              # it still substring-matches feat/tes-50 for branch feat/tes-5.
+              # Migrate legacy records to a labeled Branch line rather than
+              # relying on it.
+            fi
+          fi
 
           if [ "$MATCH_COUNT" -eq 0 ]; then
             echo "No file under .fathom/ references branch $BRANCH, skipping."
             exit 0
           fi
-          if [ "$MATCH_COUNT" -gt 1 ]; then
-            echo "Multiple files under .fathom/ reference branch $BRANCH; refusing to guess:"
+
+          # One issue legitimately has two records: the plan document under
+          # plans/ and, in checklist mode, the task file under tasks/. Both are
+          # named <ISSUE-REF>.md, so collapse on the file name before judging
+          # ambiguity. Counting files instead would refuse every checklist-mode
+          # merge, since both records carry the same labeled Branch line.
+          STEMS=$(printf '%s\n' "$MATCHES" | sed 's#.*/##' | sort -u)
+          STEM_COUNT=$(printf '%s' "$STEMS" | grep -c . || true)
+          if [ "$STEM_COUNT" -gt 1 ]; then
+            echo "Files under .fathom/ for branch $BRANCH name different issues; refusing to guess:"
             echo "$MATCHES"
             exit 1
           fi
-          FILE="$MATCHES"
+
+          # Prefer the task file when both exist; it also carries the review id.
+          # Anchor the prefix rather than matching /tasks/ anywhere: grep -r
+          # descends into dot-directories, so a repo left holding a nested
+          # .fathom/.workbench/tasks/ from a botched rename would otherwise sort
+          # ahead of the live record and select the stale copy.
+          # Every grep above that can legitimately match nothing ends in
+          # || true. Actions' default shell is bash -e with pipefail OFF, but a
+          # consumer who adds shell: bash or a defaults.run block gets pipefail,
+          # and there a no-match grep would abort the job instead of taking the
+          # skip path: a red check that closes nothing.
+          FILE=$(printf '%s\n' "$MATCHES" | grep '^\.fathom/tasks/' | head -n 1 || true)
+          [ -n "$FILE" ] || FILE=$(printf '%s\n' "$MATCHES" | head -n 1)
+          # fathom:discovery-block end
 
           # Only a labeled line is trusted. Matching any uppercase-dash-digits
           # token anywhere would also match RFC-7231, ISO-8601, SHA-1 and the
           # like, which appear legitimately in a plan document.
           KEY=$(grep -iE '^[[:space:]]*[-*]?[[:space:]]*(\*\*)?(tracker|issue|ref)(\*\*)?[[:space:]]*[:-]' "$FILE" \
-            | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -n 1)
+            | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -n 1 || true)
 
           if [ -z "$KEY" ]; then
             echo "No labeled Tracker, Issue, or Ref line carrying a Linear key in $FILE, skipping."

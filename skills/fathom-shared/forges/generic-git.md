@@ -27,10 +27,14 @@ Offering a GitHub Actions workflow here would write a file that never executes a
 
 ## `verifyForge()`
 
-Verify only that this is a git repository with a reachable remote: `git rev-parse --git-dir`, then `git ls-remote --exit-code origin HEAD`.
+Verify only that this is a git repository with a reachable remote: `git rev-parse --git-dir`, then `git ls-remote origin >/dev/null`.
 
 Verified when both succeed.
-When the remote is unreachable, report that plainly — an unreachable remote stops the push, so it is a real failure rather than a tier selection.
+Ask git only whether the remote answers, never whether it advertises any particular ref.
+`git ls-remote --exit-code origin HEAD` fails on a reachable remote that does not advertise `HEAD`, such as one whose default branch is unset, and a preflight that treats that as unreachable rejects a forge that works.
+The branch-specific check belongs in `resolveBase`, which is where a named ref genuinely has to exist.
+
+When the remote is unreachable, report that plainly: an unreachable remote stops the push, so it is a real failure rather than a tier selection.
 
 This adapter never checks for, or asks about, any forge CLI.
 The tier-2 probe already ran and either found nothing or was declined; re-probing here would reopen a question the user has answered.
@@ -53,8 +57,13 @@ Print what a human needs to open the review by hand:
 
 Return no review id.
 
-Say plainly, at this point, that no review was opened and that opening it is now the user's step.
-Do not describe the work as "in review" in the run's own reporting when no review exists yet.
+Say plainly, at this point, all three of these, since a partial statement is what leaves the user guessing:
+
+- No review was opened on any forge, and opening it is now the user's step.
+- The tracker issue has still been moved to the `inReview` phase, so the board and the forge disagree by design until the user opens the review.
+- Closing the issue is manual, because `getReviewState` is always `unknown` here.
+
+Do not describe the work as "in review" unqualified in the run's own reporting when no review exists yet; name the tracker phase and the missing review separately, so the phase is never read as evidence that a review exists.
 
 ## `publishReview(id)`
 
