@@ -43,7 +43,7 @@ Name the task in the body so the commit ties back to task memory.
 
 ## The plan document
 
-During breakdown, write a human-readable plan for the issue at `.workbench/plans/<ISSUE-REF>.md`, and commit it with the breakdown.
+During breakdown, write a human-readable plan for the issue at `.fathom/plans/<ISSUE-REF>.md`, and commit it with the breakdown.
 This document is a reference artifact for people, never resume state; task status always lives in the resolved memory backend.
 
 Include these sections:

@@ -35,25 +35,25 @@ Every run begins by reading durable state from the repository and the tracker, n
 Before doing any tracker or memory work, read:
 
 These paths are relative to the directory containing this SKILL.md file, not the current workspace.
-In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.kiro/skills/workbench-shared/trackers.md`); in a Claude Code plugin install they resolve inside the plugin's `skills/` directory.
+In a global Kiro install they resolve under `~/.kiro/skills/` (for example `~/.kiro/skills/fathom-shared/trackers.md`); in a Claude Code plugin install they resolve inside the plugin's `skills/` directory.
 
-- `../workbench-shared/trackers.md` for the tracker contract, phase names, and first-run profile setup.
-- `../workbench-shared/forges.md` for the forge contract, adapter resolution, the capability tiers, and base-branch resolution.
-- `../workbench-shared/memory.md` for the memory contract and backend resolution rules.
-- `../workbench-shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
-- `../workbench-shared/conventions.md` for staging safety, commit messages, the plan document, and progress reporting.
-- `../workbench-shared/approval.md` for the two approval modes, and for the stops that hold in both.
+- `../fathom-shared/trackers.md` for the tracker contract, phase names, and first-run profile setup.
+- `../fathom-shared/forges.md` for the forge contract, adapter resolution, the capability tiers, and base-branch resolution.
+- `../fathom-shared/memory.md` for the memory contract and backend resolution rules.
+- `../fathom-shared/agents.md` for the per-agent notes that apply to whichever agent is running this skill.
+- `../fathom-shared/conventions.md` for staging safety, commit messages, the plan document, and progress reporting.
+- `../fathom-shared/approval.md` for the two approval modes, and for the stops that hold in both.
 
 If any of these files cannot be found and read, stop immediately and report which paths were tried - never improvise their contracts from memory or proceed without them.
 
 ## Procedure
 
-1. Resolve the approval mode per `../workbench-shared/approval.md` and state it, then run preflight verification as described in `../workbench-shared/trackers.md` before any other tracker step.
+1. Resolve the approval mode per `../fathom-shared/approval.md` and state it, then run preflight verification as described in `../fathom-shared/trackers.md` before any other tracker step.
    Infer the preflight target from the invocation before verifying anything: an explicitly named tracker, or the shape of the issue ref from the invocation argument, a pasted URL, or the current branch name, in the same order of preference step 4 uses; only when none of those settles it fall back to the profile, then to the single connected MCP, per the shared precedence in `trackers.md`.
    This keeps preflight, the sweep, and the run itself on one tracker; verifying whatever the profile names while the invocation clearly targets the other tracker would sweep and verify the wrong one.
    Stop here, following that section's instructions, when the tracker's MCP does not verify.
-   A forge that does not verify is not a stop: it selects a capability tier per `../workbench-shared/forges.md`. State the resolved tier before continuing, so the user knows up front whether this run will end in an opened review or a manual handoff.
-2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../workbench-shared/trackers.md` and are tracker-agnostic, with each adapter file defining only its own closure action for the merged path.
+   A forge that does not verify is not a stop: it selects a capability tier per `../fathom-shared/forges.md`. State the resolved tier before continuing, so the user knows up front whether this run will end in an opened review or a manual handoff.
+2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../fathom-shared/trackers.md` and are tracker-agnostic, with each adapter file defining only its own closure action for the merged path.
    This sweep is itself tracker work, so it only runs once preflight has verified the MCP.
    When the invocation itself was a cleanup phrase, run only this sweep, report what it found, then stop; do not continue into the rest of this procedure.
    Treat any claim about a review's fate as a cleanup phrase, whether it says merged, closed, abandoned, landed, or shipped, and whether it names an issue or asks to clean up whatever is outstanding.
@@ -61,13 +61,13 @@ If any of these files cannot be found and read, stop immediately and report whic
    When the resolved forge declares `reviewLookup: none`, the claim cannot be confirmed at all. Say that plainly and act on nothing; do not close an issue on the strength of an unverifiable claim, since a wrong close is exactly what the confirmation step exists to prevent.
 3. Resolve which tracker owns this issue and which memory backend owns its task state, following `trackers.md` and `memory.md`.
    When the repo already contains beads state but the beads tooling is unavailable on this machine, stop and say so as memory.md directs; never substitute a different backend for a repo whose state lives in another one.
-   Load the existing `.workbench/config.md` tracker profile, or run first-run setup when none exists; either way, run the tracker adapter's profile-load checks and honor any one-time offers they define.
+   Load the existing `.fathom/config.md` tracker profile, or run first-run setup when none exists; either way, run the tracker adapter's profile-load checks and honor any one-time offers they define.
 4. Determine the issue ref from the invocation argument, a pasted issue URL, or the current branch name, in that order of preference; when the argument and the branch name refer to different issues, stop and ask the user which one to use.
 5. Call `getIssue` for that ref and save its title, description, type, URL, and existing children for the rest of this run.
    When the issue is already in the `done` phase or marked complete, do not start work: say so, report what the sweep found for it, and ask whether to reopen it or pick a different issue.
 6. Search the codebase and read the files that look relevant to this issue, noting existing patterns to follow during implementation.
 7. Ensure a feature branch exists for this issue; when one must be created, prefix its name from the issue type (`feat/` for a feature, `fix/` for a bug, `chore/` for a chore, `docs/` for docs, `feat/` by default) followed by the issue ref and a short title slug; skip creation when a matching branch already exists.
-   Resolve the base branch per the base-branch rules in `../workbench-shared/forges.md`, then fetch it and create the new branch from the fetched remote copy rather than from a local copy that may be behind, since branching from a stale local copy is the usual cause of conflicts at merge time.
+   Resolve the base branch per the base-branch rules in `../fathom-shared/forges.md`, then fetch it and create the new branch from the fetched remote copy rather than from a local copy that may be behind, since branching from a stale local copy is the usual cause of conflicts at merge time.
    When the branch already exists and the base branch has moved on since, bring it up to date before implementing, and report that you did.
    When that update conflicts, stop and hold exactly as an unfixable test failure would: keep the work, leave the task in progress, report which files conflict, and let the user decide how to resolve them; never resolve a conflict by discarding either side's changes.
 8. Ensure the breakdown exists.
@@ -77,7 +77,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    - When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown; for each adopted sub-issue, still call `createTask`, passing that sub-issue's existing ref as `subIssueRef` and skipping `createSubIssue` since the sub-issue already exists, then write the returned task id back onto that sub-issue the same way, and setting `deps` the same way.
    - After every child task exists, add the parent's dependency edge on each child, so the parent cannot close before its children and "no open children" becomes a real signal rather than an assumption.
    - Either way, write the plan document described in `conventions.md` and commit it with the breakdown.
-   - Write `.workbench/tasks/<ISSUE-REF>.md` only when the resolved backend is the checklist adapter, since that file holds checkbox statuses; with beads active the statuses live in beads and no file belongs there, as `memory.md` states.
+   - Write `.fathom/tasks/<ISSUE-REF>.md` only when the resolved backend is the checklist adapter, since that file holds checkbox statuses; with beads active the statuses live in beads and no file belongs there, as `memory.md` states.
 9. Call `updateState` to move the issue to the `inProgress` phase.
 10. Run the implementation loop until `claimNext` reports nothing claimable.
     Each pass through the loop does the following, in order.
@@ -101,19 +101,19 @@ If any of these files cannot be found and read, stop immediately and report whic
     Commit any leftover uncommitted change that belongs to this issue's tasks, leaving unrelated working-tree edits alone rather than sweeping them into the review.
     Close the parent task in the memory backend (a no-op for the checklist adapter, whose file is the parent record).
 
-    Then open the review through the forge contract in `../workbench-shared/forges.md`, never by invoking a forge CLI directly from this procedure.
+    Then open the review through the forge contract in `../fathom-shared/forges.md`, never by invoking a forge CLI directly from this procedure.
     - Confirm the resolved base with `resolveBase` first, as the contract requires, before anything is created against it.
     - Push the branch, unless the resolved adapter declares `pushesForYou`; when it does, `openReview` owns the push and pushing here would produce a wrong branch state.
     - Call `openReview` with the branch, the resolved base, a title, and a body containing `Closes <ref>` for a Linear issue or the task's URL for an Asana task, plus a summary, the list of completed tasks, and a test plan.
     - Skip this when a review already exists for the branch, and reuse that one; resuming an issue must never open a second review.
     - Call `publishReview` with the returned id.
-    - Record `- Review: <id> <url>` in this issue's file under `.workbench/`, alongside the existing `- PR:` line, since the sweep looks issues up by id.
+    - Record `- Review: <id> <url>` in this issue's file under `.fathom/`, alongside the existing `- PR:` line, since the sweep looks issues up by id.
     - Call `updateState` to move the issue to the `inReview` phase.
 
     When `openReview` returns the manual-handoff result instead of an id, there is no review object: skip `publishReview`, record no review id, print the handoff.
     Still apply `inReview`, and say plainly that no later run will move this issue to `done` on its own because the forge cannot be observed, so closing it is now a manual step.
 
-    Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.workbench/`; never sweep `.beads/` or `.workbench/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
+    Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.fathom/`; never sweep `.beads/` or `.fathom/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
 12. Report a final summary: the issue, the review URL when one was opened or the resolved tier when one was not, the tracker's current phase, and the task counts from `status()`.
 
 ## Display overlay

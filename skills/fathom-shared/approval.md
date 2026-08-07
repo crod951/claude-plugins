@@ -6,7 +6,7 @@ The mode changes which questions get asked; it never changes which conditions st
 ## Resolving the mode
 
 Resolve it once at the start of a run, first match winning.
-The profile may not be loaded yet at that point, so read only the `approval` field from `.workbench/config.md` if the file exists, and treat a missing file as no answer.
+The profile may not be loaded yet at that point, so read only the `approval` field from `.fathom/config.md` if the file exists, and treat a missing file as no answer.
 When first-run setup then establishes a mode later in the same run, that answer governs the rest of that run.
 
 The invocation overrides everything, in either direction.
@@ -70,7 +70,7 @@ When a new stop is added to either skill, decide explicitly whether it belongs t
 
 ## Recording it
 
-First-run setup asks for the mode as its own question, after the tracker questions, and records it as `approval: auto` or `approval: ask` in `.workbench/config.md`.
+First-run setup asks for the mode as its own question, after the tracker questions, and records it as `approval: auto` or `approval: ask` in `.fathom/config.md`.
 Because the profile is committed, teammates inherit the choice.
 Editing that field changes it permanently; an invocation phrase changes it for one run.
 When one skill hands off to the other, carry the resolved mode across so a per-run override is not lost at the boundary; say which mode the handed-off run is using.

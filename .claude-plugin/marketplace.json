@@ -9,10 +9,10 @@
   },
   "plugins": [
     {
-      "name": "workbench",
+      "name": "fathom",
       "source": "./",
       "description": "Two agent skills, scaffold and execute, that carry a tracker issue from requirements to an open code review, on GitHub or any other forge with an adapter. Works with Asana or Linear, runs on Claude Code and Kiro, tracks tasks in beads or a committed markdown checklist, and resumes from repository state.",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "author": {
         "name": "crod951"
       },

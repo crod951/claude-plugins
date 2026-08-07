@@ -29,7 +29,7 @@ It may bundle more than one native id when the tracker needs that; Linear's carr
 Resolve a destination for a new top-level issue from only two sources: the caller-supplied hint for this invocation, or the tracker profile's configured default when no hint is given.
 When neither a hint nor a profile default exists, the agent must call `listDestinations`, list the destinations to the user, and ask once which one to use.
 Do not substitute any other source of truth for that question.
-In particular, never infer a destination from tracker URLs found inside existing `.workbench/tasks/*.md` files, from prior issues in the repository, or from any other guess; a wrong inference silently files work in the wrong place, and even a right one takes the choice away from a user who may have several valid destinations.
+In particular, never infer a destination from tracker URLs found inside existing `.fathom/tasks/*.md` files, from prior issues in the repository, or from any other guess; a wrong inference silently files work in the wrong place, and even a right one takes the choice away from a user who may have several valid destinations.
 The agent may inspect existing task files or prior issues to offer a suggested default inside that same question, for example "previous issues in this repo used X, use that again?".
 Offering a suggestion does not replace asking; still ask the question and wait for the user's answer before creating anything.
 One exception, defined in `approval.md`: in auto mode, when `listDestinations` returns exactly one destination the answer is determinate, so record it and report it instead of asking.
@@ -84,7 +84,7 @@ The sweep is tracker-agnostic: it finds issues from repository state, and only i
 The sweep runs only when the resolved forge declares `reviewLookup: by-id`.
 When it declares `none`, there is no way to observe what happened to a review, so skip the sweep and say once that it was skipped and why; never report a clean sweep that did not run.
 
-Find the outstanding issues by searching `.workbench/` for recorded reviews.
+Find the outstanding issues by searching `.fathom/` for recorded reviews.
 Search the whole directory rather than only `tasks/`: depending on the resolved memory backend the per-issue record may be a plan document under `plans/` with no checklist file at all, and narrowing the search to `tasks/` silently skips those issues.
 
 For each issue the search finds, call `getReviewState` once with that issue's recorded review id and act on what it returns.
@@ -118,17 +118,18 @@ Unlike the merged path, this one has no tracker state to key on: the issue sits 
 Record the observation as a comment on the issue through `comment`, carrying a sentinel line such as:
 
 ```
-workbench: review-closed-unmerged <review url> <date>
+fathom: review-closed-unmerged <review url> <date>
 ```
 
 Before reporting, call `listComments` and skip any issue whose comments already contain the sentinel for that review.
 Match the sentinel as a substring anywhere in the comment stream, not by inspecting only the newest comment; users reply in comment threads, and a later reply must not hide the marker.
+Treat the legacy sentinel `workbench: review-closed-unmerged` as valid for the same purpose when matching, since sentinels written before the rename live on the tracker rather than in the repository and no file rename reaches them; only ever write the current one.
 
 The tracker holds this marker rather than a file for one reason: the marker has to survive to other clones and later runs, and a file-based marker only does that when it is pushed to the base branch.
 Most shared repositories protect that branch, so the push fails, the marker never lands, and the report repeats forever as a stop that fires in both approval modes.
 A comment needs no branch write access and is visible from every clone.
 
-When the resolved tracker cannot list comments, fall back to recording `- Review closed unmerged: <date> <review url>` in that issue's file under `.workbench/`, committed and pushed to the base branch.
+When the resolved tracker cannot list comments, fall back to recording `- Review closed unmerged: <date> <review url>` in that issue's file under `.fathom/`, committed and pushed to the base branch.
 Say plainly, when taking that fallback, that the marker depends on write access to the base branch and that the review will be re-reported on every run if the push fails.
 Keep reading legacy `- PR closed unmerged:` lines as valid markers, so records written before this change are not re-reported.
 
@@ -160,8 +161,8 @@ The connected tracker MCP is the only permitted channel for tracker operations a
 
 Run this setup procedure once per repository, then reuse its output on every later run.
 
-Trigger setup when the repository has no `.workbench/config.md`.
-Before prompting the user, check other local branches for a newer `.workbench/config.md` and offer to reuse it instead of starting over.
+Trigger setup when the repository has no `.fathom/config.md`.
+Before prompting the user, check other local branches for a newer `.fathom/config.md` and offer to reuse it instead of starting over.
 
 When no existing profile is found anywhere, the agent must run these six steps in order and must not skip any of them.
 Each step must get the user's answer before the next step starts, and the profile must not be written until every step has an answer.
@@ -195,7 +196,7 @@ When a user's reply could answer more than one pending question, or its target i
    Run this check whenever the profile is loaded, not only during first-run setup, so a profile written before this question existed gets repaired rather than staying silent.
 5. Confirm the base branch that feature branches should start from and merge into.
    Offer the repository's current branch as the default, since that is usually the integration branch the user is working from, and offer the repository's default branch as the alternative.
-   Do not offer the current branch when it is itself a workbench feature branch, meaning its name carries an issue ref and one of the branch prefixes.
+   Do not offer the current branch when it is itself a Fathom feature branch, meaning its name carries an issue ref and one of the branch prefixes.
    Recording that as the profile's base would make every future issue in the repository, and every teammate who clones it, branch from and target one issue's unmerged work, and the resolution-time guard would never fire because the profile now holds an explicit answer.
    Offer the default branch in that case, and say why the current branch was excluded.
    Record the answer as `base-branch` in the profile.
@@ -203,7 +204,7 @@ When a user's reply could answer more than one pending question, or its target i
    Ask whether future runs should stop for approval at the usual points, or run straight through without asking.
    Record the answer as `approval: ask` or `approval: auto` per `approval.md`, and say that the safety stops listed there fire either way, so choosing auto does not mean unattended risk.
 
-Save the confirmed profile to `.workbench/config.md` and commit that file only once all six steps above have an answer; include the confirmed default destination.
+Save the confirmed profile to `.fathom/config.md` and commit that file only once all six steps above have an answer; include the confirmed default destination.
 Never announce that setup will happen and then write a profile without having asked each of these questions.
 A profile written without confirmed answers for every step is a defect, not a shortcut.
 A per-invocation destination hint applies only to that invocation; change the profile's `default-destination` only when it is absent or when the user explicitly asks to change it.
@@ -211,9 +212,9 @@ A per-invocation destination hint applies only to that invocation; change the pr
 Use this format for the profile:
 
 ```markdown
-# workbench tracker profile
+# fathom tracker profile
 tracker: asana
-forge: github          # a bundled adapter name, "local" for .workbench/forge.md, or "none"
+forge: github          # a bundled adapter name, "local" for .fathom/forge.md, or "none"
 default-destination: Prototypes (1209000000000001)  # add "# auto-accepted" when auto mode chose it
 base-branch: main
 approval: ask
@@ -226,4 +227,4 @@ state-mapping:
 
 On every subsequent run, read the existing profile silently and use it without re-prompting.
 Re-run setup when a mapped state no longer exists in the tracker, or when the user explicitly asks to redo it.
-Re-run setup to resolve merge conflicts in `.workbench/config.md`; do not attempt to hand-merge the conflicting mapping.
+Re-run setup to resolve merge conflicts in `.fathom/config.md`; do not attempt to hand-merge the conflicting mapping.

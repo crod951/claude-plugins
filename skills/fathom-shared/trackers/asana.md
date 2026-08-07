@@ -59,7 +59,7 @@ When the resolved forge declares `reviewLookup: none`, no later run can detect t
 The done-on-merge sweep itself, including its handling of reviews closed without merging, is tracker-agnostic and defined in `../trackers.md`; run it exactly as written there.
 This adapter's closure action for the sweep's merged path: apply the mapped `done` state and set the task's completed flag.
 
-## Closing on merge without any workbench machinery
+## Closing on merge without any Fathom machinery
 
 Everything in this section and the next assumes the resolved forge is GitHub.
 Both arrangements below are GitHub-specific: one is a GitHub App, the other is a GitHub Actions workflow.
@@ -87,7 +87,7 @@ Asking anyway is worse than skipping, because a yes writes a workflow file that 
 
 When that line is absent and the forge declares `ciHooks`, ask the user once whether to install the merge-closer GitHub Action for instant Asana closure on review merge, then record the answer in the profile right away.
 Ask whenever no `merge-closer:` line is on record; once one is recorded, never ask again for this repository.
-When the answer is yes, write `.github/workflows/workbench-close.yml` from the template below, record `merge-closer: installed` in the tracker profile, and commit both together.
+When the answer is yes, write `.github/workflows/fathom-close.yml` from the template below, record `merge-closer: installed` in the tracker profile, and commit both together.
 Tell the user to add an `ASANA_TOKEN` repository secret, an Asana personal access token, since the workflow cannot post to the Asana API without it.
 When the answer is no, record `merge-closer: declined` in the tracker profile.
 The passive sweep and the on-demand cleanup trigger described in the execute skill keep working either way; this Action is an additive fast path, not a replacement.
@@ -97,7 +97,7 @@ The agent must never borrow the `ASANA_TOKEN` secret or any other token from dis
 The file-discovery and ref-extraction block in this template is intentionally identical to the one in `linear.md`'s template; a change to either copy must be applied to both.
 
 ```yaml
-name: workbench-close
+name: fathom-close
 
 on:
   pull_request:
@@ -124,15 +124,15 @@ jobs:
 
           # A branch must map to exactly one record; closing a task picked
           # arbitrarily from several matches could complete the wrong issue.
-          MATCHES=$(grep -rlF "$BRANCH" .workbench/ 2>/dev/null | sort)
+          MATCHES=$(grep -rlF "$BRANCH" .fathom/ 2>/dev/null | sort)
           MATCH_COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
 
           if [ "$MATCH_COUNT" -eq 0 ]; then
-            echo "No file under .workbench/ references branch $BRANCH, skipping."
+            echo "No file under .fathom/ references branch $BRANCH, skipping."
             exit 0
           fi
           if [ "$MATCH_COUNT" -gt 1 ]; then
-            echo "Multiple files under .workbench/ reference branch $BRANCH; refusing to guess:"
+            echo "Multiple files under .fathom/ reference branch $BRANCH; refusing to guess:"
             echo "$MATCHES"
             exit 1
           fi
