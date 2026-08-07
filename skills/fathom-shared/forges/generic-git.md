@@ -45,7 +45,8 @@ Confirm the branch exists on the remote with `git ls-remote --exit-code --heads 
 
 ## `openReview(branch, base, title, body)`
 
-Push the branch; `pushesForYou` is false, so the caller performs the push, exactly as it does on any other adapter.
+This operation does not push.
+`pushesForYou` is false, so the branch has already been pushed by the caller before this runs, exactly as on any other adapter that declares false.
 
 There is no review to create, so this operation returns the contract's manual-handoff result instead of an id.
 Print what a human needs to open the review by hand:

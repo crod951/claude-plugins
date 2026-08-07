@@ -86,7 +86,7 @@ On a no, record `merge-closer: installed (template-rewrite declined)`, so the of
 Recording the decline is what makes this a one-time offer rather than a prompt on every run, matching how every other question here is asked once and answered in the profile.
 
 The file-discovery and ref-extraction block in this template is intentionally identical to the one in `asana.md`'s template; a change to either copy must be applied to both.
-Three differences are expected and not drift: the marker comment names the other file, this copy names its selected file `FILE` where `asana.md` names it `TASK_FILE`, and the leading comment says issue where the other says task.
+Four differences are expected and not drift: the marker comment names the other file, the leading comment says task and wrong issue in one copy and issue and wrong one in the other, this copy names its selected file `FILE` where `asana.md` names it `TASK_FILE`, and the leading comment says issue where the other says task.
 
 ```yaml
 name: fathom-close
@@ -179,6 +179,7 @@ jobs:
           # and there a no-match grep would abort the job instead of taking the
           # skip path: a red check that closes nothing.
           FILE=$(printf '%s\n' "$MATCHES" | grep '^\.fathom/tasks/' | head -n 1 || true)
+          [ -n "$FILE" ] || FILE=$(printf '%s\n' "$MATCHES" | grep '^\.fathom/plans/' | head -n 1 || true)
           [ -n "$FILE" ] || FILE=$(printf '%s\n' "$MATCHES" | head -n 1)
           # fathom:discovery-block end
 

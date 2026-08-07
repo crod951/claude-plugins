@@ -18,9 +18,10 @@ Adapter files implement each one against a specific forge's tools; treat the ope
 | `publishReview(id)` | Move a draft review to the notified-review state, where the forge distinguishes the two. A no-op everywhere else. |
 | `getReviewState(id)` | Return one of `open`, `merged`, `closed-unmerged`, or `unknown`, plus a merge timestamp when merged. |
 
-`openReview` owns the push that opens the review.
-Some forges' review CLIs push the review ref themselves, and running `git push` alongside them produces a wrong branch state, so whether that push happens is the adapter's decision and not the calling skill's.
-The `pushesForYou` capability tells the caller which arrangement it is in; the caller must never perform that push when it is true.
+Which side performs the push that opens the review is decided by `pushesForYou`, and by nothing else.
+When it is true, `openReview` owns that push and the caller must never perform it: some forges' review CLIs push the review ref themselves, and running `git push` alongside them produces a wrong branch state.
+When it is false, the caller pushes the branch before calling `openReview`, which is what both bundled adapters declare and what `execute` does.
+Stating this unconditionally in either direction is what makes an agent either skip the push or perform it twice.
 
 That ownership is scoped to `openReview` and does not extend to the whole branch.
 Commits the caller makes after the review is open, including the final closing commit that carries completed task state, are the caller's to push, on every adapter and whatever `pushesForYou` declares.

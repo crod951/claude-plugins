@@ -103,7 +103,7 @@ The curl call to the Asana API in the template below exists exclusively for this
 The agent must never run that curl call, or any other direct call to the Asana API, interactively.
 The agent must never borrow the `ASANA_TOKEN` secret or any other token from disk to reach the Asana API itself; the connected Asana MCP is the only channel the agent uses at runtime.
 The file-discovery and ref-extraction block in this template is intentionally identical to the one in `linear.md`'s template; a change to either copy must be applied to both.
-Three differences are expected and not drift: the marker comment names the other file, this copy names its selected file `TASK_FILE` where `linear.md` names it `FILE`, and the leading comment says task where the other says issue.
+Four differences are expected and not drift: the marker comment names the other file, the leading comment says task and wrong issue in one copy and issue and wrong one in the other, this copy names its selected file `TASK_FILE` where `linear.md` names it `FILE`, and the leading comment says task where the other says issue.
 
 ```yaml
 name: fathom-close
@@ -190,6 +190,7 @@ jobs:
           # and there a no-match grep would abort the job instead of taking the
           # skip path: a red check that closes nothing.
           TASK_FILE=$(printf '%s\n' "$MATCHES" | grep '^\.fathom/tasks/' | head -n 1 || true)
+          [ -n "$TASK_FILE" ] || TASK_FILE=$(printf '%s\n' "$MATCHES" | grep '^\.fathom/plans/' | head -n 1 || true)
           [ -n "$TASK_FILE" ] || TASK_FILE=$(printf '%s\n' "$MATCHES" | head -n 1)
           # fathom:discovery-block end
 
