@@ -366,8 +366,10 @@ It asks once which one you use and records the answer - unless your forge is not
 2. **The optional merge-closer Action.** If you cannot install an integration, the skills offer a small GitHub Actions workflow that closes the issue on merge using a repository secret.
    Server-side, no agent needed at merge time.
    Offered only on GitHub, and only when the forge declares CI hooks; anywhere else, accepting it would write a file that never runs. Both closure paths above are GitHub-specific, one a GitHub App and the other a GitHub Actions workflow.
-3. **The sweep.** Whatever you choose, every run looks up each recorded review by id and closes anything the first two missed.
-   This is the backstop, and it is unavailable in the manual tier.
+3. **The sweep.** When your forge adapter can look a review up by id, every run does exactly that for each recorded review and closes anything the first two missed.
+   This is the backstop, and it is the only one of the three that is not GitHub-specific.
+   An adapter that declares `reviewLookup: none`, which includes the bundled generic-git fallback, cannot perform that lookup, so the sweep does not run there.
+   On such a forge none of the three mechanisms applies and there is no automated closure at all: issues stay in review until you close them in the tracker yourself, and the run says so rather than reporting a sweep it never performed.
 
 An installed merge-closer is a copy of the template taken when you accepted it, so a fix to the template does not reach a repository that already has one.
 From 2.1.0 a run that finds an out-of-date copy offers once to rewrite it, and records your answer either way so the offer is not repeated.
