@@ -11,7 +11,7 @@ Guidance is in `>` blockquotes throughout. Delete the blockquotes as you fill ea
 
 > **Write for an agent, not a human reader.** An agent reads this file at runtime and does what it says. Prefer exact commands over descriptions of commands. When a command's output needs interpreting, say which field to read and what each value means.
 
-> **A partial adapter is legitimate.** Implementing `verifyForge` and `openReview` and declaring `reviewLookup: none` is a good adapter. It opens reviews correctly and leaves the sweep unavailable, which is honest. Do not stub an operation with a guess to make the table look complete — a wrong `getReviewState` closes issues that never shipped.
+> **A partial adapter is legitimate.** Implementing `verifyForge` and `openReview` and declaring `reviewLookup: none` is a good adapter. It opens reviews correctly and leaves the sweep unavailable, which is honest. Do not stub an operation with a guess to make the table look complete - a wrong `getReviewState` closes issues that never shipped.
 
 ---
 
@@ -29,19 +29,19 @@ Guidance is in `>` blockquotes throughout. Delete the blockquotes as you fill ea
 | `reviewLookup` | `by-id` / `none` |
 | `stackedReviews` | `retarget` / `declared-dependency` / `none` |
 
-> `ciHooks` — can a workflow run in your repository on merge, the way GitHub Actions does? If not, false, and the merge-closer question is skipped rather than asked and answered wrongly.
+> `ciHooks` - can a workflow run in your repository on merge, the way GitHub Actions does? If not, false, and the merge-closer question is skipped rather than asked and answered wrongly.
 >
-> `draftState` — does your forge distinguish a draft review from one that has notified reviewers? If it creates reviews as drafts by default, this is true and `publishReview` must do real work.
+> `draftState` - does your forge distinguish a draft review from one that has notified reviewers? If it creates reviews as drafts by default, this is true and `publishReview` must do real work.
 >
-> `pushesForYou` — **get this one right.** If your review CLI pushes the review ref itself, set true, and the calling skill will not push. Setting it false when your CLI does push produces a wrong branch state, and on some forges a manual push is explicitly discouraged for exactly this reason.
+> `pushesForYou` - **get this one right.** If your review CLI pushes the review ref itself, set true, and the calling skill will not push. Setting it false when your CLI does push produces a wrong branch state, and on some forges a manual push is explicitly discouraged for exactly this reason.
 >
-> `reviewLookup` — `by-id` only if you can look up one review's state directly, from any clone, given the id `openReview` returned. If reviews can only be found by listing, or not found at all, this is `none`.
+> `reviewLookup` - `by-id` only if you can look up one review's state directly, from any clone, given the id `openReview` returned. If reviews can only be found by listing, or not found at all, this is `none`.
 >
-> `stackedReviews` — declared but currently unused. `retarget` if stacking means retargeting a branch; `declared-dependency` if it means declaring a dependency plus a commit range.
+> `stackedReviews` - declared but currently unused. `retarget` if stacking means retargeting a branch; `declared-dependency` if it means declaring a dependency plus a commit range.
 
 ## Absolute boundary
 
-> Restate the boundary for your forge. This is not boilerplate — it is what stops an agent from routing around a missing credential.
+> Restate the boundary for your forge. This is not boilerplate - it is what stops an agent from routing around a missing credential.
 
 Never call this forge's HTTP API directly.
 Never read tokens from disk or from the environment.
@@ -52,7 +52,7 @@ When the CLI is missing or unauthenticated, that is the answer; report the fix a
 
 <The one cheap, read-only command that proves the CLI is present and authenticated.>
 
-> Must be read-only and fast — it runs on every invocation. An auth-status subcommand is ideal. Do not use a command that creates, modifies, or lists large amounts of data.
+> Must be read-only and fast - it runs on every invocation. An auth-status subcommand is ideal. Do not use a command that creates, modifies, or lists large amounts of data.
 
 Treat a missing binary and an unauthenticated one identically: unverified.
 
@@ -72,15 +72,15 @@ When it does not verify, report the fix:
 
 <The command that creates the review.>
 
-> State explicitly whether this pushes. If `pushesForYou` is true, say that the caller must not push separately, and why.
+> State explicitly whether this pushes. If `pushesForYou` is true, say that the caller must not push separately to open the review, and why. Scope that to opening the review: commits the caller makes afterwards, including the final closing commit, stay the caller's to push, as `../forges.md` states.
 >
 > **Make it idempotent.** Skip creation and return the existing review when one already exists for this branch or change. Skills re-run on the same issue to resume, and a second review opened on a resume is a real failure.
 >
-> **Say how to extract the review id from the command's output**, exactly — which field, which format. This id is written to disk and looked up on later runs from possibly a different clone, so it must be stable. A branch name is not a review id.
+> **Say how to extract the review id from the command's output**, exactly - which field, which format. This id is written to disk and looked up on later runs from possibly a different clone, so it must be stable. A branch name is not a review id.
 
 Return the review id and the review's URL.
 
-<Note any body conventions your forge interprets — issue-closing keywords, trailers, required footers.>
+<Note any body conventions your forge interprets - issue-closing keywords, trailers, required footers.>
 
 ## `publishReview(id)`
 
@@ -96,10 +96,10 @@ Return the review id and the review's URL.
 
 Map the result to exactly one of:
 
-- `merged` — the change landed. <Which field proves this, and where the merge timestamp comes from.>
-- `closed-unmerged` — the review ended without landing. <Which field distinguishes this from merged.>
-- `open` — still in flight.
-- `unknown` — cannot be determined.
+- `merged` - the change landed. <Which field proves this, and where the merge timestamp comes from.>
+- `closed-unmerged` - the review ended without landing. <Which field distinguishes this from merged.>
+- `open` - still in flight.
+- `unknown` - cannot be determined.
 
 > **The merged/closed-unmerged distinction is the one to be careful about.** `merged` closes the tracker issue. A forge that reports both as simply "closed" must map to `closed-unmerged` unless something positively proves the change landed. Guessing `merged` marks work as shipped when it was abandoned.
 >

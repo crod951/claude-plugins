@@ -91,7 +91,7 @@ Look up each recorded id directly.
 Do not list pull requests to find one.
 An earlier version of the sweep matched `gh pr list --state all --json headRefName,state,mergedAt` against recorded branch names, which silently skipped older branches whenever the listing hit its default cap of 30; per-id lookup removes that hazard entirely and is the reason the sweep is keyed on ids.
 
-## `findReviewByBranch(branch)` — optional, legacy records only
+## `findReviewByBranch(branch)` - optional, legacy records only
 
 Run `gh pr list --state all --head <branch> --json number --limit 10` and return the newest number, or nothing when the list is empty.
 

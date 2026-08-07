@@ -154,7 +154,7 @@ Because that file is committed, **teammates who clone the repo are never asked a
 | Which destination? | The Asana project or Linear team new issues go to. |
 | How do your states map? | Your real board sections or workflow states get mapped to three phases: in progress, in review, done. |
 | Which forge? | Where your reviews live. Seeded from your `origin` remote, then from CLIs on your `PATH`. See [Forges](#forges). |
-| How should the tracker learn a review merged? | Asana and Linear differ; skipped entirely when your forge has no CI hooks. See [How the tracker learns a review merged](#how-the-tracker-learns-a-review-merged). |
+| How should the tracker learn a review merged? | Asana and Linear differ; skipped entirely when your forge is not GitHub, or declares no CI hooks. See [How the tracker learns a review merged](#how-the-tracker-learns-a-review-merged). |
 | Which base branch? | Feature branches start from it and reviews target it. Defaults to your current branch, unless that is itself a Fathom branch. |
 | Stop for approval, or run straight through? | Sets the default approval mode for future runs. See [Approval modes](#approval-modes). |
 
@@ -319,7 +319,7 @@ In the manual tier the "review merged" line never fires, because nothing can obs
 | --- | --- |
 | `.fathom/config.md` | The committed profile: tracker, forge, destination, state mapping, base branch, closer choice. |
 | `.fathom/forge.md` | Only if you wrote an adapter for a forge Fathom does not ship. See [Forges](#forges). |
-| `.fathom/plans/<ref>.md` | The per-issue plan: issue link, codebase context, approach, tasks, testing strategy. Written for people, never carries status. |
+| `.fathom/plans/<ref>.md` | The per-issue plan: issue link, branch, codebase context, approach, tasks, testing strategy. Written for people, never carries status. The branch sits on its own `- Branch:` line, which the merge-closer matches to find this issue. |
 | `.fathom/tasks/<ref>.md` | Task statuses as checkboxes. Only when the checklist backend is active. |
 | `.beads/` | Beads task database and its JSONL export, when beads is the backend. |
 | `.github/workflows/fathom-close.yml` | Only if you accepted the optional merge-closer Action. GitHub only; never offered on a forge without CI hooks. |
@@ -357,7 +357,7 @@ Two rules the skills hold to, no matter the tier: **anything executed against a 
 ## How the tracker learns a review merged
 
 Linear can close issues natively, Asana cannot, so Fathom supports several arrangements.
-It asks once which one you use and records the answer - unless your forge declares no CI hooks, in which case the question is skipped and the sweep is the only mechanism.
+It asks once which one you use and records the answer - unless your forge is not GitHub, or declares no CI hooks, in which case the question is skipped and the sweep is the only mechanism.
 
 1. **The tracker's own forge integration.** On GitHub, Linear closes an issue when a review body contains `Closes TES-5`.
    Asana can do the equivalent with its free GitHub App plus a rule that completes a task when its linked pull request merges.
@@ -365,9 +365,15 @@ It asks once which one you use and records the answer - unless your forge declar
    Best option when your organization allows the app.
 2. **The optional merge-closer Action.** If you cannot install an integration, the skills offer a small GitHub Actions workflow that closes the issue on merge using a repository secret.
    Server-side, no agent needed at merge time.
-   Offered only on a forge with CI hooks; on any other, accepting it would write a file that never runs.
-3. **The sweep.** Whatever you choose, every run looks up each recorded review by id and closes anything the first two missed.
-   This is the backstop, and it is unavailable in the manual tier.
+   Offered only on GitHub, and only when the forge declares CI hooks; anywhere else, accepting it would write a file that never runs. Both closure paths above are GitHub-specific, one a GitHub App and the other a GitHub Actions workflow.
+3. **The sweep.** When your forge adapter can look a review up by id, every run does exactly that for each recorded review and closes anything the first two missed.
+   This is the backstop, and it is the only one of the three that is not GitHub-specific.
+   An adapter that declares `reviewLookup: none`, which includes the bundled generic-git fallback, cannot perform that lookup, so the sweep does not run there.
+   On such a forge none of the three mechanisms applies and there is no automated closure at all: issues stay in review until you close them in the tracker yourself, and the run says so rather than reporting a sweep it never performed.
+
+An installed merge-closer is a copy of the template taken when you accepted it, so a fix to the template does not reach a repository that already has one.
+From 2.1.0 a run that finds an out-of-date copy offers once to rewrite it, and records your answer either way so the offer is not repeated.
+Accepting replaces only `.github/workflows/fathom-close.yml`.
 
 You can also just say so, and the skill confirms the real state through the forge before acting.
 
