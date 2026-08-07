@@ -1,11 +1,11 @@
 # Forge adapter template
 
-Copy this file to `.workbench/forge.md` in your repository, fill it in for your forge, and commit it.
+Copy this file to `.fathom/forge.md` in your repository, fill it in for your forge, and commit it.
 A repo-local adapter wins over every bundled one, so nothing else needs to change and this plugin does not need to be forked.
 
 Read `../forges.md` for the contract these operations implement.
 Read `github.md` for a complete worked example, and `generic-git.md` for the minimum viable one.
-Those three references resolve inside the plugin's `skills/workbench-shared/forges/` directory, so read them before copying this file; from the copy at `.workbench/forge.md` they will not resolve, which is fine because the finished adapter needs none of them at runtime.
+Those three references resolve inside the plugin's `skills/fathom-shared/forges/` directory, so read them before copying this file; from the copy at `.fathom/forge.md` they will not resolve, which is fine because the finished adapter needs none of them at runtime.
 
 Guidance is in `>` blockquotes throughout. Delete the blockquotes as you fill each section in.
 

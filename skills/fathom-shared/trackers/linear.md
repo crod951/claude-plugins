@@ -75,11 +75,11 @@ When the user accepts, record `installed`; when they decline, record `declined` 
 It needs a `LINEAR_API_KEY` repository secret, a personal API key from Linear's settings, and the workflow state id that the profile maps to the `done` phase.
 Read that state id from the same list-issue-statuses call used during first-run setup, and substitute it into the template before writing the file.
 
-Write it to `.github/workflows/workbench-close.yml`, commit it with the profile, and record `merge-closer: installed` so the sweep knows the Action owns the closure and only backstops it.
+Write it to `.github/workflows/fathom-close.yml`, commit it with the profile, and record `merge-closer: installed` so the sweep knows the Action owns the closure and only backstops it.
 The file-discovery and ref-extraction block in this template is intentionally identical to the one in `asana.md`'s template; a change to either copy must be applied to both.
 
 ```yaml
-name: workbench-close
+name: fathom-close
 
 on:
   pull_request:
@@ -112,15 +112,15 @@ jobs:
 
           # A branch must map to exactly one record; closing an issue picked
           # arbitrarily from several matches could complete the wrong one.
-          MATCHES=$(grep -rlF "$BRANCH" .workbench/ 2>/dev/null | sort)
+          MATCHES=$(grep -rlF "$BRANCH" .fathom/ 2>/dev/null | sort)
           MATCH_COUNT=$(printf '%s' "$MATCHES" | grep -c . || true)
 
           if [ "$MATCH_COUNT" -eq 0 ]; then
-            echo "No file under .workbench/ references branch $BRANCH, skipping."
+            echo "No file under .fathom/ references branch $BRANCH, skipping."
             exit 0
           fi
           if [ "$MATCH_COUNT" -gt 1 ]; then
-            echo "Multiple files under .workbench/ reference branch $BRANCH; refusing to guess:"
+            echo "Multiple files under .fathom/ reference branch $BRANCH; refusing to guess:"
             echo "$MATCHES"
             exit 1
           fi

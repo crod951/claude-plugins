@@ -61,7 +61,7 @@ An internal forge on an unrecognized host matches no bundled adapter, so remote-
 
 Resolve in this order, first match winning.
 
-Use `.workbench/forge.md` when the repository contains one; a repo-local adapter wins over everything.
+Use `.fathom/forge.md` when the repository contains one; a repo-local adapter wins over everything.
 Otherwise use the bundled adapter named by the profile's `forge` field, for example `forges/github.md` for `forge: github`.
 Otherwise, when the profile records `forge: none`, run in the manual tier described below and make no offers.
 Otherwise the repository has no forge answer yet, so run the first-run forge question.
@@ -71,7 +71,7 @@ A wrong inference here pushes code to the wrong place.
 
 ### The repo-local adapter
 
-`.workbench/forge.md` is how a team supports a forge this plugin has never heard of.
+`.fathom/forge.md` is how a team supports a forge this plugin has never heard of.
 They write one file describing the five operations and the capability table against their own forge's CLI, commit it to their own repository, and every later run resolves it.
 No fork of this plugin, and no change to any shared contract, is required.
 
@@ -80,7 +80,7 @@ A partial adapter is legitimate and useful: an adapter that implements `verifyFo
 
 ### First-run forge question
 
-Ask once per repository, and record the answer as `forge` in `.workbench/config.md`.
+Ask once per repository, and record the answer as `forge` in `.fathom/config.md`.
 Use the agent's structured question mechanism named in `agents.md`, as every other first-run question does.
 
 Seed the question with whatever detection can offer, in this order.
@@ -106,7 +106,7 @@ Do not drop to tier 2 instead; the tier-2 offers presume no adapter exists, and 
 
 **Tier 2, assisted.**
 No adapter resolved, but a candidate forge CLI was found on `PATH`.
-Push the branch, then offer three choices: use the candidate for this run only, write `.workbench/forge.md` now so later runs are tier 1, or fall through to the manual tier.
+Push the branch, then offer three choices: use the candidate for this run only, write `.fathom/forge.md` now so later runs are tier 1, or fall through to the manual tier.
 The best outcome is the committed adapter, because it is reviewable by the team and durable across runs.
 
 **Tier 3, manual.**
@@ -155,7 +155,7 @@ Use the base branch named in the invocation when the request specifies one, and 
 Otherwise use the profile's `base-branch` when it records one.
 Otherwise use the repository's current branch, and say which branch you resolved so the choice is visible.
 
-Guard against one trap: when the current branch is itself a workbench feature branch, meaning its name carries an issue ref and one of the branch prefixes, do not silently use it as a base.
+Guard against one trap: when the current branch is itself a Fathom feature branch, meaning its name carries an issue ref and one of the branch prefixes, do not silently use it as a base.
 Building one issue's work on top of another's unmerged branch entangles two reviews, so ask which base to use instead.
 
 Fetch the resolved base branch before creating anything from it, and create the new branch from the fetched remote copy rather than from a local copy that may be behind.

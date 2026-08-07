@@ -7,7 +7,7 @@ Read the rest of this plugin's skills as agent-neutral; when you need an agent-s
 ## Install
 
 Claude Code: install this plugin from its marketplace repo.
-Kiro: install with the skills CLI, `npx skills add crod951/skills -a kiro-cli`, which places `execute/`, `scaffold/`, and `workbench-shared/` as siblings under `~/.kiro/skills/`; or copy or symlink the contents of this plugin's `skills/` directory there by hand so the three sit as siblings directly under the destination. Copying the `skills/` directory itself would nest them one level too deep and break every `../workbench-shared/` reference.
+Kiro: install with the skills CLI, `npx skills add crod951/skills -a kiro-cli`, which places `execute/`, `scaffold/`, and `fathom-shared/` as siblings under `~/.kiro/skills/`; or copy or symlink the contents of this plugin's `skills/` directory there by hand so the three sit as siblings directly under the destination. Copying the `skills/` directory itself would nest them one level too deep and break every `../fathom-shared/` reference.
 
 ## Task display overlay
 
@@ -40,7 +40,7 @@ Kiro: use an equivalent structured prompt when the workspace exposes one; otherw
 
 ## Permissions
 
-For smooth autonomous runs, pre-approve these command families ahead of time: `git`, `bd`, the CLI named by the resolved forge adapter (`gh` for GitHub, and whatever a repo-local `.workbench/forge.md` names), and whichever tool names the runtime discovery step in the previous section resolves for the connected tracker MCP server.
+For smooth autonomous runs, pre-approve these command families ahead of time: `git`, `bd`, the CLI named by the resolved forge adapter (`gh` for GitHub, and whatever a repo-local `.fathom/forge.md` names), and whichever tool names the runtime discovery step in the previous section resolves for the connected tracker MCP server.
 
 Claude Code: add these to the permissions allowlist in settings (project or user settings.json).
 Kiro: add these to its trusted/allowed command configuration.

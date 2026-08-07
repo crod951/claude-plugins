@@ -27,7 +27,7 @@ rules:
       adding that phrase to a skill, re-review whether the suppression still
       only hides benign uses.
 
-  # workbench-shared carries the contract files execute and scaffold read;
+  # fathom-shared carries the contract files execute and scaffold read;
   # its SKILL.md exists so directory-copying installers (npx skills) bring it
   # along. Scanning it flags documentation text, not executable skill behavior.
 

@@ -1,6 +1,6 @@
-# Workbench
+# Fathom
 
-Workbench is a pair of agent skills that carry a tracker issue from requirements to an open code review.
+Fathom is a pair of agent skills that carry a tracker issue from requirements to an open code review.
 
 - **scaffold** turns requirements into a tracker issue plus linked sub-issues.
 - **execute** drives an existing issue through implementation to a code review, one task at a time.
@@ -32,7 +32,7 @@ It works with **Asana** or **Linear**, and runs unchanged on **Claude Code** and
 ## What you get
 
 A run of the two skills back to back produces: a tracker issue with sub-issues, a feature branch, a plan document a reviewer can read before any code exists, one commit per unit of work, a code review whose body links the issue and lists what was verified, and the issue sitting in review.
-On a forge without an adapter the last step is a handoff rather than an opened review: the branch is pushed and you get the base, title, and body to open it yourself — see [Forges](#forges) for the tiers.
+On a forge without an adapter the last step is a handoff rather than an opened review: the branch is pushed and you get the base, title, and body to open it yourself - see [Forges](#forges) for the tiers.
 
 The design goal is that **nothing is remembered between invocations**.
 Every run reads state from your repository and your tracker, so an interrupted run resumes by being re-invoked, in either agent.
@@ -41,7 +41,7 @@ Resuming on a *different* machine works for whatever was committed and pushed.
 The checklist backend travels with each task commit; beads keeps its database out of git by design and shares only its export, so a beads run commits that export alongside each task for the same reason.
 
 **Requirements:** an Asana or Linear MCP connected in your agent, and optionally the beads CLI (`bd`) for richer task memory.
-On GitHub, the GitHub CLI (`gh`) authenticated. On another forge, an adapter you write — or nothing at all: the bundled generic-git fallback still pushes the branch and hands the review off to you. See [Forges](#forges).
+On GitHub, the GitHub CLI (`gh`) authenticated. On another forge, an adapter you write - or nothing at all: the bundled generic-git fallback still pushes the branch and hands the review off to you. See [Forges](#forges).
 
 ## Install (30-second setup)
 
@@ -59,11 +59,11 @@ Run these inside a Claude Code session:
 
 ```text
 /plugin marketplace add crod951/skills
-/plugin install workbench@crod951
+/plugin install fathom@crod951
 /reload-plugins
 ```
 
-Confirm both skills loaded by asking for the skill list; you should see `workbench:execute` and `workbench:scaffold`.
+Confirm both skills loaded by asking for the skill list; you should see `fathom:execute` and `fathom:scaffold`.
 
 </details>
 
@@ -75,7 +75,7 @@ npx skills@latest add crod951/skills
 ```
 
 Pick which coding agents to install onto - the installer auto-detects what you have.
-**Take all three entries when it asks which skills you want: `workbench-shared` carries the contract files the other two read, and an install without it stops at the first step.**
+**Take all three entries when it asks which skills you want: `fathom-shared` carries the contract files the other two read, and an install without it stops at the first step.**
 
 Kiro's default agent auto-loads everything under `~/.kiro/skills/`, so no further configuration is needed there.
 Other agents may need the skill added to their config after install; see that agent's page on [skills.sh](https://www.skills.sh).
@@ -88,23 +88,23 @@ Other agents may need the skill added to their config after install; see that ag
 The same installer works on any agent - including Claude Code - and writes the skills as ordinary files you own and can edit.
 Nothing updates behind your back; pull the latest changes when you want them with `npx skills update`.
 
-Installing fully by hand also works; keep `execute/`, `scaffold/`, and `workbench-shared/` as siblings at the destination's top level:
+Installing fully by hand also works; keep `execute/`, `scaffold/`, and `fathom-shared/` as siblings at the destination's top level:
 
 ```bash
 # global install, available in every workspace
 cp -r skills/. ~/.kiro/skills/
 
 # or symlink while iterating, so edits take effect immediately
-ln -s "$PWD/skills/execute"          ~/.kiro/skills/execute
-ln -s "$PWD/skills/scaffold"         ~/.kiro/skills/scaffold
-ln -s "$PWD/skills/workbench-shared" ~/.kiro/skills/workbench-shared
+ln -s "$PWD/skills/execute"       ~/.kiro/skills/execute
+ln -s "$PWD/skills/scaffold"      ~/.kiro/skills/scaffold
+ln -s "$PWD/skills/fathom-shared" ~/.kiro/skills/fathom-shared
 ```
 
 </details>
 
 ### 2. Run either skill once per repo
 
-The first run asks the [setup questions](#setup-step-by-step) - tracker, destination, state mapping, base branch, approval mode - and commits the answers to `.workbench/config.md`, so teammates are never asked again.
+The first run asks the [setup questions](#setup-step-by-step) - tracker, destination, state mapping, base branch, approval mode - and commits the answers to `.fathom/config.md`, so teammates are never asked again.
 
 ### 3. Bam - you're ready to go.
 
@@ -131,7 +131,7 @@ gh auth login
 ```
 
 Preflight verifies the forge on every run alongside the tracker MCP.
-Unlike the tracker, an unverified forge does not stop the run — it selects a tier, and the run says which one it picked. See [Forges](#forges) for what each tier does and how to support a forge that is not GitHub.
+Unlike the tracker, an unverified forge does not stop the run - it selects a tier, and the run says which one it picked. See [Forges](#forges) for what each tier does and how to support a forge that is not GitHub.
 
 ### 3. Optionally install beads
 
@@ -145,7 +145,7 @@ bd version
 
 ### 4. Answer the first-run questions
 
-The first time either skill runs in a repository it asks a short series of questions, one at a time, and writes the answers to `.workbench/config.md`.
+The first time either skill runs in a repository it asks a short series of questions, one at a time, and writes the answers to `.fathom/config.md`.
 Because that file is committed, **teammates who clone the repo are never asked any of it**.
 
 | Question | Why it is asked |
@@ -155,7 +155,7 @@ Because that file is committed, **teammates who clone the repo are never asked a
 | How do your states map? | Your real board sections or workflow states get mapped to three phases: in progress, in review, done. |
 | Which forge? | Where your reviews live. Seeded from your `origin` remote, then from CLIs on your `PATH`. See [Forges](#forges). |
 | How should the tracker learn a review merged? | Asana and Linear differ; skipped entirely when your forge has no CI hooks. See [How the tracker learns a review merged](#how-the-tracker-learns-a-review-merged). |
-| Which base branch? | Feature branches start from it and reviews target it. Defaults to your current branch, unless that is itself a workbench branch. |
+| Which base branch? | Feature branches start from it and reviews target it. Defaults to your current branch, unless that is itself a Fathom branch. |
 | Stop for approval, or run straight through? | Sets the default approval mode for future runs. See [Approval modes](#approval-modes). |
 
 If your tracker has no state for a phase, which is common for review states in a fresh Linear team, the skill says so and offers real choices rather than silently picking the nearest state.
@@ -211,7 +211,7 @@ that PR got abandoned
 
 A run does this: verifies the tracker MCP, sweeps for merged work, resolves tracker and task memory, fetches the issue, reads relevant code, creates the branch from a freshly fetched base, builds the breakdown and plan document, moves the issue to in progress, then loops one task at a time.
 Each task gets claimed, implemented, tested, committed on its own, and closed in both task memory and the tracker.
-At the end it pushes, opens the review — or, in the manual tier, hands you everything needed to open it — and moves the issue to in review.
+At the end it pushes, opens the review - or, in the manual tier, hands you everything needed to open it - and moves the issue to in review.
 
 Re-invoking on the same issue resumes it.
 Guards see what already exists and skip it.
@@ -241,7 +241,7 @@ Auto mode removes friction, not judgment.
 - An ambiguous setup answer still asks that one question, because a wrong destination misfiles every future issue in the repo.
 - A reply whose target is unclear, an issue ref that disagrees with the branch, an issue already done, and requirements too thin to break down all still stop and ask.
 
-Set the default during first-run setup, or edit `approval` in `.workbench/config.md`.
+Set the default during first-run setup, or edit `approval` in `.fathom/config.md`.
 Override it per run from the prompt, in either direction:
 
 ```text
@@ -258,7 +258,7 @@ When auto mode accepts a setup answer rather than having you confirm it, the pro
 
 ```
 Did the invocation name one?            -> use it
-Does .workbench/config.md name one?     -> use it
+Does .fathom/config.md name one?        -> use it
 Is exactly one tracker MCP connected?   -> use it
 Are both connected?                     -> ask once, save the answer
 Is neither connected?                   -> stop, name both, print setup steps
@@ -284,7 +284,7 @@ Adding beads to a repository later only affects issues started afterwards, so a 
 ```
 Named in the invocation?                        -> use it, this run only
 Recorded as base-branch in the profile?         -> use it
-Current branch is itself a workbench branch?    -> ask, never stack one issue on another
+Current branch is itself a Fathom branch?       -> ask, never stack one issue on another
 Otherwise                                       -> the current branch, reported so you see it
 ```
 
@@ -295,7 +295,7 @@ Branching from a stale local copy is the usual cause of conflicts at merge time.
 
 ```
 Does the prompt say auto approve, or ask me first?  -> that, this run only
-Does .workbench/config.md set approval?             -> that
+Does .fathom/config.md set approval?                -> that
 Otherwise                                           -> ask
 ```
 
@@ -317,12 +317,12 @@ In the manual tier the "review merged" line never fires, because nothing can obs
 
 | Path | What it is |
 | --- | --- |
-| `.workbench/config.md` | The committed profile: tracker, forge, destination, state mapping, base branch, closer choice. |
-| `.workbench/forge.md` | Only if you wrote an adapter for a forge workbench does not ship. See [Forges](#forges). |
-| `.workbench/plans/<ref>.md` | The per-issue plan: issue link, codebase context, approach, tasks, testing strategy. Written for people, never carries status. |
-| `.workbench/tasks/<ref>.md` | Task statuses as checkboxes. Only when the checklist backend is active. |
+| `.fathom/config.md` | The committed profile: tracker, forge, destination, state mapping, base branch, closer choice. |
+| `.fathom/forge.md` | Only if you wrote an adapter for a forge Fathom does not ship. See [Forges](#forges). |
+| `.fathom/plans/<ref>.md` | The per-issue plan: issue link, codebase context, approach, tasks, testing strategy. Written for people, never carries status. |
+| `.fathom/tasks/<ref>.md` | Task statuses as checkboxes. Only when the checklist backend is active. |
 | `.beads/` | Beads task database and its JSONL export, when beads is the backend. |
-| `.github/workflows/workbench-close.yml` | Only if you accepted the optional merge-closer Action. GitHub only; never offered on a forge without CI hooks. |
+| `.github/workflows/fathom-close.yml` | Only if you accepted the optional merge-closer Action. GitHub only; never offered on a forge without CI hooks. |
 
 Plans and task files stay after the review merges; they are the record of how the work was broken down.
 
@@ -330,7 +330,7 @@ Plans and task files stay after the review merges; they are the record of how th
 
 The forge is where your reviews live: the system that receives the branch and holds the code review. It is resolved separately from the tracker, and GitHub is one option rather than an assumption.
 
-Workbench drives the forge through five operations — verify, resolve base, open review, publish review, read review state — and each adapter declares what its forge can actually do. Capabilities differ in kind, not just in command names, so an adapter that declares no CI hooks simply never gets offered a workflow file.
+Fathom drives the forge through five operations - verify, resolve base, open review, publish review, read review state - and each adapter declares what its forge can actually do. Capabilities differ in kind, not just in command names, so an adapter that declares no CI hooks simply never gets offered a workflow file.
 
 ### The three tiers
 
@@ -344,11 +344,11 @@ Every run lands in one tier and says which:
 
 The manual tier has one consequence worth knowing up front: **nothing can observe the review, so no later run will move the issue to done.** Issues accumulate in review until you close them. The run says this at handoff rather than leaving you to discover it.
 
-### Supporting a forge workbench does not ship
+### Supporting a forge Fathom does not ship
 
-Internal and self-hosted forges are the reason the contract exists. Workbench cannot ship an adapter for a forge whose name and CLI it has never seen — but you can write one.
+Internal and self-hosted forges are the reason the contract exists. Fathom cannot ship an adapter for a forge whose name and CLI it has never seen - but you can write one.
 
-Copy `skills/workbench-shared/forges/TEMPLATE.md` to `.workbench/forge.md` in your repository, fill in the five operations against your forge's CLI, declare the capability table, and commit it. A repo-local adapter beats every bundled one, so nothing else changes and this plugin never needs forking. Your teammates who clone the repo get it automatically.
+Copy `skills/fathom-shared/forges/TEMPLATE.md` to `.fathom/forge.md` in your repository, fill in the five operations against your forge's CLI, declare the capability table, and commit it. A repo-local adapter beats every bundled one, so nothing else changes and this plugin never needs forking. Your teammates who clone the repo get it automatically.
 
 A partial adapter is fine and often correct. One that opens reviews but declares `reviewLookup: none` still does the useful part; it just leaves the sweep off. That is far better than an adapter that guesses at review state, because a wrong guess marks abandoned work as shipped.
 
@@ -356,8 +356,8 @@ Two rules the skills hold to, no matter the tier: **anything executed against a 
 
 ## How the tracker learns a review merged
 
-Linear can close issues natively, Asana cannot, so workbench supports several arrangements.
-It asks once which one you use and records the answer — unless your forge declares no CI hooks, in which case the question is skipped and the sweep is the only mechanism.
+Linear can close issues natively, Asana cannot, so Fathom supports several arrangements.
+It asks once which one you use and records the answer - unless your forge declares no CI hooks, in which case the question is skipped and the sweep is the only mechanism.
 
 1. **The tracker's own forge integration.** On GitHub, Linear closes an issue when a review body contains `Closes TES-5`.
    Asana can do the equivalent with its free GitHub App plus a rule that completes a task when its linked pull request merges.
@@ -372,7 +372,7 @@ It asks once which one you use and records the answer — unless your forge decl
 You can also just say so, and the skill confirms the real state through the forge before acting.
 
 A review **closed without merging** is never treated as done.
-You get told which issue and review were abandoned and asked whether to resume or move the issue back. The observation is recorded as a comment on the tracker issue, so you are told once rather than on every run — and because it lives on the tracker, it works even when your base branch is protected.
+You get told which issue and review were abandoned and asked whether to resume or move the issue back. The observation is recorded as a comment on the tracker issue, so you are told once rather than on every run - and because it lives on the tracker, it works even when your base branch is protected.
 
 ## Working conventions
 
@@ -441,15 +441,15 @@ See [Developing this plugin](#developing-this-plugin).
 
 ## Known limitations
 
-- **Kiro has not been re-verified since the most recent changes.** The skills ran successfully on Kiro earlier in development, and the wiring is unchanged, but the rename, base-branch resolution, and commit-verification work have only been exercised on Claude Code.
+- **Kiro has not been re-verified since the most recent changes.** The skills ran successfully on Kiro earlier in development, and the wiring is unchanged, but the workbench-to-Fathom rename, base-branch resolution, and commit-verification work have only been exercised on Claude Code.
   Smoke-test one run before relying on it there.
 - **The Linear merge-closer Action template has never been run end to end.** The Asana one has, three times.
   Verify your first merge rather than assuming.
 - **The issue type passed to `createIssue` is not stored as a tracker field.** It survives in the issue description and drives the branch prefix, but Linear labels and Asana custom fields are not set from it.
-- **Linear suggests its own branch names**, such as `chris/tes-5-slug`, while workbench generates `feat/tes-5-slug`.
+- **Linear suggests its own branch names**, such as `chris/tes-5-slug`, while Fathom generates `feat/tes-5-slug`.
   Using Linear's copy-branch-name button will not match.
 - **No CI awareness.** Once the review is open, a failing CI run is not noticed or reported.
-- **Forges other than GitHub need an adapter you write.** Workbench ships GitHub and a generic-git fallback; anything else is a `.workbench/forge.md` you author. See [Forges](#forges).
+- **Forges other than GitHub need an adapter you write.** Fathom ships GitHub and a generic-git fallback; anything else is a `.fathom/forge.md` you author. See [Forges](#forges).
 - **Jira is not supported.** Only Asana and Linear.
 
 ## Developing this plugin
@@ -461,33 +461,84 @@ This is easy to miss and will make you think a fix did not work.
 Either reinstall after each change:
 
 ```
-/plugin uninstall workbench
-/plugin install workbench@crod951
+/plugin uninstall fathom
+/plugin install fathom@crod951
 /reload-plugins
 ```
 
-Or point the agent at your working tree with the symlinks shown under [Install](#install), which Kiro picks up live.
+Or point the agent at your working tree with the symlinks shown under [Install](#install-30-second-setup), which Kiro picks up live.
 
 Before trusting a test run, confirm which copy is live by comparing line counts:
 
 ```bash
-wc -l ~/.claude/plugins/cache/<marketplace>/workbench/*/skills/execute/SKILL.md \
+wc -l ~/.claude/plugins/cache/<marketplace>/fathom/*/skills/execute/SKILL.md \
       skills/execute/SKILL.md
 ```
 
 ## Upgrading
 
-Repos set up by an earlier version need four things renamed or added:
+Two things hold for every legacy repository once you have done the rename for your version below.
 
-1. Rename `.issue-lifecycle/` to `.workbench/`.
-2. Rename `.github/workflows/issue-lifecycle-close.yml` to `.github/workflows/workbench-close.yml`, and update the path it greps to `.workbench/`.
-3. Change the profile's first line to `# workbench tracker profile`.
-4. Add `base-branch` to the profile, or let the next run ask.
-
-Repos set up before forge support need nothing. The next run asks which forge you use and adds `forge` to the profile, exactly as it repairs any other missing field. Existing `.workbench/` records that carry a branch and no review id keep working — the sweep falls back to matching by branch and rewrites the record with an id when it finds one.
+Repos set up before forge support need no extra work for the forge field itself.
+The next run asks which forge you use and adds `forge` to the profile, exactly as it repairs any other missing field.
+Existing `.fathom/` records that carry a branch and no review id keep working, since the sweep falls back to matching by branch and rewrites the record with an id when it finds one.
 
 If the repo used beads, confirm `.beads/.gitignore` and `.gitattributes` exist, since the beads tooling writes both, and untrack any beads runtime files an earlier version committed.
 
+### From workbench 1.x to Fathom 2.0.0
+
+The plugin name and the state directory both moved, and nothing migrates automatically.
+
+1. `/plugin uninstall workbench`, refresh the marketplace listing so it carries the new plugin name, then `/plugin install fathom@crod951` and `/reload-plugins`.
+   A cached listing still names the plugin `workbench`, so the install may fail until it refreshes; `/plugin marketplace update crod951` does it, and removing and re-adding the marketplace works too.
+2. `git mv .workbench .fathom`.
+3. `git mv .github/workflows/workbench-close.yml .github/workflows/fathom-close.yml`, then change its `name:` to `fathom-close` and every `.workbench/` path inside it to `.fathom/`.
+4. Change the first line of `.fathom/config.md` to `# fathom tracker profile`.
+5. Commit all of it together and push to your base branch, so teammates are not re-prompted and the merge-closer keeps working.
+6. Repeat steps 2 and 4 on every unmerged feature branch, before you resume it and before you merge the base into it.
+
+```bash
+git switch <branch>
+git mv .workbench .fathom
+# repeat step 4 here too, so this branch's config.md matches the base's
+git commit -m "chore: move .workbench to .fathom"
+git merge <base-branch>
+```
+
+Do the rename **before** merging the base, and do not reorder those two commands.
+Once the base has been merged in, `.fathom/` already exists on the branch, so `git mv .workbench .fathom` stops meaning "rename" and starts meaning "move inside".
+How that shows up depends on whether git's rename detection fires for your repository, which is why the order is worth following rather than reasoning about: at best the merge stops on a file-location conflict and the `git mv` then fails loudly, and at worst it quietly produces `.fathom/.workbench/tasks/<ISSUE-REF>.md` and exits 0.
+Repeating step 4 keeps the merge clean for the same reason.
+Both sides otherwise create `.fathom/config.md` independently, which git resolves by content when it detects the rename and stops on as an add/add conflict when it does not.
+
+Step 6 is not optional for work already in flight, and merging the base does not cover it.
+The base's rename only moves files the base already had, and a feature branch's own `.workbench/plans/<ISSUE-REF>.md` and `.workbench/tasks/<ISSUE-REF>.md` were never on the base, so they stay behind and become invisible to Fathom 2.0.0.
+On a checklist-backed branch the issue then looks as though it was never broken down: `execute` re-adopts the tracker's existing sub-issues and reopens tasks that are already finished, and in a repository that also has `.beads/` it silently moves that issue onto the beads backend, which `memory.md` otherwise forbids.
+A beads-backed branch keeps its task state, since `.beads/` is never renamed, but its per-issue record is the plan document, left behind at `.workbench/plans/`, so the branch goes invisible to the done-on-merge sweep instead.
+Either way the merge-closer finds no record for the branch and takes the same green-but-closed-nothing exit described next.
+
+Step 3 matters more than it looks.
+A merge-closer left pointing at `.workbench/` finds no file, takes its zero-match branch, and exits successfully, so every merge shows a green check that closed nothing.
+
+On a skills.sh install, re-run `npx skills@latest add crod951/skills` and take all three entries.
+`fathom-shared` is a new skill name at the destination, so nothing installs it in place of the old one, and without it both skills stop at the first step.
+Then delete the stale `workbench-shared/` directory from your skills root, since `execute/` and `scaffold/` are overwritten in place but the old shared directory is not removed.
+
+Abandoned reviews you already triaged stay triaged.
+The sweep reads the legacy `workbench: review-closed-unmerged` sentinel alongside the current one, so it does not re-report them.
+
+### From issue-lifecycle
+
+Repos set up by an earlier version need four things renamed or added:
+
+1. Rename `.issue-lifecycle/` to `.fathom/`.
+2. Rename `.github/workflows/issue-lifecycle-close.yml` to `.github/workflows/fathom-close.yml`, then change its `name:` to `fathom-close` and update the path it greps to `.fathom/`.
+3. Change the profile's first line to `# fathom tracker profile`.
+4. Add `base-branch` to the profile, or let the next run ask.
+
+The in-flight branch caveat above applies here too, with `.issue-lifecycle/` in place of `.workbench/`.
+Rename it on every unmerged feature branch as well, not just on the base, and there too do the rename and the profile edit on the branch before merging the base into it, for the same reason.
+
 Version 3 of the predecessor plugin removed its slash commands (`/issue-start`, `/issue-task`, `/commit`, `/issue-finish`).
 The `execute` skill covers the issue flow they formed: "execute TES-5" does what the whole sequence used to.
-The one gap is `/commit` as a standalone conventional-commit helper outside an issue run; workbench applies its commit conventions only inside execute runs, so for non-issue commits use your agent's normal commit flow, borrowing the rules in `skills/workbench-shared/conventions.md` if you want the same style.
+The one gap is `/commit` as a standalone conventional-commit helper outside an issue run; Fathom applies its commit conventions only inside execute runs, so for non-issue commits use your agent's normal commit flow, borrowing the rules in `skills/fathom-shared/conventions.md` if you want the same style.

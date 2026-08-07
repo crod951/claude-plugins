@@ -26,7 +26,7 @@ Follow this order:
 
 Check the issue's own state before the repository's state, because the per-issue signal decides that issue's backend.
 
-When `.workbench/tasks/<ISSUE-REF>.md` exists, use the checklist adapter for this issue.
+When `.fathom/tasks/<ISSUE-REF>.md` exists, use the checklist adapter for this issue.
 The file's existence is the signal, not its contents: `init` creates it before any task lines are added, so requiring checkboxes would send a run that died between `init` and the first task into a different backend and fork that issue's status across both.
 Do this even when `.beads/` exists and even when `bd` is installed.
 An issue whose statuses already live in checkboxes keeps that backend for its whole life; adding beads to a repository later must never move an in-flight issue, which would orphan the statuses already recorded in its checklist file.
@@ -59,7 +59,7 @@ Skip the overlay silently when the agent exposes no such tools.
 ## No dual truth
 
 Task status never lives in two places.
-The human-readable plan always lives in the plan document at `.workbench/plans/<ISSUE-REF>.md` described in `conventions.md`, and that document never carries status.
-When the beads adapter is active, statuses live in beads and no file is written under `.workbench/tasks/` for that issue.
-When the checklist adapter is active, `.workbench/tasks/<ISSUE-REF>.md` holds the checkbox statuses for that issue, and the plan still lives in the plan document.
-Whichever backend is active, at least one file under `.workbench/` must record the issue's branch, its review id once one exists, and its tracker URL, because the merge sweep finds an issue by searching that directory, and a merge-closer running on the forge's own CI finds one the same way.
+The human-readable plan always lives in the plan document at `.fathom/plans/<ISSUE-REF>.md` described in `conventions.md`, and that document never carries status.
+When the beads adapter is active, statuses live in beads and no file is written under `.fathom/tasks/` for that issue.
+When the checklist adapter is active, `.fathom/tasks/<ISSUE-REF>.md` holds the checkbox statuses for that issue, and the plan still lives in the plan document.
+Whichever backend is active, at least one file under `.fathom/` must record the issue's branch, its review id once one exists, and its tracker URL, because the merge sweep finds an issue by searching that directory, and a merge-closer running on the forge's own CI finds one the same way.

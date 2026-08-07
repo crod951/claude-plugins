@@ -11,7 +11,7 @@ All skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/Skil
 
 ```text
 /plugin marketplace add crod951/skills
-/plugin install workbench@crod951
+/plugin install fathom@crod951
 ```
 
 **Kiro, Codex, and other agents** - use [skills.sh](https://www.skills.sh) for an editable copy on any agent:
@@ -20,27 +20,27 @@ All skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/Skil
 npx skills@latest add crod951/skills
 ```
 
-When the installer asks which skills to take, take all of them; `workbench-shared` carries the contract files the other two read.
+When the installer asks which skills to take, take all of them; `fathom-shared` carries the contract files the other two read.
 
 > Individual plugins may have additional prerequisites that run in your **terminal** (e.g., `brew install`). See each plugin's README for details.
 
 ## Available Plugins
 
-### workbench (v1.1.0)
+### fathom (v2.0.0)
 
-Workbench provides two agent skills, execute and scaffold, that carry a tracker issue from requirements to an open code review, on GitHub or any other forge with an adapter.
+Fathom provides two agent skills, execute and scaffold, that carry a tracker issue from requirements to an open code review, on GitHub or any other forge with an adapter.
 It works with Asana or Linear as your issue tracker, and both skills run unchanged on Claude Code and Kiro.
 
 #### Prerequisites
 
 - An Asana or Linear MCP plugin installed and authenticated
 - [Beads CLI](https://github.com/gastownhall/beads) installed (`bd` command available); optional, but recommended for the richest task memory
-- A forge adapter for wherever your reviews live. Two ship built in: GitHub, which needs the [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available), and a generic-git fallback that pushes the branch and hands the review off to you. Write a `.workbench/forge.md` from the bundled template only for a forge workbench does not ship.
+- A forge adapter for wherever your reviews live. Two ship built in: GitHub, which needs the [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh` command available), and a generic-git fallback that pushes the branch and hands the review off to you. Write a `.fathom/forge.md` from the bundled template only for a forge Fathom does not ship.
 
 #### Install
 
 ```bash
-/plugin install workbench@crod951
+/plugin install fathom@crod951
 ```
 
 #### Skills
@@ -65,7 +65,7 @@ scaffold these requirements
 - **Task memory** - beads-backed when available, with a plain checklist file fallback
 - **Conventional Commits** - one commit per task, referencing the issue ref
 - **Tracker-only access** - tracker work only happens through the connected tracker MCP; when it is missing, the skill refuses and stops
-- **Forge-portable** - reviews go through a five-operation forge contract; GitHub and a generic-git fallback ship built in, and any other forge is a `.workbench/forge.md` you write without forking
+- **Forge-portable** - reviews go through a five-operation forge contract; GitHub and a generic-git fallback ship built in, and any other forge is a `.fathom/forge.md` you write without forking
 
 #### Tracker Status Lifecycle
 
@@ -73,7 +73,7 @@ scaffold these requirements
 Todo → In Progress (execute starts) → In Review (review opened) → Done (review merged)
 ```
 
-See the [full guide](./docs/workbench.md) for setup, task memory, and the security boundary.
+See the [full guide](./docs/fathom.md) for setup, task memory, and the security boundary.
 
 ---
 
