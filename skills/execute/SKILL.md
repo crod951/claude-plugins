@@ -70,11 +70,30 @@ If any of these files cannot be found and read, stop immediately and report whic
    Resolve the base branch per the base-branch rules in `../fathom-shared/forges.md`, then fetch it and create the new branch from the fetched remote copy rather than from a local copy that may be behind, since branching from a stale local copy is the usual cause of conflicts at merge time.
    When the branch already exists and the base branch has moved on since, bring it up to date before implementing, and report that you did.
    When that update conflicts, stop and hold exactly as an unfixable test failure would: keep the work, leave the task in progress, report which files conflict, and let the user decide how to resolve them; never resolve a conflict by discarding either side's changes.
+   These rules describe bundle 1's branch, which is the only branch a single-review run has.
+   When step 8 confirms a stack, later bundles take the same name with their index appended, so bundle 2 of `feat/ONC-5-add-webhooks` is `feat/ONC-5-add-webhooks-2`.
+   Create each of those from the previous bundle's branch at the moment that bundle starts, not up front: creating them all at breakdown time would leave empty branches behind whenever a run stops early.
 8. Ensure the breakdown exists.
    - Skip the rest of this step when a breakdown already exists for this issue.
    - Call `init` for the issue, then call `parentTask` for it.
    - When the issue has no existing children, plan three to seven units of work, each sized so it can be implemented and verified on its own; for each one, call `createSubIssue` first, then call `createTask` with the newly created sub-issue's ref as `subIssueRef`, then write the returned task id back onto that sub-issue so the link reads both ways, since the task id does not exist until `createTask` returns, setting `deps` to the id of the task it builds on so tasks chain sequentially by default whenever order matters.
    - When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown; for each adopted sub-issue, still call `createTask`, passing that sub-issue's existing ref as `subIssueRef` and skipping `createSubIssue` since the sub-issue already exists, then write the returned task id back onto that sub-issue the same way, and setting `deps` the same way.
+   - Decide whether this issue produces one review or a stack, once the child tasks exist and before any dependency edge is added.
+     Read the profile's `stacking` field per `../fathom-shared/approval.md`; treat an absent field as `propose`, and stop considering a split immediately when it reads `never`.
+     Do not consider a split when the resolved forge tier is the manual tier, and say once that the split was not offered because the tier cannot create reviews.
+     Otherwise propose a split only when both conditions hold: the breakdown has five or more sub-issues, and at least one valid cut point exists.
+     A cut point is valid only where the work up to it is independently mergeable, meaning the repository builds, that bundle's tests pass, and merging it alone would not break the base branch.
+     When no valid cut point exists, proceed as a single review and say so rather than forcing a boundary.
+   - Shape the bundles as contiguous runs of the sub-issue dependency chain, so bundles inherit its order rather than inventing one.
+     Produce at most three bundles, each holding at least two sub-issues; those two limits together mean five sub-issues yield at most two bundles, and six is the smallest breakdown that can yield three.
+     Exceed the cap only when the user asked for a specific larger split; never exceed it on the heuristic's own judgment.
+   - Present the proposed split before creating anything: the bundles, which sub-issues fall in each, and the resolved forge's `stackedReviews` value with what it means for this run.
+     This is a skip-list stop per `../fathom-shared/approval.md`, so `ask` mode waits for an answer and `auto` mode applies the split and reports it.
+   - When a split is confirmed, chain every task in the issue sequentially, so each task deps on its predecessor across bundle boundaries as well as within them, rather than only where order matters.
+     This is what makes `claimNext` structurally unable to hand out a later bundle's task while any earlier task is open, so the implementation loop needs no bundle-ordering logic of its own.
+     A single edge at each bundle boundary is not enough: a task carrying no deps has them trivially closed, so it stays claimable out of order and the branch chain would be built on unfinished work.
+     Apply full chaining only when a split is confirmed; a single-review run keeps the conditional chaining described above.
+     Then write the `Bundles` section of the plan document described in `conventions.md`, and commit it with the breakdown.
    - After every child task exists, add the parent's dependency edge on each child, so the parent cannot close before its children and "no open children" becomes a real signal rather than an assumption.
    - Either way, write the plan document described in `conventions.md` and commit it with the breakdown.
    - Write `.fathom/tasks/<ISSUE-REF>.md` only when the resolved backend is the checklist adapter, since that file holds checkbox statuses; with beads active the statuses live in beads and no file belongs there, as `memory.md` states.
