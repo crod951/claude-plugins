@@ -60,6 +60,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    Treat any claim about a review's fate as a cleanup phrase, whether it says merged, closed, abandoned, landed, or shipped, and whether it names an issue or asks to clean up whatever is outstanding.
    Never act on the claim itself: confirm each referenced review's real state through `getReviewState` first, then apply the merged path or the closed-without-merging path accordingly, and say plainly when the confirmed state differs from what the user described.
    When the resolved forge declares `reviewLookup: none`, the claim cannot be confirmed at all. Say that plainly and act on nothing; do not close an issue on the strength of an unverifiable claim, since a wrong close is exactly what the confirmation step exists to prevent.
+   When the adapter declares `reviewLookup: none` the whole sweep is unavailable, exactly as it already is for single reviews, so say so once and act on nothing; this is checked before the cases below because it decides whether `getReviewState` can be called at all.
    An issue split into a stack has one recorded review per bundle rather than one in total, so call `getReviewState` on every recorded id before deciding anything about the issue.
    A stack can satisfy more than one of the cases below at once, so check them in the order written and let the first one that applies decide the whole sweep.
    In particular a stack can hold a merged bundle, an open bundle, and an abandoned one simultaneously, and the abandoned bundle wins: restacking the bundles above it would force-push a rebase onto work the user may be about to discard, which is exactly the unattended destruction that stop exists to prevent.
@@ -67,7 +68,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    This case is checked first and is terminal: no later case runs after it, however many other bundles merged or stayed open.
    Otherwise move the issue to `done` when every bundle reports `merged`.
    Otherwise, with some bundles merged and others still open, close nothing: report the partial progress, naming which bundles merged, then run the restack check below.
-   When the adapter declares `reviewLookup: none` the whole sweep is unavailable here as it already is for single reviews, so say so once and act on nothing.
+   Otherwise every bundle is still open with none merged and none abandoned, so the stack is simply still in review: say that, close nothing, and restack nothing, since no merge has moved any base.
 
    The restack check asks one forge-agnostic question: is the merged bundle's content an ancestor of each remaining stack branch?
    Rebase a remaining branch onto its updated base only when the answer is no, and leave it alone when the answer is yes.

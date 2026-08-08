@@ -87,7 +87,9 @@ When it declares `none`, there is no way to observe what happened to a review, s
 Find the outstanding issues by searching `.fathom/` for recorded reviews.
 Search the whole directory rather than only `tasks/`: depending on the resolved memory backend the per-issue record may be a plan document under `plans/` with no checklist file at all, and narrowing the search to `tasks/` silently skips those issues.
 
-For each issue the search finds, call `getReviewState` once with that issue's recorded review id and act on what it returns.
+For each issue the search finds, read every review id recorded for it and call `getReviewState` on each one before deciding anything about that issue.
+A single-review issue records one id; an issue split into a stack records one per bundle, in the plan document's `Bundles` section described in `conventions.md`.
+Read the records rather than assuming a count: acting on the first id found would decide a stacked issue's fate from one bundle's result while the rest of its work was still open, which is the early close the `Merge-closer: suppressed` marker exists to prevent.
 Look each id up directly; never list a forge's reviews and match them locally.
 A listing has to be bounded, and any bound silently drops the oldest records once a repository has more reviews than the bound allows, which is a defect that grows quietly with the repository's age.
 
@@ -95,7 +97,25 @@ Records written before review ids were recorded carry a branch name and no id.
 For those, fall back to the optional `findReviewByBranch` operation defined in `forges.md`, and rewrite the record with the id once one is known, so the fallback path drains over time rather than becoming permanent.
 When the resolved adapter does not implement that operation, the record cannot be swept: report that once, naming the record, rather than guessing or treating a branch name as a review id.
 
-When `getReviewState` returns `merged`, read the issue's current state before writing to the tracker.
+Judge each issue on all of its results together, in the order below, letting the first case that applies decide that issue.
+An issue can satisfy more than one case at once, and a stack holding a merged bundle, an open bundle, and an abandoned one routinely does.
+
+1. Any recorded review reports `closed-unmerged`.
+   Apply the closed-without-merging path below for that review, and, when the issue is a stack, name which bundles above it are now orphaned by it.
+   Close nothing for that issue, and do not read its merged reviews as progress toward closure.
+   This case is checked first and is terminal, however many of the issue's other reviews merged or stayed open, because whether to retry, rescope, or drop the orphaned work is the user's decision and nothing should be built on top of work that may be about to be discarded.
+2. Every recorded review reports `merged`.
+   Apply the merged path below.
+   For a single-review issue that is its one review, and for a stack it is every bundle, which is what keeps a stack from being closed by its first merge.
+3. Some reviews merged and others still open.
+   Close nothing, and report the partial progress, naming which bundles merged.
+4. None merged and none closed without merging.
+   The work is still entirely in review, so close nothing and say so plainly rather than reporting nothing at all.
+
+Cases 3 and 4 leave the issue's phase exactly where it is.
+The branches a partially merged stack leaves behind may still need restacking, but that is git and forge work rather than tracker work, so it belongs to the skill running the sweep; this section decides only what is written to the tracker.
+
+On the merged path, read the issue's current state before writing to the tracker.
 When the issue is already complete, for example because a merge-closer Action or a native integration already closed it, do nothing further for that issue.
 Otherwise apply the mapped `done` state through `updateState`, plus any closure action the adapter defines for the merged path, before proceeding with the rest of the run.
 An issue whose record carries `- Merge-closer: suppressed`, which is how a stacked issue is recorded per `conventions.md`, was deliberately left for this sweep to close: the Action takes no action for it, so the sweep is its only closure mechanism and reaching `done` requires a run of this sweep.
@@ -220,12 +240,16 @@ forge: github          # a bundled adapter name, "local" for .fathom/forge.md, o
 default-destination: Prototypes (1209000000000001)  # add "# auto-accepted" when auto mode chose it
 base-branch: main
 approval: ask
+stacking: propose      # or "never" to keep this repository on one review per issue; absent means propose
 merge-closer: native   # "none (forge has no hooks)" when the forge declares no ciHooks
 state-mapping:
   inProgress: section "In Progress"
   inReview: section "Review"
   done: section "Done" + completed
 ```
+
+The `stacking` line is optional and is not one of the six setup questions above, so first-run setup neither asks for it nor writes it.
+Write it only when the user asks for a repository-wide answer, and treat its absence as `propose` exactly as `approval.md` states.
 
 On every subsequent run, read the existing profile silently and use it without re-prompting.
 Re-run setup when a mapped state no longer exists in the tracker, or when the user explicitly asks to redo it.
