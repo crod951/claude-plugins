@@ -64,6 +64,7 @@ Include these sections:
   One line per bundle, in stack order, each reading `- Bundle <k>/<N>: <branch> - <sub-issue refs, comma separated>`.
   Add a `- Review: <id> <url> (bundle k/N)` line beneath a bundle once its review exists.
   The suffix is redundant with the nesting on purpose: the sweep reads these lines individually, and a self-describing record survives being read out of its surrounding context.
+  Each of those lines is committed and pushed as soon as it is written rather than riding the run's final closing commit, so that every review id is durable and visible from another clone the moment its review is published; `execute` describes exactly where in its per-bundle routine that happens.
   This section is the durable record a resumed run reads to recover the stack, so write it when the split is confirmed rather than when the first review opens.
 - **Merge-closer** - present only when this issue was split into a stack, and omitted entirely otherwise.
   One line reading `- Merge-closer: suppressed`, written when the split is confirmed, alongside the `Bundles` section.
@@ -89,7 +90,8 @@ Recording a real hash is impossible when no commit was made, so this converts a 
 A progress line describes repository state, so never name a commit that does not exist in the log.
 
 Reconcile before finishing.
-A task commit is one whose subject is scoped to this issue's ref and which implements a task; the breakdown commit, the plan document commit, and any task-state bookkeeping commit are not task commits.
+A task commit is one whose subject is scoped to this issue's ref and which implements a task; the breakdown commit, every plan document commit including the per-bundle one that records a bundle's review id, and any task-state bookkeeping commit are not task commits.
+Those bookkeeping commits are recognizable rather than a matter of judgment: each is typed `chore`, touches only records under `.fathom/`, and names no task, so none of them can be counted as the commit that implemented one.
 Count them over the range from the resolved base branch to the current head, not over all history, since a branch inherits its base's commits.
 Compare that count to the number of tasks closed for this issue.
 Check the recorded hashes as well: every hash recorded at close must name a commit inside that same range, and each closed task's hash must be distinct, which catches a mismatch that subject-line counting can misclassify.

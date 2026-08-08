@@ -200,6 +200,10 @@ If any of these files cannot be found and read, stop immediately and report whic
       Pass the previous bundle's review id as `dependsOn` for every bundle after the first, and omit it for bundle 1.
     - Call `publishReview` with the returned id.
     - Record `- Review: <id> <url> (bundle k/N)` beneath that bundle's line in the plan document's `Bundles` section, since the sweep looks reviews up by id and needs every one of them.
+    - Commit and push that recorded line immediately, on branch k, before moving to bundle k+1's branch or doing anything else.
+      Stage only the plan document, by explicit path, per the staging rules in `conventions.md`, and word it as bookkeeping rather than as a task: `chore(<issue-ref>): record bundle k review id`, naming no task in the body.
+      `conventions.md` excludes plan document and bookkeeping commits from task and commit reconciliation, and a commit shaped this way is one of them, so it cannot be miscounted as the commit that implemented a task.
+      Waiting for the run's final closing commit instead would leave bundle 1's review id uncommitted through bundles 2 and 3, where a sweep run from another clone cannot see it and an interrupted run leaves it on one machine's disk only.
     - Apply `inReview` when bundle 1's review publishes, and never again for the later bundles; the issue is genuinely in review from that moment and re-applying a phase it already holds reports progress that did not happen.
     Skip a bundle whose review already exists and reuse it, the same way the single-review path does, so a resumed run never opens a second review for a bundle that has one.
     After bundle N's routine completes, close the parent task in the memory backend (a no-op for the checklist adapter, whose file is the parent record), which is the one action the single-review path takes that no bundle routine has taken yet.
