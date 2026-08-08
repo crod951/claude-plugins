@@ -211,8 +211,8 @@ If any of these files cannot be found and read, stop immediately and report whic
 
     The single-review path, for an issue that was not split into a stack:
 
-    Run the commit reconciliation from `conventions.md` and stop if the task and commit counts disagree.
     Commit any leftover uncommitted change that belongs to this issue's tasks, leaving unrelated working-tree edits alone rather than sweeping them into the review.
+    Then run the commit reconciliation from `conventions.md` and stop if the task and commit counts disagree, in that order, so the range it counts already carries every commit this issue's tasks produced.
     Close the parent task in the memory backend (a no-op for the checklist adapter, whose file is the parent record).
 
     Then open the review through the forge contract in `../fathom-shared/forges.md`, never by invoking a forge CLI directly from this procedure.
@@ -229,9 +229,11 @@ If any of these files cannot be found and read, stop immediately and report whic
 
     When this issue was split into a stack, the review-opening portion above is a per-bundle routine rather than a single closing action, and step 10 invokes it once per bundle as that bundle's last task closes.
     For bundle k of N:
-    - Reconcile bundle k's closed tasks against the commits on its branch, over that bundle's own range, per the per-bundle rule in `conventions.md`; stop and do not open this bundle's review when they disagree.
     - Commit any leftover uncommitted change that belongs to this bundle's tasks, leaving unrelated working-tree edits alone rather than sweeping them into the review, exactly as the single-review path does before it opens its one review.
       A change left uncommitted here is absent from bundle k's review and lands in bundle k+1's instead, which is worse than the single-review case rather than merely equivalent to it.
+    - Then reconcile bundle k's closed tasks against the commits on its branch, over that bundle's own range as it stands after the commit above, per the per-bundle rule in `conventions.md`; stop and do not open this bundle's review when they disagree.
+      These two run in this order because the leftover commit changes the very range the reconciliation counts.
+      Reconciling first would count a range still missing that commit, so a bundle with leftover work would come up short and stop the routine even though nothing was wrong; and where the count happened to match anyway, the leftover commit would land in the range afterwards and never be reconciled at all.
     - Call `resolveBase` on bundle 1's base, which is the resolved base branch, or on branch k-1 for every later bundle.
     - Push branch k, unless the adapter declares `pushesForYou`, exactly as the single-review path does.
     - Call `openReview` with branch k, that base, a title naming the bundle, and a body built per the stack rules in `conventions.md`: the closing reference only in bundle N, plus `Part k of N`, plus `Depends on` the previous bundle's review URL for every bundle after the first.
