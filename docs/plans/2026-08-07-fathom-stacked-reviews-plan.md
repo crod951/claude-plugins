@@ -591,7 +591,7 @@ In the same file, insert these bullets into step 8, directly after the bullet be
 
 ```markdown
    - Decide whether this issue produces one review or a stack, once the child tasks exist and before any dependency edge is added.
-     Read the profile's `stacking` field per `../fathom-shared/approval.md`; treat an absent field as `propose`, and stop considering a split immediately when it reads `never`.
+     Read the profile's `stacking` field per `../fathom-shared/approval.md`; treat an absent field as `never`, and stop considering a split immediately when it reads `never`.
      Do not consider a split when the resolved forge tier is the manual tier, and say once that the split was not offered because the tier cannot create reviews.
      Otherwise propose a split only when both conditions hold: the breakdown has five or more sub-issues, and at least one valid cut point exists.
      A cut point is valid only where the work up to it is independently mergeable, meaning the repository builds, that bundle's tests pass, and merging it alone would not break the base branch.
