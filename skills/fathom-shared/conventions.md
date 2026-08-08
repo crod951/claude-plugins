@@ -64,10 +64,16 @@ Include these sections:
   One line per bundle, in stack order, each reading `- Bundle <k>/<N>: <branch> - <sub-issue refs, comma separated>`.
   Add a `- Review: pending (bundle k/N)` marker beneath a bundle before its review is attempted, then replace that marker with a `- Review: <id> <url> (bundle k/N)` line once its review exists.
   The suffix is redundant with the nesting on purpose: the sweep reads these lines individually, and a self-describing record survives being read out of its surrounding context.
-  The marker is a write-ahead record of intent rather than a record of a review: it names no id, so nothing can be looked up from it, and every reader collecting review ids treats a bundle carrying only the marker as carrying no record at all.
+  The marker means only that a run reached the point of calling `openReview` for that bundle: it is committed before the call, so the call may or may not have started and a review may or may not exist.
+  Its job is to force the next run to look the review up rather than to prove that any review was created.
+  It names no id, so nothing can be looked up from the marker itself, and every reader collecting review ids treats a bundle carrying only the marker as carrying no record at all.
   The done-on-merge sweep therefore counts such a bundle among the missing records and leaves the whole issue undecided, and `execute` holds on it rather than opening a review that may duplicate one.
-  What the marker distinguishes is a bundle whose `openReview` was never attempted, which carries no line at all, from a bundle whose call was attempted and whose outcome was never recorded, which carries the marker.
+  What the marker separates is a bundle no run has ever tried to open a review for, which carries no line at all, from a bundle where a review may exist and no record names it, which carries the marker.
   Branch absence cannot make that distinction, because a forge retains a review after its head branch is deleted, so a bundle branch deleted or reused before its record was durable leaves a review that no branch and no record names; that is why the marker is written ahead of the call rather than inferred afterwards.
+  When the lookup cannot settle whether a review exists, the run holds and reports the marker, and the user confirms whether one exists.
+  Record a confirmation that none exists by replacing that bundle's marker with a `- Review: none confirmed (bundle k/N)` line, committed and pushed on that bundle's branch as the same kind of bookkeeping commit, so the next run opens that bundle's review instead of holding again.
+  Every reader that treats the bare marker as no record treats a `none confirmed` line the same way, since neither names an id.
+  A hold that recorded nothing would stop every later run identically, which is why the confirmation lands in this section rather than staying in the conversation that produced it.
   Each of those lines, the marker included, is committed and pushed as soon as it is written rather than riding the run's final closing commit, so that both the intent and the review id are durable and visible from another clone the moment each is written; `execute` describes exactly where in its per-bundle routine that happens.
   Each one lands on its own bundle's branch, though, because that is the branch the run is on when it writes the line.
   So a checkout of the base branch carries the records of the bundles that have already merged into it and none of the records above them, and reading only what that checkout holds would judge a three-bundle stack on one bundle's record.
