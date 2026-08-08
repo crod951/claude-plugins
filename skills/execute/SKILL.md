@@ -177,7 +177,7 @@ If any of these files cannot be found and read, stop immediately and report whic
     Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.fathom/`; never sweep `.beads/` or `.fathom/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
     Push this closing commit with an ordinary `git push` of the branch even when the adapter declares `pushesForYou`, since that capability governs only the push that opens the review, as `../fathom-shared/forges.md` states; skipping it here would leave the completed task state in the local clone while the review reads as finished.
     On a stacked issue this closing commit goes on branch N, the stack tip, because that branch contains every bundle's history and is the only one whose review shows the completed task state.
-12. Report a final summary: the issue, the review URL when one was opened or the resolved tier when one was not, the tracker's current phase, and the task counts from `status()`.
+12. Report a final summary: the issue, the review URL when one was opened, every bundle's review URL in order when the issue was split into a stack, or the resolved tier when no review was opened, the tracker's current phase, and the task counts from `status()`.
 
 ## Display overlay
 

@@ -26,7 +26,7 @@ When the installer asks which skills to take, take all of them; `fathom-shared` 
 
 ## Available Plugins
 
-### fathom (v2.1.0)
+### fathom (v2.2.0)
 
 Fathom provides two agent skills, execute and scaffold, that carry a tracker issue from requirements to an open code review, on GitHub or any other forge with an adapter.
 It works with Asana or Linear as your issue tracker, and both skills run unchanged on Claude Code and Kiro.
