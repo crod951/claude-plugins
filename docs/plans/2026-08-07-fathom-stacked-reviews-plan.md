@@ -415,7 +415,8 @@ In `skills/fathom-shared/conventions.md`, in the bullet list of plan document se
 ```markdown
 - **Bundles** - present only when this issue was split into a stack, and omitted entirely otherwise.
   One line per bundle, in stack order, each reading `- Bundle <k>/<N>: <branch> - <sub-issue refs, comma separated>`.
-  Add a `- Review: <id> <url>` line beneath a bundle once its review exists.
+  Add a `- Review: <id> <url> (bundle k/N)` line beneath a bundle once its review exists.
+  The suffix is redundant with the nesting on purpose: the sweep reads these lines individually, and a self-describing record survives being read out of its surrounding context.
   This section is the durable record a resumed run reads to recover the stack, so write it when the split is confirmed rather than when the first review opens.
 ```
 
@@ -484,7 +485,7 @@ Expected: exit code 0.
 
 ```bash
 git add skills/fathom-shared/conventions.md
-git commit -m "feat(fathom): add bundle records, per-bundle reconciliation, and stack bodies"
+git commit -m "feat(fathom): add bundle records, reconciliation, and stack bodies"
 ```
 
 ---
