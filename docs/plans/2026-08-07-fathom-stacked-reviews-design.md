@@ -165,7 +165,7 @@ Adapters key their behavior off their declared `stackedReviews` value:
 | --- | --- |
 | `retarget` | Ignore `dependsOn`. The `base` argument does the work, and the forge retargets on upstream merge. |
 | `declared-dependency` | Pass `dependsOn` to the forge's dependency mechanism and scope the commit range. |
-| `none` | Ignore `dependsOn`. The `base` argument gives git-level chaining, and the body's `Depends on` line carries the rest. Reachable only from a tier-1 repo-local adapter, per section 3. |
+| `none` | Ignore `dependsOn`. The `base` argument gives git-level chaining, and the body's `Depends on` line carries the rest. Reachable only from a tier-1 repo-local adapter, per section 2. |
 
 `forges.md:59-60` stops saying the capability is declared and unused.
 
