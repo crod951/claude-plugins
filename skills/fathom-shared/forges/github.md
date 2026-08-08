@@ -65,6 +65,8 @@ The number is what `getReviewState` looks up, and it resolves from any clone wit
 Ignore `dependsOn` when it is supplied.
 `stackedReviews` is `retarget`, so passing the previous bundle's branch as `base` is the entire mechanism, and GitHub needs no separate dependency declaration.
 Never encode the dependency a second way, such as by adding a label or an extra API call; the base branch already carries it and a second representation can disagree with the first.
+The `Depends on <url>` line in a review body is prose for a human reviewer and carries no machine meaning, so it is not a second representation of the dependency; the prohibition is on machine-readable representations such as a label or an extra API call.
+Nothing on GitHub reads that line, which is why the calling skill writes it into every bundle after the first while this operation still ignores `dependsOn`.
 
 Two body conventions matter on GitHub specifically, and the calling skill supplies them:
 

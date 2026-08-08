@@ -155,5 +155,9 @@ Every bundle's body carries two additional lines instead:
 - `Part <k> of <N>` so a reviewer knows this diff is a slice rather than the whole change.
 - `Depends on <previous review url>`, omitted for bundle 1, which depends on nothing.
 
+`forges/github.md` forbids encoding a stack dependency a second way, and this body line is not that.
+The `Depends on <url>` line in a review body is prose for a human reviewer and carries no machine meaning, so it is not a second representation of the dependency; the prohibition is on machine-readable representations such as a label or an extra API call.
+The machine-readable representation is whatever the resolved forge declares: the `dependsOn` argument to `openReview` on a forge with a dependency mechanism of its own, and the base branch alone on a `retarget` forge, whose adapter ignores that argument.
+
 Earlier bundles still name the issue for context, as a plain link with no closing keyword.
 The distinction is between referencing an issue and instructing the forge to close it, and only the last bundle does the second one.
