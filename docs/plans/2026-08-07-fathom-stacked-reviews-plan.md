@@ -866,10 +866,12 @@ Expected: no output, exit code 1. No file still describes the capability as unus
 Run:
 
 ```bash
-grep -rn "—" skills/ docs/plans/2026-08-07-fathom-stacked-reviews-*.md
+grep -rn "—" skills/ docs/plans/2026-08-07-fathom-stacked-reviews-design.md
 ```
 
 Expected: no output, exit code 1. No em dash was introduced.
+
+Do not add the plan file itself to this check. The plan contains this very grep command, so the literal character appears in it by necessity and would always match.
 
 Run:
 
