@@ -182,21 +182,29 @@ If any of these files cannot be found and read, stop immediately and report whic
     One commit per task, always, even when two tasks touch the same file.
 
 11. Once `claimNext` returns none remaining, finish the issue.
+    Read this issue's plan document before anything else in this step and look for the `- Finalization: complete` line described in `conventions.md`.
+    That line is this issue's one durable record that its closing actions have run, the closing actions themselves are the only thing that writes it, and it is written by the last of them.
+    When it is present, this issue is already finished: say so, change nothing else in this step, and go to step 12.
+    The one exception is a line sitting on a commit that was never pushed; push that commit before reporting, since that push is itself the last of the closing actions and the only one that can still be missing while the line exists.
+    When the line is absent, run the rest of this step.
+    One recorded fact deciding this is what keeps a stacked issue from finalizing twice, in place of reasoning about which path invoked which routine.
+
     This step has two mutually exclusive paths, and exactly one of them runs.
     A single-review issue follows the single-review path immediately below, then the closing actions at the end of this step.
     A stacked issue skips that path entirely and goes straight to the closing actions, because step 10 already opened every one of its reviews through the per-bundle routine further down.
     Running the single-review path on a stacked issue would reconcile the whole issue against a single bundle's commit range, write a second review record in a format the sweep does not read, and move the issue to `inReview` a second time.
-    A stacked issue also never enters this step on its own on a run that completes: step 10 invokes the per-bundle routine directly, and bundle N's routine runs the closing actions once as it finishes.
-    So when the loop afterwards drains and `claimNext` returns none, this step has already completed for that issue, and nothing in it runs a second time.
+    On a stacked run that completes, step 10 invokes the per-bundle routine directly and bundle N's routine runs the closing actions as it finishes, so the finalization line is already written and pushed by the time the loop drains.
+    Re-entering this step then reads that line and stops at the check above, having changed nothing, so the closing actions run exactly once however the run reached them.
 
-    A run that was interrupted is the one exception, and recovering it is the only reason a stacked issue ever arrives here with nothing claimable.
+    A run interrupted before that line was written arrives here with it absent, and recovering such a run is the only reason a stacked issue ever runs this step's body.
     Every task can be closed while the finalization that follows the last one is unfinished, and in that state nothing is claimable precisely when there is most left to do, so decide what remains from the durable record instead: the plan document's `Bundles` section says which bundles carry a recorded review, the memory backend says whether the parent task is still open, the tracker says the issue's phase and whether the completion comment is already on it, and branch N says whether the final closing commit exists and is pushed.
     Then do only what that record shows is missing, and skip whatever it shows is already done, which is what makes arriving here twice produce the same result as arriving once.
     Never call `openReview` for a bundle that already carries a recorded review; reuse it, exactly as the per-bundle routine's own guard says.
     A bundle whose tasks are all closed and whose review is missing is recovered in step 10 rather than here, before any claiming, so by the time this step runs every bundle has its review.
     Close the parent task only when the backend shows it open, apply `inReview` only when the tracker shows the issue in an earlier phase, post the completion comment only when `listComments` shows the issue does not already carry one, and make and push the final closing commit only when branch N does not already carry the completed task state.
     When the resolved tracker cannot list comments, post the comment and say that it may be a duplicate, since a second completion comment is a cosmetic cost and a missing one loses the handoff entirely.
-    When the record shows all of that already done, say so and change nothing, since the previous run finished the issue and only the report was lost.
+    When the record shows every one of those already done, the previous run got all the way to the last closing action without recording it, so write the finalization line described below, commit and push it as bookkeeping, and say that the issue was already finished and only its record was missing.
+    That is the one thing such a run still owes: leaving the line unwritten would make every later run walk this recovery again.
 
     The single-review path, for an issue that was not split into a stack:
 
@@ -243,7 +251,9 @@ If any of these files cannot be found and read, stop immediately and report whic
     Then skip the single-review path above entirely and continue into the closing actions below, which run once for the issue rather than once per bundle.
     The parent task is closed exactly once either way: the single-review path closes it before opening its review, and a stacked issue closes it here, after the last bundle's review and before the issue's completion comment.
 
-    Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.fathom/`; never sweep `.beads/` or `.fathom/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
+    Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, then write `- Finalization: complete` into this issue's plan document per `conventions.md`, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.fathom/`; never sweep `.beads/` or `.fathom/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
+    Write that line last, after every other closing action has been taken, since it records that they were: a line written earlier would claim a finalization that had not happened and the check at the top of this step would then skip the rest of it forever.
+    It rides this same closing commit, so it becomes durable at the moment the completed task state does, and this commit is the only one that carries it on a run that reaches here normally.
     Push this closing commit with an ordinary `git push` of the branch even when the adapter declares `pushesForYou`, since that capability governs only the push that opens the review, as `../fathom-shared/forges.md` states; skipping it here would leave the completed task state in the local clone while the review reads as finished.
     On a stacked issue this closing commit goes on branch N, the stack tip, because that branch contains every bundle's history and is the only one whose review shows the completed task state.
     Say plainly at handoff, when the issue was split, that its record carries `- Merge-closer: suppressed`, so the merge-closer Action will take no action for it however its bundles merge.

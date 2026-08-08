@@ -77,6 +77,12 @@ Include these sections:
   That close is also permanent and silent, because the next sweep reads the issue as already complete and does nothing.
   The Action reads this line and takes no action for the issue, which leaves closure to the sweep, and the sweep already waits for every bundle to report merged.
   One mechanism closes a stacked issue rather than two that disagree.
+- **Finalization** - one line reading `- Finalization: complete`, absent until every one of the issue's closing actions has run.
+  The last of those actions writes it, so it rides the run's final closing commit and becomes durable at the same moment the completed task state does.
+  This is the one durable record that an issue's one-time closing actions have happened, and `execute` consults it before finalizing and stops immediately when it is present.
+  A stacked issue needs that: its last bundle finalizes the issue directly as it finishes, and the implementation loop then drains and reaches the finalizing step again, so without one recorded fact to consult the closing actions can run twice.
+  This is not task status and does not belong in the memory backend, which knows which tasks are closed and nothing about whether the completion comment was posted or the closing commit pushed.
+  It is the same kind of line as `Merge-closer` above: a fact about this issue that another mechanism reads later.
 - **Testing strategy** - which tests will prove the work, and which existing tests could regress.
 - **Notes** - open questions, risks, and decisions taken during the run.
 
