@@ -245,6 +245,9 @@ If any of these files cannot be found and read, stop immediately and report whic
       `conventions.md` excludes plan document and bookkeeping commits from task and commit reconciliation, and a commit shaped this way is one of them, so it cannot be miscounted as the commit that implemented a task.
       Waiting for the run's final closing commit instead would leave bundle 1's review id uncommitted through bundles 2 and 3, where a sweep run from another clone cannot see it and an interrupted run leaves it on one machine's disk only.
     - Apply `inReview` when bundle 1's review publishes, and never again for the later bundles; the issue is genuinely in review from that moment and re-applying a phase it already holds reports progress that did not happen.
+      A resumed run that reuses bundle 1's existing review publishes nothing, so apply `inReview` there instead, whenever the tracker still shows the issue in an earlier phase; read that phase from the tracker rather than assuming the interrupted run got as far as applying it.
+      That is a phase update and nothing more: reusing a review never reopens it and never calls `publishReview` on it again.
+      Later bundles keep this rule exactly as written and never apply the phase, whether their reviews were newly opened or reused.
     Skip the `openReview` call for a bundle whose review already exists and reuse that review, the same way the single-review path does, so a resumed run never opens a second review for a bundle that has one.
     Decide whether one exists from that bundle's entry in the `Bundles` section first, since an entry carrying a `- Review:` line names the review outright and needs no lookup at all.
     When the entry carries no such line, ask the forge with `findReviewByBranch` for branch k, then keep only the reviews whose base is the base `resolveBase` returned for this bundle.
