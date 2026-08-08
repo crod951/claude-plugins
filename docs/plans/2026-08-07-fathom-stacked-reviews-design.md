@@ -100,13 +100,18 @@ The pattern is predictable and matchable, which is what lets a resumed run find 
 
 ### 6. Ordering is enforced in data
 
-When a split is confirmed, add a dependency edge from the first task of bundle k+1 to the last task of bundle k.
+When a split is confirmed, every task takes a dependency on its predecessor, so the whole issue becomes one sequential chain across bundles as well as within them.
 
-`claimNext` then structurally cannot hand out a bundle-2 task while a bundle-1 task is still open, and the implementation loop needs no bundle-ordering logic of its own.
+`claimNext` returns the first open task whose deps are all closed, so a single chain means it structurally cannot hand out a later bundle's task while any earlier task is still open.
+The implementation loop therefore needs no bundle-ordering logic of its own.
 
-This edge is necessary rather than decorative.
-`execute/SKILL.md:76` sets `deps` so tasks chain sequentially "whenever order matters", which leaves parallel-claimable tasks legal.
-Without the boundary edge a stack could be built out of order.
+A boundary-only edge, from the first task of bundle k+1 to the last task of bundle k, is not sufficient and was rejected for that reason.
+`execute/SKILL.md:76` sets `deps` so tasks chain sequentially "whenever order matters", which leaves tasks with no deps at all legal.
+Such a task sitting anywhere in bundle k+1 other than its first position has all of its deps trivially closed, so `claimNext` would hand it out while bundle k was still open, and the branch chain would then be built on unfinished work.
+
+Requiring the full chain is not a patch on that hole.
+It makes the design's own premise explicit: section 1 defines a bundle as a contiguous run of the dependency chain, and if tasks are parallel-claimable there is no chain to cut into contiguous runs in the first place.
+Full sequential chaining applies only when a split is confirmed; an ordinary single-review run keeps today's conditional chaining unchanged.
 
 ### 7. Durable record
 
@@ -246,7 +251,7 @@ Internal consistency is checked by reading the changed files together: every `ex
 | Skip-list stop | Never-skip stop | It fires before any branch, commit, or review exists, so being wrong costs nothing. |
 | `stacking` with two values | `stacking` with `ask`, `auto`, and `never` | Three values would duplicate the `approval` field in the same profile and could disagree with it. |
 | Incremental review opening | All reviews at the end | Opening at the end requires cherry-picking commit ranges onto a chain of branches after the fact. |
-| Ordering via dependency edge | Ordering logic in the loop | Encoding it in the task graph means `claimNext` cannot violate it, so the loop needs no new branch. |
+| Full sequential chain when stacked | A single edge at each bundle boundary | A boundary edge leaves a dep-free task inside a later bundle claimable while an earlier bundle is open, so it does not deliver the ordering it claims. |
 | Ancestry check for rebase | Rebase keyed on `stackedReviews` | A squash-merge on a `retarget` forge has the same problem as a merge on a `none` forge, and one rule covers both. |
 | All bundles merged closes the issue | Top of stack merged closes it | Cheaper, but wrong when someone merges out of order or squashes the stack by hand. |
 | No stacks in tier 3 | Stacks with N manual handoffs | Three sets of hand-open-this instructions is worse than one review. |

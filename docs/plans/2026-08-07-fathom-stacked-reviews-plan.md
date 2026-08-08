@@ -507,7 +507,7 @@ No new memory operation is added. `createTask` already accepts `deps`, which is 
 In `skills/fathom-shared/memory.md`, append this sentence to the end of the `createTask` row's cell in the contract table, keeping it on the same table line:
 
 ```
-When the issue was split into a stack, the first task of each bundle after the first also takes a dep on the last task of the previous bundle, so the backend itself enforces bundle order and `claimNext` cannot hand out a later bundle's task while an earlier bundle is still open.
+When the issue was split into a stack, every task takes a dep on its predecessor so the whole issue forms one sequential chain across bundles as well as within them, which is what lets the backend itself enforce bundle order: a later bundle's task is never claimable while any earlier task is still open. A single edge at each bundle boundary would not achieve this, because a task carrying no deps at all has them trivially closed and stays claimable out of order.
 ```
 
 - [ ] **Step 2: Update the record requirement for stacks**
@@ -601,8 +601,10 @@ In the same file, insert these bullets into step 8, directly after the bullet be
      Exceed the cap only when the user asked for a specific larger split; never exceed it on the heuristic's own judgment.
    - Present the proposed split before creating anything: the bundles, which sub-issues fall in each, and the resolved forge's `stackedReviews` value with what it means for this run.
      This is a skip-list stop per `../fathom-shared/approval.md`, so `ask` mode waits for an answer and `auto` mode applies the split and reports it.
-   - When a split is confirmed, add a dependency edge from the first task of each bundle after the first to the last task of the previous bundle, alongside the edges the steps above already add.
-     This is what makes `claimNext` structurally unable to hand out a later bundle's task while an earlier bundle is open, so the implementation loop needs no bundle-ordering logic of its own.
+   - When a split is confirmed, chain every task in the issue sequentially, so each task deps on its predecessor across bundle boundaries as well as within them, rather than only where order matters.
+     This is what makes `claimNext` structurally unable to hand out a later bundle's task while any earlier task is open, so the implementation loop needs no bundle-ordering logic of its own.
+     A single edge at each bundle boundary is not enough: a task carrying no deps has them trivially closed, so it stays claimable out of order and the branch chain would be built on unfinished work.
+     Apply full chaining only when a split is confirmed; a single-review run keeps the conditional chaining described above.
      Then write the `Bundles` section of the plan document described in `conventions.md`, and commit it with the breakdown.
 ```
 
