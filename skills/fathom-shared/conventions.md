@@ -60,7 +60,8 @@ Include these sections:
 - **Tasks** - the planned units of work with their sub-issue links.
 - **Bundles** - present only when this issue was split into a stack, and omitted entirely otherwise.
   One line per bundle, in stack order, each reading `- Bundle <k>/<N>: <branch> - <sub-issue refs, comma separated>`.
-  Add a `- Review: <id> <url>` line beneath a bundle once its review exists.
+  Add a `- Review: <id> <url> (bundle k/N)` line beneath a bundle once its review exists.
+  The suffix is redundant with the nesting on purpose: the sweep reads these lines individually, and a self-describing record survives being read out of its surrounding context.
   This section is the durable record a resumed run reads to recover the stack, so write it when the split is confirmed rather than when the first review opens.
 - **Testing strategy** - which tests will prove the work, and which existing tests could regress.
 - **Notes** - open questions, risks, and decisions taken during the run.
