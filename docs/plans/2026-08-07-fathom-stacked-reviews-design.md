@@ -44,9 +44,17 @@ A bundle is a contiguous run of the sub-issue dependency chain that `execute/SKI
 Bundles inherit the chain's ordering rather than inventing an ordering of their own.
 Each bundle maps to one branch and one review.
 
-A bundle boundary may fall only at a point where the work up to that point is independently mergeable.
-That means the repository builds, that bundle's tests pass, and merging the bundle alone would not break the base branch.
+A bundle boundary may fall only where the planned units up to that point form a self-contained change: the units after the boundary build on the units before it and not the reverse, and the earlier units together deliver something that stands on its own rather than half of one thing.
 When no such point exists there is no valid split, and the run proceeds as a single review.
+
+This criterion is deliberately about the plan rather than about the repository.
+The decision happens at breakdown time, before any of the work is written, so the agent cannot build the repository at a candidate boundary or run that bundle's tests: neither exists yet.
+An earlier version of this design asked for exactly that, and it was undecidable at the only moment it could be applied.
+
+So the agent is predicting reviewability, not verifying it, and two things catch a wrong prediction.
+The confirmation stop shows the proposed boundaries to the user before anything is built, which is the cheap correction.
+The per-bundle finish routine then reconciles and runs that bundle's tests for real, and its existing stop-and-hold fires when they fail, which is the expensive one.
+A boundary that looked self-contained in the plan and turns out not to be is therefore caught before its review opens, rather than silently shipped.
 
 ### 2. When a split is proposed
 
@@ -75,7 +83,8 @@ The stop fires at step 8, after the breakdown exists and before any branch is cr
 It shows the proposed bundles, which sub-issues fall in each, and the resolved forge's stacking behavior.
 
 It goes on the skip list in `approval.md`, not the never-skip list.
-It fires before any branch, commit, or review exists, so being wrong costs nothing and is trivially corrected.
+It fires before any commit or review exists, so being wrong costs nothing and is trivially corrected.
+Bundle 1's branch does exist by then, because step 7 creates it before step 8 runs, but that branch is the one a single-review run needs anyway, so declining the split wastes nothing and leaves nothing to clean up.
 That is the shape of every existing skip-list item, and unlike every never-skip item it destroys nothing and misdirects nothing.
 In `ask` mode the run waits for an answer; in `auto` mode it applies the split and reports it.
 
