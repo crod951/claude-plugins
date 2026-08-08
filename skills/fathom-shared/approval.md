@@ -32,6 +32,10 @@ Skipping them changes how much the run interrupts you, not whether it is correct
   Resolve it by that precedence and report the choice rather than asking.
 - Any first-run setup question whose answer is unambiguous: one destination available, or tracker state names that match the three phases exactly.
   Record the answer, and note in the profile that it was auto-accepted rather than confirmed, so a wrong destination is traceable later.
+- The bundle-split proposal in `execute`.
+  Apply the proposed split and report the bundles rather than asking for confirmation first.
+  This belongs here rather than on the safety list because it fires before any branch, commit, or review exists, so a wrong answer costs nothing and is corrected by re-running with `stacking: never` or a different instruction.
+  It is skipped only when the profile's `stacking` field permits a split at all; `stacking: never` suppresses the split itself, in both modes, rather than suppressing the question.
 
 ## What auto mode never skips
 
@@ -74,6 +78,15 @@ First-run setup asks for the mode as its own question, after the tracker questio
 Because the profile is committed, teammates inherit the choice.
 Editing that field changes it permanently; an invocation phrase changes it for one run.
 When one skill hands off to the other, carry the resolved mode across so a per-run override is not lost at the boundary; say which mode the handed-off run is using.
+
+A second field, `stacking`, sits alongside `approval` and answers a different question: whether `execute` may split one issue into a stack of dependent reviews at all.
+It holds `propose` or `never`, and it defaults to `propose` when the field is absent.
+
+`propose` means the agent may propose a split when the breakdown crosses the threshold in `execute`, with the `approval` field above deciding whether that proposal is a question or a report.
+`never` means this repository always produces one review per issue, in both approval modes, in the same permanent way that `forge: none` makes the manual tier permanent.
+
+The field deliberately has two values rather than three.
+An `ask` or `auto` value here would restate the `approval` field recorded a few lines above it in the same profile, and two fields that can disagree about the same question will eventually disagree.
 
 When auto mode auto-accepted a setup answer rather than having it confirmed, record that alongside the value, for example `default-destination: Prototypes (1209000000000001) # auto-accepted, only option`.
 A later reader needs to know which answers a human actually gave.
