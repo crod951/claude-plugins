@@ -135,8 +135,9 @@ Full sequential chaining applies only when a split is confirmed; an ordinary sin
 
 ### 7. Durable record
 
-Bundle membership is written at step 8 to the plan document and to the issue's file under `.fathom/`.
+Bundle membership is written at step 8 to exactly one place, the plan document's `Bundles` section.
 It records, for each bundle, its index, the sub-issue refs and task ids it contains, and its branch name.
+One record is deliberate: a second copy elsewhere under `.fathom/` would be a second version of the same fact, and two records of one fact can disagree.
 
 This is required rather than optional.
 `execute/SKILL.md:22` states that every run begins by reading durable state from the repository and the tracker, never from memory of a previous run.
@@ -152,7 +153,7 @@ The per-bundle routine runs when the last task of bundle k closes:
 2. Call `resolveBase`. Bundle 1's base is the resolved base branch; bundle k's base is branch k-1.
 3. Push branch k, unless the adapter declares `pushesForYou`.
 4. Call `openReview`, then `publishReview`.
-5. Record `- Review: <id> <url> (bundle k/N)` in the issue's file under `.fathom/`.
+5. Record `- Review: <id> <url> (bundle k/N)` beneath that bundle's line in the plan document's `Bundles` section, which is the one place bundle records live.
 6. When another bundle remains, create branch k+1 from branch k and continue the implementation loop. When bundle k was the last one, fall through to the issue-level close instead.
 
 The issue-level close runs once, after the last bundle.
