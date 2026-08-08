@@ -348,7 +348,7 @@ In the same file, in the `Recording it` section, append these lines after the pa
 
 ```markdown
 A second field, `stacking`, sits alongside `approval` and answers a different question: whether `execute` may split one issue into a stack of dependent reviews at all.
-It holds `propose` or `never`, and it defaults to `propose` when the field is absent.
+It holds `propose` or `never`, and an absent field means `never`, so a repository opts into stacking by writing `stacking: propose`.
 
 `propose` means the agent may propose a split when the breakdown crosses the threshold in `execute`, with the `approval` field above deciding whether that proposal is a question or a report.
 `never` means this repository always produces one review per issue, in both approval modes, in the same permanent way that `forge: none` makes the manual tier permanent.
