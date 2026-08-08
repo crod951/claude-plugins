@@ -229,7 +229,13 @@ If any of these files cannot be found and read, stop immediately and report whic
       `conventions.md` excludes plan document and bookkeeping commits from task and commit reconciliation, and a commit shaped this way is one of them, so it cannot be miscounted as the commit that implemented a task.
       Waiting for the run's final closing commit instead would leave bundle 1's review id uncommitted through bundles 2 and 3, where a sweep run from another clone cannot see it and an interrupted run leaves it on one machine's disk only.
     - Apply `inReview` when bundle 1's review publishes, and never again for the later bundles; the issue is genuinely in review from that moment and re-applying a phase it already holds reports progress that did not happen.
-    Skip a bundle whose review already exists and reuse it, the same way the single-review path does, so a resumed run never opens a second review for a bundle that has one.
+    Skip the `openReview` call for a bundle whose review already exists and reuse that review, the same way the single-review path does, so a resumed run never opens a second review for a bundle that has one.
+    Reusing a review does not skip the two recording steps above it, and this is where a resumed run otherwise loses a bundle.
+    Read that bundle's entry in the `Bundles` section, and when it carries no `- Review:` line, backfill one now from the existing review's own id and URL, in the same `- Review: <id> <url> (bundle k/N)` form, then commit it exactly as the recording step above does: stage only the plan document, by explicit path, and word it as the same bookkeeping commit.
+    Push it on branch k before continuing, then carry on with the rest of this routine for that bundle.
+    Without that backfill the review exists on the forge and nothing in the repository names it, so the sweep never learns its id, step 7 keeps reading that bundle as the one in progress, and the completeness rule in step 2 leaves the whole issue undecided forever.
+    When the entry already carries its `- Review:` line, the record is already durable: change nothing, make no commit, and continue.
+    A bundle with no reusable review is unaffected by any of this and runs the routine above unchanged.
     After bundle N's routine completes, close the parent task in the memory backend (a no-op for the checklist adapter, whose file is the parent record), which is the one action the single-review path takes that no bundle routine has taken yet.
     Then skip the single-review path above entirely and continue into the closing actions below, which run once for the issue rather than once per bundle.
     The parent task is closed exactly once either way: the single-review path closes it before opening its review, and a stacked issue closes it here, after the last bundle's review and before the issue's completion comment.
