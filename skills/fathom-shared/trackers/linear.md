@@ -174,13 +174,17 @@ jobs:
           # own sweep once every bundle reports merged. Check every matching
           # record rather than the one selected below: in checklist mode the
           # marker lives in the plan document while the task file is preferred.
-          SUPPRESSED=''
-          for RECORD in $MATCHES; do
+          # Read the list the same way everything above does, through
+          # printf and a quoted read: an unquoted for loop word-splits and
+          # glob-expands the path, so one record named with a space or a
+          # bracket would silently fail the grep and close a stacked issue.
+          SUPPRESSED=$(printf '%s\n' "$MATCHES" | while IFS= read -r RECORD; do
+            [ -n "$RECORD" ] || continue
             if grep -qE '^[[:space:]]*[-*]?[[:space:]]*(\*\*)?[Mm]erge-closer(\*\*)?[[:space:]]*[:-][[:space:]]*(\*\*)?[Ss]uppressed' "$RECORD"; then
-              SUPPRESSED=$RECORD
+              printf '%s\n' "$RECORD"
               break
             fi
-          done
+          done) || true
           if [ -n "$SUPPRESSED" ]; then
             echo "$SUPPRESSED records merge-closer: suppressed, so this issue is a stack that closes only once every bundle merges. Taking no action for $BRANCH."
             exit 0
