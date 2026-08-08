@@ -613,10 +613,12 @@ In the same file, insert these bullets into step 8, directly after the bullet be
 Run:
 
 ```bash
-grep -n "^1\?[0-9]\. " skills/execute/SKILL.md | head -20
+grep -nE "^[0-9]+\. " skills/execute/SKILL.md
 ```
 
 Expected: steps numbered 1 through 12 with no gaps and no duplicates, exactly as before your edits.
+
+Use `grep -E` here, not plain `grep`. macOS ships BSD grep, whose basic regex does not honor `\?`, so a pattern written that way matches nothing at all and the check silently passes while proving nothing.
 
 Run:
 
@@ -714,10 +716,12 @@ Expected: at least one line from each file, both using the identical `(bundle k/
 Run:
 
 ```bash
-grep -n "^1\?[0-9]\. " skills/execute/SKILL.md | tail -5
+grep -nE "^[0-9]+\. " skills/execute/SKILL.md
 ```
 
-Expected: steps 9 through 12 still present, in order, unrenumbered.
+Expected: steps 1 through 12 still present, in order, unrenumbered, with steps 9 through 12 at the end.
+
+Use `grep -E` here, not plain `grep`. macOS ships BSD grep, whose basic regex does not honor `\?`, so a pattern written that way matches nothing and the check silently passes while proving nothing.
 
 - [ ] **Step 6: Run the scanner**
 
