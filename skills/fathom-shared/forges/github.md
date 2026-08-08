@@ -97,10 +97,14 @@ Look up each recorded id directly.
 Do not list pull requests to find one.
 An earlier version of the sweep matched `gh pr list --state all --json headRefName,state,mergedAt` against recorded branch names, which silently skipped older branches whenever the listing hit its default cap of 30; per-id lookup removes that hazard entirely and is the reason the sweep is keyed on ids.
 
-## `findReviewByBranch(branch)` - optional, legacy records only
+## `findReviewByBranch(branch)` - optional, record repair only
 
-Run `gh pr list --state all --head <branch> --json number --limit 10` and return the newest number, or nothing when the list is empty.
+Run `gh pr list --state all --head <branch> --json number,url,baseRefName --limit 10`.
 
-This is the one sanctioned listing call, and it exists only so the sweep can repair a record written before review ids were recorded.
+Return one candidate record per pull request the listing returned, newest first, each carrying the pull request number as the review id, its URL, and `baseRefName` as its base.
+Return an empty list when the listing is empty.
+Never collapse the list to the newest entry here: a head branch can carry more than one pull request, and which of them the caller wants is the caller's question to answer from the base, per the contract in `../forges.md`.
+
+This is the one sanctioned listing call, and it exists only so an incomplete record can be repaired: the sweep repairs a record written before review ids were recorded, and `execute` recovers a bundle whose pull request opened before its `- Review:` line was committed.
 Scoping the list to one head branch keeps it bounded regardless of repository age, which is what the unscoped listing above could not guarantee.
 Never use it for records that already carry an id.

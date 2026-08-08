@@ -35,11 +35,20 @@ A branch name is not a review id.
 An adapter that cannot create reviews (see `generic-git.md`) returns this instead of an id, and it is a typed outcome of the contract rather than a failure.
 A caller receiving it must not call `publishReview`, must not record a review id, and must say plainly that opening the review is now the user's step.
 
-One optional operation exists beyond the five, for repairing incomplete records: `findReviewByBranch(branch)`, which resolves a review id from a head branch name where the forge can do that (`github.md` implements it with a bounded head-branch listing).
+One optional operation exists beyond the five, for repairing incomplete records: `findReviewByBranch(branch)`, which finds the reviews opened from a head branch where the forge can do that (`github.md` implements it with a bounded head-branch listing).
 Adapters that cannot implement it simply omit it.
+
+**It returns a bounded list of candidate records, newest first, and each record carries three fields: the review id, the review's URL, and the base branch that review targets.**
+It returns an empty list when the branch has no reviews, and it never returns a bare id.
+A caller needs all three fields.
+The id is what `getReviewState` and every later record are written against, the URL is what a `- Review:` line needs in order to name the review to a human, and the base is the only thing that tells apart two reviews sharing one head branch.
+That last case is routine rather than exotic: bundle branches chain, so one head branch can carry a review opened against a base the caller no longer targets, and `getReviewState` reports a review's fate without reporting what it targets, so the base has to come from here or from nowhere.
+The list is bounded, so treat it as a set of candidates rather than an exhaustive answer, and match within it rather than trusting it to hold exactly one review.
+
 It is used only where a review may exist while nothing in the repository records its id: the sweep repairs records written before review ids were recorded, and `execute` recovers a bundle whose review opened before its `- Review:` line was committed.
-It resolves by head branch alone, so a caller that needs a review against a particular base must filter what comes back by that base itself rather than trusting a head branch to name exactly one review in a chained stack.
-When the resolved adapter omits it, such a record cannot be repaired, and the caller reports that once instead of guessing.
+When the resolved adapter omits the operation entirely, no lookup is possible at all and such a record cannot be repaired.
+Each caller says that once, names the record, and then takes the path its own procedure defines for an unrepairable record rather than guessing: the sweep leaves that issue undecided and closes nothing, per `trackers.md`, and `execute` treats a bundle with no recorded review as having none and opens one, per `execute/SKILL.md`.
+Those two differ because the costs differ, and each file states its own; neither is licensed to invent the other's.
 
 ## Declared capabilities
 
