@@ -664,7 +664,7 @@ Step 11 keeps its number and its single-review text. The stack behavior is added
 In `skills/execute/SKILL.md`, append this bullet to step 10's inner bullet list, directly after the bullet beginning "- Print the per-task progress line":
 
 ```markdown
-    - When this issue was split into a stack and the closed task was the last one in its bundle, run the per-bundle finish routine in step 11 for that bundle before claiming again, then create the next bundle's branch from this one and continue the loop on it.
+    - When this issue was split into a stack and the closed task was the last one in its bundle, run the per-bundle finish routine in step 11 for that bundle before claiming again, then, when a later bundle remains, create the next bundle's branch from this one and continue the loop on it.
       Do not wait until the loop drains to open any review: building each bundle on the correct branch from the start is what avoids having to cherry-pick commit ranges onto a chain of branches afterwards.
 ```
 
@@ -684,7 +684,29 @@ In the same file, insert this block into step 11, directly before the paragraph 
     - Record `- Review: <id> <url> (bundle k/N)` beneath that bundle's line in the plan document's `Bundles` section, since the sweep looks reviews up by id and needs every one of them.
     - Apply `inReview` when bundle 1's review publishes, and never again for the later bundles; the issue is genuinely in review from that moment and re-applying a phase it already holds reports progress that did not happen.
     Skip a bundle whose review already exists and reuse it, the same way the single-review path does, so a resumed run never opens a second review for a bundle that has one.
-    After bundle N's routine completes, continue into the closing actions below, which run once for the issue rather than once per bundle.
+    After bundle N's routine completes, skip the single-review path above entirely and continue into the closing actions below, which run once for the issue rather than once per bundle.
+```
+
+- [ ] **Step 2b: Scope the existing single-review path so a stacked run cannot fall into it**
+
+This is the other half of Step 2, and without it the two paths are not mutually exclusive. A stacked run reaches `claimNext` returning none after its last bundle's routine has already opened that bundle's review, and then executes the original text as well.
+
+In the same file, replace this line:
+
+```markdown
+11. Once `claimNext` returns none remaining, finish the issue.
+```
+
+with:
+
+```markdown
+11. Once `claimNext` returns none remaining, finish the issue.
+    This step has two mutually exclusive paths, and exactly one of them runs.
+    A single-review issue follows the single-review path immediately below, then the closing actions at the end of this step.
+    A stacked issue skips that path entirely and goes straight to the closing actions, because step 10 already opened every one of its reviews through the per-bundle routine further down.
+    Running the single-review path on a stacked issue would reconcile the whole issue against a single bundle's commit range, write a second review record in a format the sweep does not read, and move the issue to `inReview` a second time.
+
+    The single-review path, for an issue that was not split into a stack:
 ```
 
 - [ ] **Step 3: Point the closing commit at the stack tip**
