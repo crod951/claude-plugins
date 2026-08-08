@@ -811,7 +811,9 @@ Run:
 grep -n "force-with-lease" skills/execute/SKILL.md
 ```
 
-Expected: exactly 2 lines, one requiring the flag and one handling its rejection. There must be no line permitting a bare `--force`.
+Expected: exactly 1 line, the one requiring the flag and forbidding a bare force push. The sentence handling a rejected lease follows it and says "the lease is rejected" without repeating the flag name, so it does not match this pattern. There must be no line permitting a bare `--force`.
+
+Also confirm by reading that the sentence immediately after it stops and holds when the lease is rejected. That behavior is the point of the check, and a grep count alone cannot prove it.
 
 Run:
 
