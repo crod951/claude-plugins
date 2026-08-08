@@ -106,8 +106,7 @@ If any of these files cannot be found and read, stop immediately and report whic
      Every decision below is made once, at breakdown time, so a resumed run reads the split, the bundles, and their branches out of the plan document instead of deciding any of them again.
      When that plan document carries a `Bundles` section, the stack step 7 recovered from it governs the rest of this run, and arriving here with such a section on disk but no recovered stack is the defect: go back to step 7 and recover it before implementing anything.
      A resumed single-review issue has no `Bundles` section and so has nothing to recover; step 7 has already put it on its one branch.
-   - Call `init` for the issue, then call `parentTask` for it.
-   - Plan the units of work before writing anything to the tracker.
+   - Plan the units of work before writing anything to the tracker or the memory backend.
      When the issue has no existing children, plan three to seven units of work, each sized so it can be implemented and verified on its own, and hold that plan rather than creating anything from it yet.
      When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown, which reads the tracker without writing to it.
      Either way the units are ordered, each building on the one before it, and that order is what the `deps` below and any bundle boundary follow.
@@ -124,8 +123,10 @@ If any of these files cannot be found and read, stop immediately and report whic
      Exceed the cap only when the user asked for a specific larger split; never exceed it on the heuristic's own judgment.
    - When both of those conditions hold, present the proposed split before anything is written to the tracker: the bundles, which units fall in each, and the resolved forge's `stackedReviews` value with what it means for this run.
      This is a skip-list stop per `../fathom-shared/approval.md`, so `ask` mode waits for an answer and `auto` mode applies the split and reports it.
-     Placing it ahead of every write is what makes it safe to abandon: a user who walks away from the question, or declines outright, leaves no sub-issue on the tracker and no task in memory, so there is nothing half-built to reconcile.
-   - Create the sub-issues and their tasks once the split question is settled, passing each task's final `deps` to `createTask` itself, since that is the only operation in `../fathom-shared/memory.md` that takes `deps` and a chain cannot be added to tasks that already exist.
+     Placing it ahead of every write is what makes it safe to abandon: a user who walks away from the question, or declines outright, leaves no sub-issue on the tracker, no task in memory, and no task file on disk, so there is nothing half-built to reconcile.
+   - Call `init` for the issue, then call `parentTask` for it, once the split question is settled.
+     These are the first writes this step makes, which is why they sit below the proposal stop rather than above it; nothing between the plan and this point reads either of them.
+   - Create the sub-issues and their tasks next, passing each task's final `deps` to `createTask` itself, since that is the only operation in `../fathom-shared/memory.md` that takes `deps` and a chain cannot be added to tasks that already exist.
      When no split was confirmed and the issue has no existing children, for each planned unit call `createSubIssue` first, then call `createTask` with the newly created sub-issue's ref as `subIssueRef`, then write the returned task id back onto that sub-issue so the link reads both ways, since the task id does not exist until `createTask` returns, setting `deps` to the id of the task it builds on so tasks chain sequentially by default whenever order matters.
      When no split was confirmed and the issue already had children, for each adopted sub-issue still call `createTask`, passing that sub-issue's existing ref as `subIssueRef` and skipping `createSubIssue` since the sub-issue already exists, then write the returned task id back onto that sub-issue the same way, and setting `deps` the same way.
      Those two are the single-review behavior exactly as it has always run, one sub-issue and its task at a time, so nothing watching the tracker sees a different sequence than before.
