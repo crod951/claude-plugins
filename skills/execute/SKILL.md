@@ -94,6 +94,8 @@ If any of these files cannot be found and read, stop immediately and report whic
    When that document carries a `Bundles` section, this issue was already split: recover every bundle's index, branch, sub-issue refs, and recorded review id from it, and carry that recovered stack through the rest of this run, including step 10's loop and step 11's per-bundle routine.
    The bundle in progress is the first one with no recorded review, because a bundle's review is recorded as its last task closes, so this run continues on that bundle's branch rather than on bundle 1's.
    Continuing on bundle 1's branch instead would land a later bundle's commits in a review that is already open and published, which is the failure this recovery exists to prevent.
+   When every bundle already carries a recorded review, no bundle is in progress and the branch is bundle N's, the stack tip: every bundle's work is committed and reviewed, so all that can remain is the issue-level finalization, which step 11 puts on the tip branch anyway.
+   Do not create another branch and do not go back to an earlier bundle's branch in that case; this run is finishing the stack rather than building it.
    The branch is bundle 1's whenever no plan document exists yet, which is a first run rather than a resumed one, and whenever the plan document carries no `Bundles` section, which is a single-review issue.
 
    Name a branch that must be created from the issue type (`feat/` for a feature, `fix/` for a bug, `chore/` for a chore, `docs/` for docs, `feat/` by default) followed by the issue ref and a short title slug; skip creation when a matching branch already exists.
@@ -144,6 +146,11 @@ If any of these files cannot be found and read, stop immediately and report whic
    - Write `.fathom/tasks/<ISSUE-REF>.md` only when the resolved backend is the checklist adapter, since that file holds checkbox statuses; with beads active the statuses live in beads and no file belongs there, as `memory.md` states.
 9. Call `updateState` to move the issue to the `inProgress` phase.
 10. Run the implementation loop until `claimNext` reports nothing claimable.
+    Before the first pass, when this issue was split into a stack, check the bundle step 7 recovered: when every task in that bundle is already closed and it still carries no recorded review, its per-bundle finish routine was interrupted, so run that routine from step 11 for that bundle now, and then, when a later bundle remains, move onto its branch under the already-exists guard in step 7, exactly as the end of a pass would.
+    Decide that from the durable record rather than from what is claimable: the closed tasks live in the memory backend and the recorded reviews live in the plan document, and both outlive the run that was interrupted.
+    Claiming without this check would hand out the next bundle's first task, since an interrupted routine leaves this bundle's tasks all closed while the next bundle's are still open, and that task would then be implemented on this bundle's branch and land in the wrong review.
+    A run interrupted later still, after every bundle's routine finished but before the issue's closing actions did, leaves nothing claimable at all and so makes no pass here; step 11 recovers that one.
+
     Each pass through the loop does the following, in order.
     - Call `claimNext`, and record the claim in the memory backend's own format at claim time.
     - Move the claimed task's linked sub-issue to the `inProgress` phase, subject to the adapter's own rules for sub-issues; the Asana adapter degrades this to a no-op on subtasks, so read its subtask section rather than assuming a state change happens.
@@ -168,8 +175,17 @@ If any of these files cannot be found and read, stop immediately and report whic
     A single-review issue follows the single-review path immediately below, then the closing actions at the end of this step.
     A stacked issue skips that path entirely and goes straight to the closing actions, because step 10 already opened every one of its reviews through the per-bundle routine further down.
     Running the single-review path on a stacked issue would reconcile the whole issue against a single bundle's commit range, write a second review record in a format the sweep does not read, and move the issue to `inReview` a second time.
-    A stacked issue also never enters this step on its own: step 10 invokes the per-bundle routine directly, and bundle N's routine runs the closing actions once as it finishes.
+    A stacked issue also never enters this step on its own on a run that completes: step 10 invokes the per-bundle routine directly, and bundle N's routine runs the closing actions once as it finishes.
     So when the loop afterwards drains and `claimNext` returns none, this step has already completed for that issue, and nothing in it runs a second time.
+
+    A run that was interrupted is the one exception, and recovering it is the only reason a stacked issue ever arrives here with nothing claimable.
+    Every task can be closed while the finalization that follows the last one is unfinished, and in that state nothing is claimable precisely when there is most left to do, so decide what remains from the durable record instead: the plan document's `Bundles` section says which bundles carry a recorded review, the memory backend says whether the parent task is still open, the tracker says the issue's phase and whether the completion comment is already on it, and branch N says whether the final closing commit exists and is pushed.
+    Then do only what that record shows is missing, and skip whatever it shows is already done, which is what makes arriving here twice produce the same result as arriving once.
+    Never call `openReview` for a bundle that already carries a recorded review; reuse it, exactly as the per-bundle routine's own guard says.
+    A bundle whose tasks are all closed and whose review is missing is recovered in step 10 rather than here, before any claiming, so by the time this step runs every bundle has its review.
+    Close the parent task only when the backend shows it open, apply `inReview` only when the tracker shows the issue in an earlier phase, post the completion comment only when `listComments` shows the issue does not already carry one, and make and push the final closing commit only when branch N does not already carry the completed task state.
+    When the resolved tracker cannot list comments, post the comment and say that it may be a duplicate, since a second completion comment is a cosmetic cost and a missing one loses the handoff entirely.
+    When the record shows all of that already done, say so and change nothing, since the previous run finished the issue and only the report was lost.
 
     The single-review path, for an issue that was not split into a stack:
 
