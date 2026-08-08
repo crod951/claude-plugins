@@ -104,15 +104,23 @@ An issue can satisfy more than one case at once, and a stack holding a merged bu
    Apply the closed-without-merging path below for that review, and, when the issue is a stack, name which bundles above it are now orphaned by it.
    Close nothing for that issue, and do not read its merged reviews as progress toward closure.
    This case is checked first and is terminal, however many of the issue's other reviews merged or stayed open, because whether to retry, rescope, or drop the orphaned work is the user's decision and nothing should be built on top of work that may be about to be discarded.
-2. Every recorded review reports `merged`.
+2. Any recorded review reports `unknown`, and none reported `closed-unmerged`.
+   `getReviewState` returns `unknown` when it could not determine the review's fate, which is not a state the review is in but an answer the sweep did not get.
+   Change nothing about the issue: close nothing, report nothing about its progress, and leave it exactly as it stands for a later sweep to decide.
+   Name the review ids that came back `unknown`, and say that this issue was left undecided because of them.
+   Never fold an `unknown` result into `merged`, `open`, or "still entirely in review": each of those is a specific claim about work the sweep cannot actually see, and the later cases would otherwise absorb it and make that claim anyway.
+   This case sits below case 1 because a `closed-unmerged` result is a fact the sweep did observe, and its outcome does not depend on the undetermined ones: it closes nothing, restacks nothing, and hands the decision to the user, which is already the safest thing an undetermined result could ask for.
+   It sits above every case below because those judge the issue on all of its results at once, and an undetermined result cannot carry its share of such a judgment.
+3. Every recorded review reports `merged`.
    Apply the merged path below.
    For a single-review issue that is its one review, and for a stack it is every bundle, which is what keeps a stack from being closed by its first merge.
-3. Some reviews merged and others still open.
+4. Some reviews merged and others still open.
    Close nothing, and report the partial progress, naming which bundles merged.
-4. None merged and none closed without merging.
+5. None merged and none closed without merging.
    The work is still entirely in review, so close nothing and say so plainly rather than reporting nothing at all.
+   Every result reaching this case is `open`, since an `unknown` one was already decided by case 2.
 
-Cases 3 and 4 leave the issue's phase exactly where it is.
+Cases 2, 4, and 5 leave the issue's phase exactly where it is.
 The branches a partially merged stack leaves behind may still need restacking, but that is git and forge work rather than tracker work, so it belongs to the skill running the sweep; this section decides only what is written to the tracker.
 
 On the merged path, read the issue's current state before writing to the tracker.
