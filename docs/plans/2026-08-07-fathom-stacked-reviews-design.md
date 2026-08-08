@@ -79,7 +79,7 @@ No bundled adapter reaches it, because `generic-git.md` is the only bundled adap
 
 ### 3. The split proposal stop
 
-The stop fires at step 8, after the breakdown exists and before any branch is created.
+The stop fires at step 8, after the breakdown exists and before any task, commit, or review is created.
 It shows the proposed bundles, which sub-issues fall in each, and the resolved forge's stacking behavior.
 
 It goes on the skip list in `approval.md`, not the never-skip list.
