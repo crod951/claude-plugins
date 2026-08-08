@@ -705,6 +705,8 @@ with:
     A single-review issue follows the single-review path immediately below, then the closing actions at the end of this step.
     A stacked issue skips that path entirely and goes straight to the closing actions, because step 10 already opened every one of its reviews through the per-bundle routine further down.
     Running the single-review path on a stacked issue would reconcile the whole issue against a single bundle's commit range, write a second review record in a format the sweep does not read, and move the issue to `inReview` a second time.
+    A stacked issue also never enters this step on its own: step 10 invokes the per-bundle routine directly, and bundle N's routine runs the closing actions once as it finishes.
+    So when the loop afterwards drains and `claimNext` returns none, this step has already completed for that issue, and nothing in it runs a second time.
 
     The single-review path, for an issue that was not split into a stack:
 ```
