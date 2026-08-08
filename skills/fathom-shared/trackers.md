@@ -90,6 +90,16 @@ Search the whole directory rather than only `tasks/`: depending on the resolved 
 For each issue the search finds, read every review id recorded for it and call `getReviewState` on each one before deciding anything about that issue.
 A single-review issue records one id; an issue split into a stack records one per bundle, in the plan document's `Bundles` section described in `conventions.md`.
 Read the records rather than assuming a count: acting on the first id found would decide a stacked issue's fate from one bundle's result while the rest of its work was still open, which is the early close the `Merge-closer: suppressed` marker exists to prevent.
+A stack's records are spread across its bundle branches rather than gathered in one place.
+Each bundle's `- Review:` line is committed on that bundle's own branch as that bundle's review publishes, so a checkout of the base branch carries the records of the bundles that have merged into it and none of the records above them.
+Collect the missing ones before judging anything: read the branch names from the plan document's `Bundles` section, fetch each of those branches, and read each fetched branch's own copy of the plan document for that bundle's `- Review:` line.
+A bundle branch is created from the branch below it, so the highest one that still exists carries every record beneath it, and fetching all of them costs nothing beyond that.
+Prefer this to mirroring the ids into a store the base branch can read directly, such as a tracker comment or a second file: fetching is read-only git work that needs no write anywhere and cannot drift, whereas a second record of the same fact is a second thing that can disagree with the plan document.
+When a bundle's branch is absent from the remote and its record is not on the current branch either, that bundle simply has no record, and case 2 below decides what happens then.
+
+An issue none of whose bundles have merged has no record on the base branch at all, since the plan document itself is committed on bundle 1's branch, so from a base checkout that issue is not found by the search above.
+That is exactly how an unmerged single-review issue behaves, and it is correct: nothing has merged, so there is nothing to close.
+
 Look each id up directly; never list a forge's reviews and match them locally.
 A listing has to be bounded, and any bound silently drops the oldest records once a repository has more reviews than the bound allows, which is a defect that grows quietly with the repository's age.
 

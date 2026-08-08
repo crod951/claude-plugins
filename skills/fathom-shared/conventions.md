@@ -65,6 +65,11 @@ Include these sections:
   Add a `- Review: <id> <url> (bundle k/N)` line beneath a bundle once its review exists.
   The suffix is redundant with the nesting on purpose: the sweep reads these lines individually, and a self-describing record survives being read out of its surrounding context.
   Each of those lines is committed and pushed as soon as it is written rather than riding the run's final closing commit, so that every review id is durable and visible from another clone the moment its review is published; `execute` describes exactly where in its per-bundle routine that happens.
+  Each one lands on its own bundle's branch, though, because that is the branch the run is on when it writes the line.
+  So a checkout of the base branch carries the records of the bundles that have already merged into it and none of the records above them, and reading only what that checkout holds would judge a three-bundle stack on one bundle's record.
+  The branch name on each `- Bundle` line is what makes the rest reachable: the done-on-merge sweep fetches every branch named in this section and reads that branch's own copy of this document to collect the `- Review:` lines it cannot see locally, as `trackers.md` describes.
+  Those branch names are therefore load-bearing for the sweep as well as for a resumed run, and a bundle line without one leaves that bundle's record unreachable.
+  Collecting the records this way is what keeps them in one place: the alternative is mirroring every review id into a second store that the sweep can read directly, and two records of the same fact can disagree, while a fetch is read-only git work that needs no write anywhere.
   This section is the durable record a resumed run reads to recover the stack, so write it when the split is confirmed rather than when the first review opens.
 - **Merge-closer** - present only when this issue was split into a stack, and omitted entirely otherwise.
   One line reading `- Merge-closer: suppressed`, written when the split is confirmed, alongside the `Bundles` section.
