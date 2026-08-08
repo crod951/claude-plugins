@@ -44,7 +44,9 @@ Name the task in the body so the commit ties back to task memory.
 ## The plan document
 
 During breakdown, write a human-readable plan for the issue at `.fathom/plans/<ISSUE-REF>.md`, and commit it with the breakdown.
-This document is a reference artifact for people, never resume state; task status always lives in the resolved memory backend.
+This document is a reference artifact for people, and it never carries task status; status always lives in the resolved memory backend, so nothing here is ever consulted to learn what is done.
+It does carry structure, which is a different thing: the branch, the review ids, and the bundles of a stacked issue are recorded here, and a resumed run reads them back rather than remembering them from a previous invocation.
+`memory.md` draws the same line, and it is what keeps this from being dual truth: structure is decided once and does not change as the work proceeds, while status changes with every task and lives in exactly one place.
 
 Include these sections:
 

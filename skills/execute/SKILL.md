@@ -54,6 +54,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    Stop here, following that section's instructions, when the tracker's MCP does not verify.
    A forge that does not verify is not a stop: it selects a capability tier per `../fathom-shared/forges.md`. State the resolved tier before continuing, so the user knows up front whether this run will end in an opened review or a manual handoff.
    When a resumed run resolves the manual tier on an issue whose earlier bundles already have open reviews, leave those reviews alone and hand the remaining bundles off manually, saying that the tier changed between runs so the stack is now half automated and half manual.
+   Say with it that no later run will move this issue to `done` on its own, because the manual tier cannot observe what happened to a review, so closing the issue is now a manual step.
 2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../fathom-shared/trackers.md` and are tracker-agnostic, with each adapter file defining only its own closure action for the merged path.
    This sweep is itself tracker work, so it only runs once preflight has verified the MCP.
    When the invocation itself was a cleanup phrase, run only this sweep, report what it found, then stop; do not continue into the rest of this procedure.
@@ -181,6 +182,8 @@ If any of these files cannot be found and read, stop immediately and report whic
     When this issue was split into a stack, the review-opening portion above is a per-bundle routine rather than a single closing action, and step 10 invokes it once per bundle as that bundle's last task closes.
     For bundle k of N:
     - Reconcile bundle k's closed tasks against the commits on its branch, over that bundle's own range, per the per-bundle rule in `conventions.md`; stop and do not open this bundle's review when they disagree.
+    - Commit any leftover uncommitted change that belongs to this bundle's tasks, leaving unrelated working-tree edits alone rather than sweeping them into the review, exactly as the single-review path does before it opens its one review.
+      A change left uncommitted here is absent from bundle k's review and lands in bundle k+1's instead, which is worse than the single-review case rather than merely equivalent to it.
     - Call `resolveBase` on bundle 1's base, which is the resolved base branch, or on branch k-1 for every later bundle.
     - Push branch k, unless the adapter declares `pushesForYou`, exactly as the single-review path does.
     - Call `openReview` with branch k, that base, a title naming the bundle, and a body built per the stack rules in `conventions.md`: the closing reference only in bundle N, plus `Part k of N`, plus `Depends on` the previous bundle's review URL for every bundle after the first.
@@ -189,7 +192,9 @@ If any of these files cannot be found and read, stop immediately and report whic
     - Record `- Review: <id> <url> (bundle k/N)` beneath that bundle's line in the plan document's `Bundles` section, since the sweep looks reviews up by id and needs every one of them.
     - Apply `inReview` when bundle 1's review publishes, and never again for the later bundles; the issue is genuinely in review from that moment and re-applying a phase it already holds reports progress that did not happen.
     Skip a bundle whose review already exists and reuse it, the same way the single-review path does, so a resumed run never opens a second review for a bundle that has one.
-    After bundle N's routine completes, skip the single-review path above entirely and continue into the closing actions below, which run once for the issue rather than once per bundle.
+    After bundle N's routine completes, close the parent task in the memory backend (a no-op for the checklist adapter, whose file is the parent record), which is the one action the single-review path takes that no bundle routine has taken yet.
+    Then skip the single-review path above entirely and continue into the closing actions below, which run once for the issue rather than once per bundle.
+    The parent task is closed exactly once either way: the single-review path closes it before opening its review, and a stacked issue closes it here, after the last bundle's review and before the issue's completion comment.
 
     Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.fathom/`; never sweep `.beads/` or `.fathom/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
     Push this closing commit with an ordinary `git push` of the branch even when the adapter declares `pushesForYou`, since that capability governs only the push that opens the review, as `../fathom-shared/forges.md` states; skipping it here would leave the completed task state in the local clone while the review reads as finished.
