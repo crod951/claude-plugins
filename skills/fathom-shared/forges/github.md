@@ -19,6 +19,9 @@ Shared contracts outside this file say "review"; that difference is deliberate, 
 `ciHooks` is true because GitHub Actions can run a merge-closer workflow in the user's repository; the tracker adapters' merge-closer offers are gated on this.
 `pushesForYou` is false because `gh pr create` does not push the branch, so the calling skill pushes first.
 `stackedReviews` is `retarget` because GitHub stacking is branch retargeting, and GitHub retargets a dependent pull request automatically when its upstream merges.
+That automatic retarget is real but partial, and the gap matters to the caller.
+When the upstream pull request is **squash-merged**, the squash commit is not an ancestor of the dependent branch, so the dependent pull request retargets to the base and then redisplays the upstream bundle's changes as if they were new.
+The dependent branch has to be rebased for its diff to be honest again, which is why the calling skill's rebase rule is keyed on commit ancestry rather than on this capability value.
 
 ## Absolute boundary
 
@@ -50,7 +53,7 @@ Delivering these instructions is a complete, useful action, not a fallback.
 Confirm the branch exists on the remote with `git ls-remote --exit-code --heads origin <branch>`.
 A base branch that exists only locally is not a valid merge target, because the pull request is created against the remote.
 
-## `openReview(branch, base, title, body)`
+## `openReview(branch, base, title, body, dependsOn?)`
 
 Push the branch first; `pushesForYou` is false, so the push is the caller's and this operation does not perform it.
 
@@ -59,6 +62,9 @@ Skip creation when a pull request already exists for the branch, and return the 
 
 Return the pull request number as the review id, and the pull request URL.
 The number is what `getReviewState` looks up, and it resolves from any clone without a listing call.
+Ignore `dependsOn` when it is supplied.
+`stackedReviews` is `retarget`, so passing the previous bundle's branch as `base` is the entire mechanism, and GitHub needs no separate dependency declaration.
+Never encode the dependency a second way, such as by adding a label or an extra API call; the base branch already carries it and a second representation can disagree with the first.
 
 Two body conventions matter on GitHub specifically, and the calling skill supplies them:
 

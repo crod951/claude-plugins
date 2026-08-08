@@ -37,7 +37,7 @@ Guidance is in `>` blockquotes throughout. Delete the blockquotes as you fill ea
 >
 > `reviewLookup` - `by-id` only if you can look up one review's state directly, from any clone, given the id `openReview` returned. If reviews can only be found by listing, or not found at all, this is `none`.
 >
-> `stackedReviews` - declared but currently unused. `retarget` if stacking means retargeting a branch; `declared-dependency` if it means declaring a dependency plus a commit range.
+> `stackedReviews` - how your forge expresses that one review is stacked on another, which decides what your `openReview` does with the optional `dependsOn` argument. `retarget` if stacking is just pointing a review at the previous branch, and your forge retargets automatically when the upstream merges. `declared-dependency` if stacking means declaring an explicit dependency and scoping the commit range yourself, with no automatic retarget. `none` if your forge has no stacking model at all, which is a fine answer: the calling skill still chains the branches in git and writes the relationship into the review body.
 
 ## Absolute boundary
 
@@ -68,7 +68,7 @@ When it does not verify, report the fix:
 
 > `git ls-remote --exit-code --heads origin <branch>` works on most forges and is a fine answer. Use something forge-specific only if your forge has merge targets that are not plain branches.
 
-## `openReview(branch, base, title, body)`
+## `openReview(branch, base, title, body, dependsOn?)`
 
 <The command that creates the review.>
 
@@ -77,6 +77,8 @@ When it does not verify, report the fix:
 > **Make it idempotent.** Skip creation and return the existing review when one already exists for this branch or change. Skills re-run on the same issue to resume, and a second review opened on a resume is a real failure.
 >
 > **Say how to extract the review id from the command's output**, exactly - which field, which format. This id is written to disk and looked up on later runs from possibly a different clone, so it must be stable. A branch name is not a review id.
+
+> **Say what you do with `dependsOn`, explicitly, even when the answer is nothing.** It arrives holding the review id this one is stacked on, and it is absent for a standalone review and for the first review in a stack. If you declared `retarget` or `none`, write "Ignore `dependsOn`" and say that the `base` argument carries the relationship. If you declared `declared-dependency`, give the exact command that records the dependency, and say how you scope the review to this bundle's commits only - a declared dependency with an unscoped range shows the upstream bundle's changes twice.
 
 Return the review id and the review's URL.
 
