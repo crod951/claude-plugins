@@ -102,31 +102,35 @@ If any of these files cannot be found and read, stop immediately and report whic
    Create each of those from the previous bundle's branch at the moment that bundle starts, not up front: creating them all at breakdown time would leave empty branches behind whenever a run stops early.
    Give every one of them the same already-exists guard bundle 1 has: check out a bundle branch that already exists rather than creating it, and create it only when it is genuinely absent, since creating a branch name that already carries that bundle's commits either fails outright or resets the branch and discards them.
 8. Ensure the breakdown exists.
-   - Skip the rest of this step when a breakdown already exists for this issue, and let the stack recovered in step 7 govern the rest of this run.
+   - Skip the rest of this step when a breakdown already exists for this issue.
      Every decision below is made once, at breakdown time, so a resumed run reads the split, the bundles, and their branches out of the plan document instead of deciding any of them again.
-     Reaching this step without having recovered them is the defect: go back to step 7 and recover them before implementing anything.
+     When that plan document carries a `Bundles` section, the stack step 7 recovered from it governs the rest of this run, and arriving here with such a section on disk but no recovered stack is the defect: go back to step 7 and recover it before implementing anything.
+     A resumed single-review issue has no `Bundles` section and so has nothing to recover; step 7 has already put it on its one branch.
    - Call `init` for the issue, then call `parentTask` for it.
-   - Establish the set of sub-issues before creating any task.
-     When the issue has no existing children, plan three to seven units of work, each sized so it can be implemented and verified on its own, and call `createSubIssue` for each one in order.
-     When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown, and skip `createSubIssue` since those sub-issues already exist.
-     Either way the set is ordered, each unit building on the one before it, and that order is what the `deps` below and any bundle boundary follow.
-   - Decide whether this issue produces one review or a stack, now that the sub-issues are known and before any task is created.
+   - Plan the units of work before writing anything to the tracker.
+     When the issue has no existing children, plan three to seven units of work, each sized so it can be implemented and verified on its own, and hold that plan rather than creating anything from it yet.
+     When the issue already has children, call `listSubIssues` to adopt them instead of inventing a new breakdown, which reads the tracker without writing to it.
+     Either way the units are ordered, each building on the one before it, and that order is what the `deps` below and any bundle boundary follow.
+   - Decide whether this issue produces one review or a stack, from those planned units and before anything is written to the tracker.
+     Never consider a split when the resolved forge tier is the manual tier, whatever the breakdown looks like, since that tier cannot create a review at all.
      Read the profile's `stacking` field per `../fathom-shared/approval.md`; treat an absent field as `propose`, and stop considering a split immediately when it reads `never`.
-     Otherwise propose a split only when both conditions hold: the breakdown has five or more sub-issues, and at least one valid cut point exists.
+     Otherwise propose a split only when both conditions hold: the breakdown has five or more units of work, and at least one valid cut point exists.
      A cut point is valid only where the work up to it is independently mergeable, meaning the repository builds, that bundle's tests pass, and merging it alone would not break the base branch.
      When no valid cut point exists, proceed as a single review and say so rather than forcing a boundary.
-     Never consider a split when the resolved forge tier is the manual tier, whatever the breakdown looks like.
-     Say that the split was not offered because the tier cannot create reviews only when the breakdown would otherwise have crossed the five sub-issue threshold above; below that threshold no split was available in any tier, so explaining its absence would report a decision that was never live.
-   - When both of those conditions hold, shape the bundles as contiguous runs of the sub-issue order established above, so bundles inherit that order rather than inventing one.
-     Produce at most three bundles, each holding at least two sub-issues; those two limits together mean five sub-issues yield at most two bundles, and six is the smallest breakdown that can yield three.
+     Both conditions are properties of the planned units rather than of anything on the tracker: the count comes from the plan, and a cut point's validity is a property of the work itself, which is what lets this whole decision run before a single sub-issue exists.
+     When the manual-tier guard above fired, say the split was not offered because the tier cannot create reviews only if the breakdown would otherwise have crossed the five-unit threshold; below that threshold no split was available in any tier, so explaining its absence would report a decision that was never live.
+   - When both of those conditions hold, shape the bundles as contiguous runs of the planned order established above, so bundles inherit that order rather than inventing one.
+     Produce at most three bundles, each holding at least two units; those two limits together mean five units yield at most two bundles, and six is the smallest breakdown that can yield three.
      Exceed the cap only when the user asked for a specific larger split; never exceed it on the heuristic's own judgment.
-   - When both of those conditions hold, present the proposed split before creating any task: the bundles, which sub-issues fall in each, and the resolved forge's `stackedReviews` value with what it means for this run.
+   - When both of those conditions hold, present the proposed split before anything is written to the tracker: the bundles, which units fall in each, and the resolved forge's `stackedReviews` value with what it means for this run.
      This is a skip-list stop per `../fathom-shared/approval.md`, so `ask` mode waits for an answer and `auto` mode applies the split and reports it.
-   - Create the tasks once the split question is settled, in one pass over the sub-issues in order.
-     For each one, call `createTask` with that sub-issue's ref as `subIssueRef`, then write the returned task id back onto that sub-issue so the link reads both ways, since the task id does not exist until `createTask` returns.
-     Pass each task's final `deps` in that same call: `createTask` is the only operation in `../fathom-shared/memory.md` that takes `deps`, so a chain the split needs has to be built as the tasks are created rather than added to them afterwards, which is why the split is settled first.
-     When no split was confirmed, set `deps` to the id of the task it builds on so tasks chain sequentially by default whenever order matters, which is the single-review behavior unchanged.
-     When a split was confirmed, chain every task in the issue sequentially instead, so each task deps on its predecessor across bundle boundaries as well as within them, rather than only where order matters.
+     Placing it ahead of every write is what makes it safe to abandon: a user who walks away from the question, or declines outright, leaves no sub-issue on the tracker and no task in memory, so there is nothing half-built to reconcile.
+   - Create the sub-issues and their tasks once the split question is settled, passing each task's final `deps` to `createTask` itself, since that is the only operation in `../fathom-shared/memory.md` that takes `deps` and a chain cannot be added to tasks that already exist.
+     When no split was confirmed and the issue has no existing children, for each planned unit call `createSubIssue` first, then call `createTask` with the newly created sub-issue's ref as `subIssueRef`, then write the returned task id back onto that sub-issue so the link reads both ways, since the task id does not exist until `createTask` returns, setting `deps` to the id of the task it builds on so tasks chain sequentially by default whenever order matters.
+     When no split was confirmed and the issue already had children, for each adopted sub-issue still call `createTask`, passing that sub-issue's existing ref as `subIssueRef` and skipping `createSubIssue` since the sub-issue already exists, then write the returned task id back onto that sub-issue the same way, and setting `deps` the same way.
+     Those two are the single-review behavior exactly as it has always run, one sub-issue and its task at a time, so nothing watching the tracker sees a different sequence than before.
+     When a split was confirmed, create the sub-issues and tasks in whatever order the bundle records require, since a bundle names its sub-issues by ref and those refs must exist before the `Bundles` section can be written; this path is new behavior with no earlier sequence to preserve.
+     Chain every task in the issue sequentially on that path, so each task deps on its predecessor across bundle boundaries as well as within them, rather than only where order matters.
      This is what makes `claimNext` structurally unable to hand out a later bundle's task while any earlier task is open, so the implementation loop needs no bundle-ordering logic of its own.
      A single edge at each bundle boundary is not enough: a task carrying no deps has them trivially closed, so it stays claimable out of order and the branch chain would be built on unfinished work.
    - After every child task exists, add the parent's dependency edge on each child, so the parent cannot close before its children and "no open children" becomes a real signal rather than an assumption.
