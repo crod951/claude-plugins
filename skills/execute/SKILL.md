@@ -90,8 +90,17 @@ If any of these files cannot be found and read, stop immediately and report whic
    These rules describe bundle 1's branch, which is the only branch a single-review run has.
    When step 8 confirms a stack, later bundles take the same name with their index appended, so bundle 2 of `feat/ONC-5-add-webhooks` is `feat/ONC-5-add-webhooks-2`.
    Create each of those from the previous bundle's branch at the moment that bundle starts, not up front: creating them all at breakdown time would leave empty branches behind whenever a run stops early.
+   Give every one of them the same already-exists guard bundle 1 has: check out a bundle branch that already exists rather than creating it, and create it only when it is genuinely absent, since creating a branch name that already carries that bundle's commits either fails outright or resets the branch and discards them.
+
+   Before deciding which branch this run continues on, read this issue's plan document when one already exists, since a resumed run recovers the stack from durable state and never from memory of an earlier run.
+   When that document carries a `Bundles` section, this issue was already split: recover every bundle's index, branch, sub-issue refs, and recorded review id from it, and carry that recovered stack through the rest of this run, including step 10's loop and step 11's per-bundle routine.
+   The bundle in progress is the first one with no recorded review, because a bundle's review is recorded as its last task closes; continue on that bundle's branch rather than on bundle 1's.
+   Continuing on bundle 1's branch instead would land a later bundle's commits in a review that is already open and published, which is the failure this recovery exists to prevent.
+   Fall back to bundle 1's branch only when no plan document exists yet, which is a first run rather than a resumed one.
 8. Ensure the breakdown exists.
-   - Skip the rest of this step when a breakdown already exists for this issue.
+   - Skip the rest of this step when a breakdown already exists for this issue, and let the stack recovered in step 7 govern the rest of this run.
+     Every decision below is made once, at breakdown time, so a resumed run reads the split, the bundles, and their branches out of the plan document instead of deciding any of them again.
+     Reaching this step without having recovered them is the defect: go back to step 7 and recover them before implementing anything.
    - Call `init` for the issue, then call `parentTask` for it.
    - Establish the set of sub-issues before creating any task.
      When the issue has no existing children, plan three to seven units of work, each sized so it can be implemented and verified on its own, and call `createSubIssue` for each one in order.
@@ -136,7 +145,7 @@ If any of these files cannot be found and read, stop immediately and report whic
     - Close the task in the memory backend and move its sub-issue to `done`, again per the adapter's sub-issue rules, recording the close as it happens rather than summarizing at the end of the loop.
       A task is not closed until both its memory record and its sub-issue are closed; closing only the sub-issue leaves it claimable and `claimNext` will hand you the same task again.
     - Print the per-task progress line from `conventions.md`.
-    - When this issue was split into a stack and the closed task was the last one in its bundle, run the per-bundle finish routine in step 11 for that bundle before claiming again, then, when a later bundle remains, create the next bundle's branch from this one and continue the loop on it.
+    - When this issue was split into a stack and the closed task was the last one in its bundle, run the per-bundle finish routine in step 11 for that bundle before claiming again, then, when a later bundle remains, move onto the next bundle's branch under the already-exists guard in step 7, creating it from this one only when it is absent and checking it out when it is not, and continue the loop on it.
       Do not wait until the loop drains to open any review: building each bundle on the correct branch from the start is what avoids having to cherry-pick commit ranges onto a chain of branches afterwards.
     - On a failure that cannot be fixed, stop and hold: keep the change, leave the task in progress, report the failure, and exit without continuing the loop.
       On a stacked issue, also name which bundles already have open reviews and which were never built, since some of the work is already in front of reviewers and the user needs to know which part held.
