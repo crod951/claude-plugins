@@ -14,7 +14,7 @@ Adapter files implement each one against a specific forge's tools; treat the ope
 | --- | --- |
 | `verifyForge()` | Cheap read-only preflight check that the forge is reachable and authenticated; returns verified or unverified and nothing else. |
 | `resolveBase(branch)` | Confirm the named base branch exists on the remote and is a valid merge target. |
-| `openReview(branch, base, title, body)` | Create the review for a branch against a base. Return a stable review id and the review's URL - or, on a forge where no review can be created, the manual-handoff result defined below. |
+| `openReview(branch, base, title, body, dependsOn?)` | Create the review for a branch against a base. Return a stable review id and the review's URL - or, on a forge where no review can be created, the manual-handoff result defined below. `dependsOn` is optional and carries the review id this one is stacked on; it is absent for a standalone review and for the first bundle of a stack. |
 | `publishReview(id)` | Move a draft review to the notified-review state, where the forge distinguishes the two. A no-op everywhere else. |
 | `getReviewState(id)` | Return one of `open`, `merged`, `closed-unmerged`, or `unknown`, plus a merge timestamp when merged. |
 
@@ -51,13 +51,24 @@ An absent capability means false.
 | `draftState` | true / false | Whether `publishReview` is meaningful, and when the `inReview` phase is applied. |
 | `pushesForYou` | true / false | Whether `openReview` owns the push, or the calling skill pushes the branch first. |
 | `reviewLookup` | `by-id` / `none` | Whether the done-on-merge sweep can run at all. |
-| `stackedReviews` | `retarget` / `declared-dependency` / `none` | Reserved. No behavior depends on it yet. |
+| `stackedReviews` | `retarget` / `declared-dependency` / `none` | How this adapter expresses that one review is stacked on another, in `openReview`. |
 
 Forges differ in kind, not only in command names, which is the same lesson `agents.md:23-31` already records for tracker MCP builds whose tool coverage varies.
 A capability that is false is a fact to design around, not a gap to work around.
 
-`stackedReviews` is declared and unused.
-It is recorded now because the difference is real - `retarget` describes a forge where stacking is branch retargeting with automatic retarget when the upstream merges, and `declared-dependency` describes one where stacking is an explicit dependency plus a manually scoped commit range with no auto-rebase - and because adding a capability key later means revisiting every adapter file.
+`stackedReviews` decides what an adapter does with `openReview`'s optional `dependsOn` argument.
+
+| Value | What `openReview` does with `dependsOn` |
+| --- | --- |
+| `retarget` | Ignore it. Passing the previous bundle's branch as `base` is the whole mechanism, and the forge retargets the dependent review automatically when its upstream merges. |
+| `declared-dependency` | Pass it to the forge's own dependency mechanism, and scope the review's commit range to this bundle's commits only. Nothing is retargeted automatically. |
+| `none` | Ignore it. The `base` argument still chains the branches in git, and the calling skill writes the relationship into the review body in prose. |
+
+A `none` adapter is still stackable in the only sense that matters to a reader: the branches chain, each review shows one bundle's diff, and the body says what it depends on.
+What it lacks is any forge-side record of the relationship, so nothing retargets and nothing warns when the stack is merged out of order.
+
+Only a repo-local adapter reaches the `none` row in practice.
+The one bundled adapter that declares `none` is `generic-git.md`, which is what the manual tier runs on, and the manual tier never proposes a stack.
 
 ## Adapter resolution
 
@@ -124,6 +135,7 @@ The best outcome is the committed adapter, because it is reviewable by the team 
 No adapter, no candidate, the user declined the tier-2 offer, or the profile records `forge: none`.
 Push the branch, then print what a human needs in order to open the review by hand: the branch, the base, a suggested title, and a suggested body.
 `getReviewState` is unavailable, so the done-on-merge sweep does not run.
+A stack is never proposed in this tier: with no review object to create, a three-bundle stack would become three separate sets of open-this-by-hand instructions, which is worse for the user than one review.
 
 `forge: none` is not a fourth tier.
 It is the manual tier made permanent, so a repository that will never have an automatable forge stops being offered one on every invocation.

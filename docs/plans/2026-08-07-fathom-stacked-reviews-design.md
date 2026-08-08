@@ -66,6 +66,9 @@ A tier-3 forge (`forges.md:123-126`) cannot create reviews, so a three-bundle st
 In tier 3 the agent says the split was not offered and why.
 Tier 1 and tier 2 both propose.
 
+This makes the `none` behavior in section 10 reachable only through a tier-1 repo-local adapter at `.fathom/forge.md` that creates real reviews but has no stacking model of its own.
+No bundled adapter reaches it, because `generic-git.md` is the only bundled adapter declaring `none` and it is exactly what the manual tier runs on.
+
 ### 3. The split proposal stop
 
 The stop fires at step 8, after the breakdown exists and before any branch is created.
@@ -162,7 +165,7 @@ Adapters key their behavior off their declared `stackedReviews` value:
 | --- | --- |
 | `retarget` | Ignore `dependsOn`. The `base` argument does the work, and the forge retargets on upstream merge. |
 | `declared-dependency` | Pass `dependsOn` to the forge's dependency mechanism and scope the commit range. |
-| `none` | Ignore `dependsOn`. The `base` argument gives git-level chaining, and the body's `Depends on` line carries the rest. |
+| `none` | Ignore `dependsOn`. The `base` argument gives git-level chaining, and the body's `Depends on` line carries the rest. Reachable only from a tier-1 repo-local adapter, per section 3. |
 
 `forges.md:59-60` stops saying the capability is declared and unused.
 
