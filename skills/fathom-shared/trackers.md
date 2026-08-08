@@ -104,8 +104,16 @@ Look each id up directly; never list a forge's reviews and match them locally.
 A listing has to be bounded, and any bound silently drops the oldest records once a repository has more reviews than the bound allows, which is a defect that grows quietly with the repository's age.
 
 Records written before review ids were recorded carry a branch name and no id.
-For those, fall back to the optional `findReviewByBranch` operation defined in `forges.md`, and rewrite the record with the id once one is known, so the fallback path drains over time rather than becoming permanent.
-When the resolved adapter does not implement that operation, the record cannot be swept: report that once, naming the record, rather than guessing or treating a branch name as a review id.
+For those, fall back to the optional `findReviewByBranch` operation defined in `forges.md`, which returns bounded candidate records carrying each review's id, its URL, and its base.
+Treat such a record as resolved only when exactly one candidate comes back, since a legacy record names a branch and nothing else and so carries nothing to tell two candidates apart; two or more candidates leave it unresolved rather than presenting a choice to make.
+
+Resolution is not complete at the id.
+Add the resolved id to that issue's set of review ids and call `getReviewState` on it, and do both before any of the ordered cases below are evaluated for that issue, so every case judges the issue on its whole set rather than on the subset that already carried ids.
+Doing this after the cases, or not at all, would let the completeness requirement and the aggregate cases run against an incomplete set: an issue whose only unresolved record is the branch-only one would read as fully recorded, and case 3 would close it on the strength of the reviews that happened to have ids.
+Then rewrite the record with the id, so the fallback path drains over time rather than becoming permanent.
+
+When resolution fails, and when the resolved adapter does not implement that operation at all, that record yields no id and no state: report that once, naming the record, rather than guessing or treating a branch name as a review id.
+Leave the issue incomplete in that case, exactly as a missing `- Review:` record leaves it, so case 2 below blocks closure on it instead of the aggregate cases deciding the issue on partial data.
 
 Judge each issue on all of its results together, in the order below, letting the first case that applies decide that issue.
 An issue can satisfy more than one case at once, and a stack holding a merged bundle, an open bundle, and an abandoned one routinely does.
@@ -114,14 +122,15 @@ An issue can satisfy more than one case at once, and a stack holding a merged bu
    Apply the closed-without-merging path below for that review, and, when the issue is a stack, name which bundles above it are now orphaned by it.
    Close nothing for that issue, and do not read its merged reviews as progress toward closure.
    This case is checked first and is terminal, however many of the issue's other reviews merged or stayed open, because whether to retry, rescope, or drop the orphaned work is the user's decision and nothing should be built on top of work that may be about to be discarded.
-2. Any recorded review reports `unknown`, or some bundle between 1 and N has no `- Review:` record at all, and none reported `closed-unmerged`.
+2. Any recorded review reports `unknown`, or some bundle between 1 and N has no `- Review:` record at all, or a branch-only record could not be resolved to a review id, and none reported `closed-unmerged`.
    `getReviewState` returns `unknown` when it could not determine the review's fate, which is not a state the review is in but an answer the sweep did not get.
    A missing record is the same kind of gap: the `Bundles` section says how many bundles the issue has, so N is known even when a record is not, and an issue judged on fewer records than N is judged on an incomplete set.
+   An unresolved branch-only record is that same gap in a third shape: the record is there, but nothing behind it can be looked up, so the review it stands for is exactly as unobserved as one whose record is missing.
    With N of 3 and only two records collected, the cases below would read a partly recorded three-bundle stack as a complete two-bundle one, and case 3 would then close a half-merged issue.
-   So require a record for every bundle from 1 to N before evaluating cases 3, 4, and 5 at all, and take this case whenever that requirement is unmet.
+   So require a record for every bundle from 1 to N, and a `getReviewState` result for every one of those records, before evaluating cases 3, 4, and 5 at all, and take this case whenever that requirement is unmet.
    Change nothing about the issue: close nothing, report nothing about its progress, and leave it exactly as it stands for a later sweep to decide.
-   Name the review ids that came back `unknown` and the bundles whose records are missing, and say that this issue was left undecided because of them.
-   Never fold an `unknown` result or a missing record into `merged`, `open`, or "still entirely in review": each of those is a specific claim about work the sweep cannot actually see, and the later cases would otherwise absorb it and make that claim anyway.
+   Name the review ids that came back `unknown`, the bundles whose records are missing, and the branch-only records that could not be resolved, and say that this issue was left undecided because of them.
+   Never fold an `unknown` result, a missing record, or an unresolved branch-only record into `merged`, `open`, or "still entirely in review": each of those is a specific claim about work the sweep cannot actually see, and the later cases would otherwise absorb it and make that claim anyway.
    This case sits below case 1 because a `closed-unmerged` result is a fact the sweep did observe, and its outcome does not depend on the undetermined or unrecorded ones: it closes nothing, restacks nothing, and hands the decision to the user, which is already the safest thing an incomplete picture could ask for.
    It sits above every case below because those judge the issue on all of its results at once, and neither an undetermined result nor a missing one can carry its share of such a judgment.
 3. Every recorded review reports `merged`.
