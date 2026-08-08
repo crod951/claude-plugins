@@ -238,6 +238,11 @@ If any of these files cannot be found and read, stop immediately and report whic
     - Push branch k, unless the adapter declares `pushesForYou`, exactly as the single-review path does.
     - Call `openReview` with branch k, that base, a title naming the bundle, and a body built per the stack rules in `conventions.md`: the closing reference only in bundle N, plus `Part k of N`, plus `Depends on` the previous bundle's review URL for every bundle after the first.
       Pass the previous bundle's review id as `dependsOn` for every bundle after the first, and omit it for bundle 1.
+    - Branch on what `openReview` returned before doing anything with it, since the manual-handoff result defined in `../fathom-shared/forges.md` is a typed outcome of that call and carries no review id.
+      When it is that result, there is no review object for this bundle: do not call `publishReview`, do not write a `- Review:` line for it, and stop and report the handoff for bundle k rather than continuing to bundle k+1.
+      Writing a record from it would put an entry in the `Bundles` section with no id behind it, which the sweep reads as a review it can look up and cannot, and continuing would leave bundle k+1 with no id to pass as `dependsOn` and no URL for its `Depends on` line.
+      A stacked run should not normally reach this at all, because the manual tier never proposes a split, as `../fathom-shared/forges.md` states, and it is the only tier that hands a review off by hand.
+      So treat this branch as a guard against an adapter that returns the handoff result from a non-manual tier, rather than as a path a correct run is expected to take, and say that plainly when it fires.
     - Call `publishReview` with the returned id.
     - Record `- Review: <id> <url> (bundle k/N)` beneath that bundle's line in the plan document's `Bundles` section, since the sweep looks reviews up by id and needs every one of them.
     - Commit and push that recorded line immediately, on branch k, before moving to bundle k+1's branch or doing anything else.
