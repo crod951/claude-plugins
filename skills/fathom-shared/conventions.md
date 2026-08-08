@@ -63,6 +63,12 @@ Include these sections:
   Add a `- Review: <id> <url> (bundle k/N)` line beneath a bundle once its review exists.
   The suffix is redundant with the nesting on purpose: the sweep reads these lines individually, and a self-describing record survives being read out of its surrounding context.
   This section is the durable record a resumed run reads to recover the stack, so write it when the split is confirmed rather than when the first review opens.
+- **Merge-closer** - present only when this issue was split into a stack, and omitted entirely otherwise.
+  One line reading `- Merge-closer: suppressed`, written when the split is confirmed, alongside the `Bundles` section.
+  The merge-closer Action matches a merged branch against the records under `.fathom/` and knows nothing about stacks, and every bundle's branch is recorded there, so without this line the first bundle to merge closes the whole issue while most of the work is still open and unreviewed.
+  That close is also permanent and silent, because the next sweep reads the issue as already complete and does nothing.
+  The Action reads this line and takes no action for the issue, which leaves closure to the sweep, and the sweep already waits for every bundle to report merged.
+  One mechanism closes a stacked issue rather than two that disagree.
 - **Testing strategy** - which tests will prove the work, and which existing tests could regress.
 - **Notes** - open questions, risks, and decisions taken during the run.
 

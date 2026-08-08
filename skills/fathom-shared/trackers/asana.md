@@ -179,6 +179,24 @@ jobs:
             exit 1
           fi
 
+          # A stacked issue records one branch per bundle, so any one bundle's
+          # merge reaches this Action while the rest of the work is still open.
+          # Such an issue records a suppression marker and is closed by fathom's
+          # own sweep once every bundle reports merged. Check every matching
+          # record rather than the one selected below: in checklist mode the
+          # marker lives in the plan document while the task file is preferred.
+          SUPPRESSED=''
+          for RECORD in $MATCHES; do
+            if grep -qE '^[[:space:]]*[-*]?[[:space:]]*(\*\*)?[Mm]erge-closer(\*\*)?[[:space:]]*[:-][[:space:]]*(\*\*)?[Ss]uppressed' "$RECORD"; then
+              SUPPRESSED=$RECORD
+              break
+            fi
+          done
+          if [ -n "$SUPPRESSED" ]; then
+            echo "$SUPPRESSED records merge-closer: suppressed, so this issue is a stack that closes only once every bundle merges. Taking no action for $BRANCH."
+            exit 0
+          fi
+
           # Prefer the task file when both exist; it also carries the review id.
           # Anchor the prefix rather than matching /tasks/ anywhere: grep -r
           # descends into dot-directories, so a repo left holding a nested

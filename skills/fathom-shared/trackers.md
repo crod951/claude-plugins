@@ -98,6 +98,8 @@ When the resolved adapter does not implement that operation, the record cannot b
 When `getReviewState` returns `merged`, read the issue's current state before writing to the tracker.
 When the issue is already complete, for example because a merge-closer Action or a native integration already closed it, do nothing further for that issue.
 Otherwise apply the mapped `done` state through `updateState`, plus any closure action the adapter defines for the merged path, before proceeding with the rest of the run.
+An issue whose record carries `- Merge-closer: suppressed`, which is how a stacked issue is recorded per `conventions.md`, was deliberately left for this sweep to close: the Action takes no action for it, so the sweep is its only closure mechanism and reaching `done` requires a run of this sweep.
+The state read above still applies to it unchanged, since a user may have closed such an issue by hand.
 
 That state read is the whole idempotency mechanism for the merged path.
 An issue that is already `done` produces no write on any later run, so nothing needs to be recorded anywhere and nothing needs to be pushed.

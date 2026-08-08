@@ -119,6 +119,7 @@ If any of these files cannot be found and read, stop immediately and report whic
    - After every child task exists, add the parent's dependency edge on each child, so the parent cannot close before its children and "no open children" becomes a real signal rather than an assumption.
    - Whether the sub-issues were newly created or adopted, write the plan document described in `conventions.md` and commit it with the breakdown.
      When a split was confirmed, that same document also carries the `Bundles` section recording each bundle's index, branch, and sub-issue refs, so write it now rather than when the first review opens, since it is what a resumed run reads to recover the stack.
+     Write the `- Merge-closer: suppressed` line described in `conventions.md` with it, since a stacked issue records every bundle's branch and the merge-closer Action would otherwise close the whole issue on whichever bundle merged first.
    - Write `.fathom/tasks/<ISSUE-REF>.md` only when the resolved backend is the checklist adapter, since that file holds checkbox statuses; with beads active the statuses live in beads and no file belongs there, as `memory.md` states.
 9. Call `updateState` to move the issue to the `inProgress` phase.
 10. Run the implementation loop until `claimNext` reports nothing claimable.
@@ -183,6 +184,9 @@ If any of these files cannot be found and read, stop immediately and report whic
     Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.fathom/`; never sweep `.beads/` or `.fathom/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
     Push this closing commit with an ordinary `git push` of the branch even when the adapter declares `pushesForYou`, since that capability governs only the push that opens the review, as `../fathom-shared/forges.md` states; skipping it here would leave the completed task state in the local clone while the review reads as finished.
     On a stacked issue this closing commit goes on branch N, the stack tip, because that branch contains every bundle's history and is the only one whose review shows the completed task state.
+    Say plainly at handoff, when the issue was split, that its record carries `- Merge-closer: suppressed`, so the merge-closer Action will take no action for it however its bundles merge.
+    On a repository that relies on that Action for closure this is a real change: a stacked issue reaches `done` only when a later run's done-on-merge sweep sees every bundle merged, where a single-review issue still closes on merge without one.
+    The alternative is worse, since the Action matches branch names and every bundle records one, so the first bundle to merge would close the whole issue and the sweep would then read it as complete and never correct it.
 12. Report a final summary: the issue, the review URL when one was opened, every bundle's review URL in order when the issue was split into a stack, or the resolved tier when no review was opened, the tracker's current phase, and the task counts from `status()`.
 
 ## Display overlay
