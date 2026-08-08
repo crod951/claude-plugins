@@ -66,7 +66,7 @@ No bundled adapter reaches it, because `generic-git.md` is the only bundled adap
 In the same file, in section 10, replace the `none` row of the behavior table with this row:
 
 ```markdown
-| `none` | Ignore `dependsOn`. The `base` argument gives git-level chaining, and the body's `Depends on` line carries the rest. Reachable only from a tier-1 repo-local adapter, per section 3. |
+| `none` | Ignore `dependsOn`. The `base` argument gives git-level chaining, and the body's `Depends on` line carries the rest. Reachable only from a tier-1 repo-local adapter, per section 2. |
 ```
 
 - [ ] **Step 3: Change the `openReview` row in the contract table**
@@ -148,7 +148,9 @@ Run:
 grep -c "dependsOn" skills/fathom-shared/forges.md
 ```
 
-Expected: `5` or more. The argument is named in the contract row, the capability table rows, and the surrounding prose.
+Expected: `3`. `grep -c` counts matching lines rather than occurrences, and Step 5's prose deliberately says "it" rather than repeating the argument name in each behavior row, so three lines carry it: the contract row, the sentence introducing the behavior table, and the table's own header.
+
+If this returns anything other than 3, report the number rather than dropping the check. A silently omitted verification is worse than a failed one.
 
 - [ ] **Step 8: Run the scanner**
 
