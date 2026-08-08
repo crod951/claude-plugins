@@ -35,9 +35,11 @@ A branch name is not a review id.
 An adapter that cannot create reviews (see `generic-git.md`) returns this instead of an id, and it is a typed outcome of the contract rather than a failure.
 A caller receiving it must not call `publishReview`, must not record a review id, and must say plainly that opening the review is now the user's step.
 
-One optional operation exists beyond the five, for legacy records only: `findReviewByBranch(branch)`, which resolves a review id from a head branch name where the forge can do that (`github.md` implements it with a bounded head-branch listing).
+One optional operation exists beyond the five, for repairing incomplete records: `findReviewByBranch(branch)`, which resolves a review id from a head branch name where the forge can do that (`github.md` implements it with a bounded head-branch listing).
 Adapters that cannot implement it simply omit it.
-The sweep uses it solely to repair records written before review ids were recorded; when the resolved adapter omits it, such a record cannot be swept, and the sweep reports that once instead of guessing.
+It is used only where a review may exist while nothing in the repository records its id: the sweep repairs records written before review ids were recorded, and `execute` recovers a bundle whose review opened before its `- Review:` line was committed.
+It resolves by head branch alone, so a caller that needs a review against a particular base must filter what comes back by that base itself rather than trusting a head branch to name exactly one review in a chained stack.
+When the resolved adapter omits it, such a record cannot be repaired, and the caller reports that once instead of guessing.
 
 ## Declared capabilities
 
