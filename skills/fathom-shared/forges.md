@@ -44,10 +44,14 @@ A caller needs all three fields.
 The id is what `getReviewState` and every later record are written against, the URL is what a `- Review:` line needs in order to name the review to a human, and the base is the only thing that tells apart two reviews sharing one head branch.
 That last case is routine rather than exotic: bundle branches chain, so one head branch can carry a review opened against a base the caller no longer targets, and `getReviewState` reports a review's fate without reporting what it targets, so the base has to come from here or from nowhere.
 The list is bounded, so treat it as a set of candidates rather than an exhaustive answer, and match within it rather than trusting it to hold exactly one review.
+The bound cuts both ways, so a result carrying no matching candidate is not proof that no such review exists, and an empty list is not proof that the branch has no review at all: each says only that the operation saw none inside its window, which is a different claim from there being none.
+Adapters bound this differently and a caller cannot see how, so no caller may read absence out of this operation, however the result comes back.
+A caller may act on a match it finds here, since a returned record is a review that demonstrably exists.
+A caller that would create something on the strength of absence must not use this result for that: it has to establish absence from evidence outside the operation, or stop and hold, and each caller below states which of those it does.
 
 It is used only where a review may exist while nothing in the repository records its id: the sweep repairs records written before review ids were recorded, and `execute` recovers a bundle whose review opened before its `- Review:` line was committed.
 When the resolved adapter omits the operation entirely, no lookup is possible at all and such a record cannot be repaired.
-Each caller says that once, names the record, and then takes the path its own procedure defines for an unrepairable record rather than guessing: the sweep leaves that issue undecided and closes nothing, per `trackers.md`, and `execute` treats a bundle with no recorded review as having none and opens one, per `execute/SKILL.md`.
+Each caller says that once, names the record, and then takes the path its own procedure defines for an unrepairable record rather than guessing: the sweep leaves that issue undecided and closes nothing, per `trackers.md`, and `execute` opens a review for a bundle only where the remote does not carry that bundle's branch at all, which is evidence of absence that owes nothing to this operation, and otherwise holds rather than risk opening a second review, per `execute/SKILL.md`.
 Those two differ because the costs differ, and each file states its own; neither is licensed to invent the other's.
 
 ## Declared capabilities
