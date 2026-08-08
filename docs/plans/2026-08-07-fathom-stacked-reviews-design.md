@@ -83,7 +83,7 @@ The stop fires at step 8, after the breakdown exists and before any task, commit
 It shows the proposed bundles, which sub-issues fall in each, and the resolved forge's stacking behavior.
 
 It goes on the skip list in `approval.md`, not the never-skip list.
-It fires before any commit or review exists, so being wrong costs nothing and is trivially corrected.
+It fires before any commit or review exists, so being wrong destroys nothing and misdirects nothing.
 Bundle 1's branch does exist by then, because step 7 creates it before step 8 runs, but that branch is the one a single-review run needs anyway, so declining the split wastes nothing and leaves nothing to clean up.
 That is the shape of every existing skip-list item, and unlike every never-skip item it destroys nothing and misdirects nothing.
 In `ask` mode the run waits for an answer; in `auto` mode it applies the split and reports it.

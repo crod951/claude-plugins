@@ -34,7 +34,9 @@ Skipping them changes how much the run interrupts you, not whether it is correct
   Record the answer, and note in the profile that it was auto-accepted rather than confirmed, so a wrong destination is traceable later.
 - The bundle-split proposal in `execute`.
   Apply the proposed split and report the bundles rather than asking for confirmation first.
-  This belongs here rather than on the safety list because it fires before any branch, commit, or review exists, so a wrong answer costs nothing and is corrected by re-running with `stacking: never` or a different instruction.
+  This belongs here rather than on the safety list because it fires before any commit or review exists, so being wrong destroys nothing and misdirects nothing, which is the shape of every other item on this list.
+  Bundle 1's branch does exist by then, since step 7 creates it before step 8 runs, but that branch is the one a single-review run needs anyway, so declining the split wastes nothing and leaves nothing to clean up.
+  Being on this list is not a claim that an applied split is undone by a later run: in auto mode the split is already written into the breakdown by the time anyone reads the report, and the task dependency chain and the plan document's `Bundles` section persist until someone edits them.
   It is skipped only when the profile's `stacking` field permits a split at all; `stacking: never`, and an absent field which means the same thing, suppress the split itself, in both modes, rather than suppressing the question.
 
 ## What auto mode never skips
