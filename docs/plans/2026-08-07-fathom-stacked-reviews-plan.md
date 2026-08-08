@@ -781,9 +781,12 @@ In `skills/execute/SKILL.md`, append these lines to the end of step 2:
 
 ```markdown
    An issue split into a stack has one recorded review per bundle rather than one in total, so call `getReviewState` on every recorded id before deciding anything about the issue.
-   Move the issue to `done` only when every bundle reports `merged`.
-   When some bundles are merged and others are still open, close nothing: report the partial progress, naming which bundles merged, then run the restack check below.
+   A stack can satisfy more than one of the cases below at once, so check them in the order written and let the first one that applies decide the whole sweep.
+   In particular a stack can hold a merged bundle, an open bundle, and an abandoned one simultaneously, and the abandoned bundle wins: restacking the bundles above it would force-push a rebase onto work the user may be about to discard, which is exactly the unattended destruction that stop exists to prevent.
    When any bundle reports `closed-unmerged`, apply the closed-without-merging path for that bundle, name which bundles above it in the stack are now orphaned by it, and neither close the issue nor restack anything; whether to retry, rescope, or drop the orphaned work is the user's judgment call.
+   This case is checked first and is terminal: no later case runs after it, however many other bundles merged or stayed open.
+   Otherwise move the issue to `done` when every bundle reports `merged`.
+   Otherwise, with some bundles merged and others still open, close nothing: report the partial progress, naming which bundles merged, then run the restack check below.
    When the adapter declares `reviewLookup: none` the whole sweep is unavailable here as it already is for single reviews, so say so once and act on nothing.
 
    The restack check asks one forge-agnostic question: is the merged bundle's content an ancestor of each remaining stack branch?
@@ -811,9 +814,12 @@ Run:
 grep -n "force-with-lease" skills/execute/SKILL.md
 ```
 
-Expected: exactly 1 line, the one requiring the flag and forbidding a bare force push. The sentence handling a rejected lease follows it and says "the lease is rejected" without repeating the flag name, so it does not match this pattern. There must be no line permitting a bare `--force`.
+Expected: exactly 1 line, the one requiring the flag and forbidding a bare force push.
+The sentence handling a rejected lease follows it and says "the lease is rejected" without repeating the flag name, so it does not match this pattern.
+There must be no line permitting a bare `--force`.
 
-Also confirm by reading that the sentence immediately after it stops and holds when the lease is rejected. That behavior is the point of the check, and a grep count alone cannot prove it.
+Also confirm by reading that the sentence immediately after it stops and holds when the lease is rejected.
+That behavior is the point of the check, and a grep count alone cannot prove it.
 
 Run:
 
