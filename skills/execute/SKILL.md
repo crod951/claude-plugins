@@ -278,7 +278,13 @@ If any of these files cannot be found and read, stop immediately and report whic
     The pending marker records that a run got as far as the call instead, and it is the only evidence this procedure accepts on that question.
     On the pending case, ask the forge with `findReviewByBranch` for branch k, which returns bounded candidate records carrying each review's id, its URL, and its base, as `../fathom-shared/forges.md` defines the operation, then keep only the candidates whose base is exactly the base `resolveBase` returned for this bundle.
     Bundle branches chain, so a head branch can carry a review opened against a different base than this bundle now targets; matching on the exact head and base pair is what keeps this bundle's commits out of that review, and the base in the candidate record is what makes that match possible at all.
-    When exactly one candidate survives that filter, call `getReviewState` on its id before reusing or backfilling it, so its fate is read rather than assumed, and stop and hold when that state is anything other than open.
+    When exactly one candidate survives that filter, that review exists and belongs to this bundle, so back its id and URL into the record first, then call `getReviewState` on that id to decide whether this run may continue.
+    The state decides continuation and never whether the record may be written: the candidate came back from the forge keyed on this bundle's exact head and base, which makes the id true whatever the review's fate turns out to be, and a merged, closed, or undetermined review whose id goes unrecorded is exactly the bundle the sweep reads as missing a record forever.
+    Then read the state and act on it.
+    On `open`, carry on with the rest of this routine for bundle k, which is the ordinary recovery.
+    On `merged`, carry on the same way: the bundle's outcome is known and good, its review needs no reopening, and its id is now recorded, so the sweep can see that bundle merged.
+    On `closed-unmerged`, stop and hold after recording, naming bundle k and saying its review was abandoned, since whether to retry, rescope, or drop that work is the user's judgment exactly as it is in the sweep's own abandoned case.
+    On `unknown`, stop and hold after recording, since nothing was learned about that review's fate and building the next bundle on an outcome this run never observed is the guess this whole lookup exists to avoid.
     Keep that candidate's URL alongside its id, since the backfill below records both and no other operation in the contract reports a review's URL.
     When more than one survives, stop and hold naming them, since choosing between two candidate reviews by guess is the failure this pairing exists to prevent.
     When no candidate matches at all, do not call `openReview`: stop and hold instead.
@@ -289,9 +295,10 @@ If any of these files cannot be found and read, stop immediately and report whic
     Either confirmation belongs in the `Bundles` section, because that is where the next run reads it; a confirmation given only in conversation leaves the durable record unchanged and every later run holds identically.
     When the resolved adapter omits `findReviewByBranch`, which `../fathom-shared/forges.md` says is legitimate, no lookup is possible at all: say once that the forge cannot be asked, then hold on exactly those same terms, since a pending marker with no id beside it says nothing about whether the call that followed it created a review.
     Holding costs one confirmation on a run that was interrupted between marking bundle k pending and recording its review, while opening blindly costs a duplicate review that no record names and the sweep can never reconcile, so the hold is the cheaper of the two.
-    Reusing a review does not skip the two recording steps above it, and this is where a resumed run otherwise loses a bundle.
+    A matched candidate does not skip the two recording steps above it, whatever its state, and this is where a resumed run otherwise loses a bundle.
     That bundle's entry carries the pending marker, since the marker is what brought this run into the lookup at all: replace it now with a real `- Review: <id> <url> (bundle k/N)` line built from the id and URL on the candidate record that matched, then commit it exactly as the recording step above does: stage only the plan document, by explicit path, verify the staged diff carries only that one replaced line before committing, and word it as the same bookkeeping commit.
-    Push it on branch k before continuing, then carry on with the rest of this routine for that bundle.
+    Push it on branch k before anything else, including before any hold the state above calls for, since a record that never leaves this clone closes none of the gaps below.
+    Then continue or hold as that state directs.
     Without that backfill the review exists on the forge and nothing in the repository names it, so the sweep never learns its id, step 7 keeps reading that bundle as the one in progress, and the completeness rule in step 2 leaves the whole issue undecided forever.
     A bundle whose entry already carries its full `- Review:` line never reaches the lookup at all: its record is already durable, so it changes nothing and makes no commit.
     A bundle with no line at all is unaffected by any of this and runs the routine above unchanged.
