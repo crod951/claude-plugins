@@ -112,7 +112,10 @@ If any of these files cannot be found and read, stop immediately and report whic
     - Close the task in the memory backend and move its sub-issue to `done`, again per the adapter's sub-issue rules, recording the close as it happens rather than summarizing at the end of the loop.
       A task is not closed until both its memory record and its sub-issue are closed; closing only the sub-issue leaves it claimable and `claimNext` will hand you the same task again.
     - Print the per-task progress line from `conventions.md`.
+    - When this issue was split into a stack and the closed task was the last one in its bundle, run the per-bundle finish routine in step 11 for that bundle before claiming again, then create the next bundle's branch from this one and continue the loop on it.
+      Do not wait until the loop drains to open any review: building each bundle on the correct branch from the start is what avoids having to cherry-pick commit ranges onto a chain of branches afterwards.
     - On a failure that cannot be fixed, stop and hold: keep the change, leave the task in progress, report the failure, and exit without continuing the loop.
+      On a stacked issue, also name which bundles already have open reviews and which were never built, since some of the work is already in front of reviewers and the user needs to know which part held.
     One commit per task, always, even when two tasks touch the same file.
 
 11. Once `claimNext` returns none remaining, finish the issue.
@@ -132,8 +135,22 @@ If any of these files cannot be found and read, stop immediately and report whic
     When `openReview` returns the manual-handoff result instead of an id, there is no review object: skip `publishReview`, record no review id, print the handoff.
     Still apply `inReview`, and say plainly that no later run will move this issue to `done` on its own because the forge cannot be observed, so closing it is now a manual step.
 
+    When this issue was split into a stack, the review-opening portion above is a per-bundle routine rather than a single closing action, and step 10 invokes it once per bundle as that bundle's last task closes.
+    For bundle k of N:
+    - Reconcile bundle k's closed tasks against the commits on its branch, over that bundle's own range, per the per-bundle rule in `conventions.md`; stop and do not open this bundle's review when they disagree.
+    - Call `resolveBase` on bundle 1's base, which is the resolved base branch, or on branch k-1 for every later bundle.
+    - Push branch k, unless the adapter declares `pushesForYou`, exactly as the single-review path does.
+    - Call `openReview` with branch k, that base, a title naming the bundle, and a body built per the stack rules in `conventions.md`: the closing reference only in bundle N, plus `Part k of N`, plus `Depends on` the previous bundle's review URL for every bundle after the first.
+      Pass the previous bundle's review id as `dependsOn` for every bundle after the first, and omit it for bundle 1.
+    - Call `publishReview` with the returned id.
+    - Record `- Review: <id> <url> (bundle k/N)` beneath that bundle's line in the plan document's `Bundles` section, since the sweep looks reviews up by id and needs every one of them.
+    - Apply `inReview` when bundle 1's review publishes, and never again for the later bundles; the issue is genuinely in review from that moment and re-applying a phase it already holds reports progress that did not happen.
+    Skip a bundle whose review already exists and reuse it, the same way the single-review path does, so a resumed run never opens a second review for a bundle that has one.
+    After bundle N's routine completes, continue into the closing actions below, which run once for the issue rather than once per bundle.
+
     Finally, post a completion comment on the issue, including the done-on-merge note from `asana.md` when the tracker is Asana, and commit and push the task-state files this run changed as a final closing commit so the branch carries the completed state, staging them by explicit path per the staging rules in `conventions.md`: the beads JSONL export and `metadata.json` when beads is the backend, and this issue's files under `.fathom/`; never sweep `.beads/` or `.fathom/` as directories, since the beads database and runtime files are intentionally ignored and must not ride into the review.
     Push this closing commit with an ordinary `git push` of the branch even when the adapter declares `pushesForYou`, since that capability governs only the push that opens the review, as `../fathom-shared/forges.md` states; skipping it here would leave the completed task state in the local clone while the review reads as finished.
+    On a stacked issue this closing commit goes on branch N, the stack tip, because that branch contains every bundle's history and is the only one whose review shows the completed task state.
 12. Report a final summary: the issue, the review URL when one was opened or the resolved tier when one was not, the tracker's current phase, and the task counts from `status()`.
 
 ## Display overlay
