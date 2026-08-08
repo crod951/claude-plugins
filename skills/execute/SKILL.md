@@ -112,7 +112,7 @@ If any of these files cannot be found and read, stop immediately and report whic
      Either way the units are ordered, each building on the one before it, and that order is what the `deps` below and any bundle boundary follow.
    - Decide whether this issue produces one review or a stack, from those planned units and before anything is written to the tracker.
      Never consider a split when the resolved forge tier is the manual tier, whatever the breakdown looks like, since that tier cannot create a review at all.
-     Read the profile's `stacking` field per `../fathom-shared/approval.md`; treat an absent field as `propose`, and stop considering a split immediately when it reads `never`.
+     Read the profile's `stacking` field per `../fathom-shared/approval.md`; treat an absent field as `never`, and stop considering a split immediately when it reads `never`, whether it was written or absent.
      Otherwise propose a split only when both conditions hold: the breakdown has five or more units of work, and at least one valid cut point exists.
      A cut point is valid only where the work up to it is independently mergeable, meaning the repository builds, that bundle's tests pass, and merging it alone would not break the base branch.
      When no valid cut point exists, proceed as a single review and say so rather than forcing a boundary.

@@ -35,7 +35,7 @@ Skipping them changes how much the run interrupts you, not whether it is correct
 - The bundle-split proposal in `execute`.
   Apply the proposed split and report the bundles rather than asking for confirmation first.
   This belongs here rather than on the safety list because it fires before any branch, commit, or review exists, so a wrong answer costs nothing and is corrected by re-running with `stacking: never` or a different instruction.
-  It is skipped only when the profile's `stacking` field permits a split at all; `stacking: never` suppresses the split itself, in both modes, rather than suppressing the question.
+  It is skipped only when the profile's `stacking` field permits a split at all; `stacking: never`, and an absent field which means the same thing, suppress the split itself, in both modes, rather than suppressing the question.
 
 ## What auto mode never skips
 
@@ -80,10 +80,14 @@ Editing that field changes it permanently; an invocation phrase changes it for o
 When one skill hands off to the other, carry the resolved mode across so a per-run override is not lost at the boundary; say which mode the handed-off run is using.
 
 A second field, `stacking`, sits alongside `approval` and answers a different question: whether `execute` may split one issue into a stack of dependent reviews at all.
-It holds `propose` or `never`, and it defaults to `propose` when the field is absent.
+It holds `propose` or `never`, and it defaults to `never` when the field is absent.
 
 `propose` means the agent may propose a split when the breakdown crosses the threshold in `execute`, with the `approval` field above deciding whether that proposal is a question or a report.
 `never` means this repository always produces one review per issue, in both approval modes, in the same permanent way that `forge: none` makes the manual tier permanent.
+
+The default is `never` because stacking is opt-in, and a default of `propose` would not be.
+An existing repository running in `auto` mode has a profile written before this field existed and has never asked for stacking, yet under a `propose` default its next large issue would be split into a stack and reported rather than asked about, changing that repository's behavior without anyone opting in.
+A repository gets stacking only by writing `stacking: propose` into its profile, so every repository that has not written it keeps producing exactly one review per issue.
 
 The field deliberately has two values rather than three.
 An `ask` or `auto` value here would restate the `approval` field recorded a few lines above it in the same profile, and two fields that can disagree about the same question will eventually disagree.

@@ -22,7 +22,7 @@ On a `none` forge there is no forge-level stacking at all, but chaining the bran
 ## Goals
 
 Let one issue produce a short stack of dependent reviews when the work is large enough to warrant it.
-Keep the existing single-review behavior as the default for every repository, forge, and issue that does not opt in.
+Keep the existing single-review behavior as the default for every repository, forge, and issue that does not opt in, where opting in means writing `stacking: propose` into the repository's profile.
 Make the split a decision the user can see, override, and pin, rather than something the agent does silently.
 
 ## Non-goals
@@ -85,8 +85,12 @@ In `ask` mode the run waits for an answer; in `auto` mode it applies the split a
 
 `.fathom/config.md` gains `stacking`, with two values.
 
-`propose` is the default and means the agent may propose a split, with the approval mode deciding whether that is a question or a report.
+`propose` means the agent may propose a split, with the approval mode deciding whether that is a question or a report.
 `never` makes single-review behavior permanent for the repository, in the same spirit as `forge: none`.
+
+`never` is the default, so an absent field means the repository never splits an issue and a repository opts in by writing `stacking: propose`.
+A `propose` default would silently change behavior for every existing repository, most sharply for one running `approval: auto`, where the split is applied and reported rather than asked about, so its next large issue would arrive as a stack without anyone having asked for stacking.
+An opt-in feature must not do that, which is what makes `never` the only default consistent with the goal above of preserving single-review behavior for every repository that does not opt in.
 
 The field has two values rather than three on purpose.
 An `ask` or `auto` value here would duplicate the `approval` field two lines above it in the same file, and two fields that can disagree about the same question is a defect waiting to be filed.

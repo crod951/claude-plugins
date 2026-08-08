@@ -240,7 +240,7 @@ forge: github          # a bundled adapter name, "local" for .fathom/forge.md, o
 default-destination: Prototypes (1209000000000001)  # add "# auto-accepted" when auto mode chose it
 base-branch: main
 approval: ask
-stacking: propose      # or "never" to keep this repository on one review per issue; absent means propose
+stacking: propose      # write this to let the repository split an issue into a stack; "never" or absent keeps it on one review per issue
 merge-closer: native   # "none (forge has no hooks)" when the forge declares no ciHooks
 state-mapping:
   inProgress: section "In Progress"
@@ -249,7 +249,8 @@ state-mapping:
 ```
 
 The `stacking` line is optional and is not one of the six setup questions above, so first-run setup neither asks for it nor writes it.
-Write it only when the user asks for a repository-wide answer, and treat its absence as `propose` exactly as `approval.md` states.
+Write it only when the user asks for a repository-wide answer, and treat its absence as `never` exactly as `approval.md` states.
+Leaving it out of setup therefore means a freshly set up repository produces one review per issue and never proposes a split, which is the opt-in behavior stacking is meant to have; a repository that wants stacking adds the line itself.
 
 On every subsequent run, read the existing profile silently and use it without re-prompting.
 Re-run setup when a mapped state no longer exists in the tracker, or when the user explicitly asks to redo it.
