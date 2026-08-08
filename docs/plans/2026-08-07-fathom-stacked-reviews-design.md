@@ -100,6 +100,13 @@ The pattern is predictable and matchable, which is what lets a resumed run find 
 
 ### 6. Ordering is enforced in data
 
+The split is decided before any task is created, not after.
+The bundling proposal and its confirmation happen once the sub-issues are planned and before the `createTask` calls, so every task is created with its final deps in a single pass.
+
+This ordering is load-bearing rather than tidy.
+`createTask` takes `deps` at creation, and the memory contract has exactly six operations with no way to add a dependency to a task that already exists.
+Deciding the split after the tasks exist would leave the chain unbuildable, which would silently reinstate the out-of-order hazard this section exists to close.
+
 When a split is confirmed, every task takes a dependency on its predecessor, so the whole issue becomes one sequential chain across bundles as well as within them.
 
 `claimNext` returns the first open task whose deps are all closed, so a single chain means it structurally cannot hand out a later bundle's task while any earlier task is still open.
@@ -158,6 +165,16 @@ In a stack that closing keyword appears in the last bundle's review only.
 Earlier bundles reference the issue without a closing keyword and carry two additional lines: `Part k of N`, and `Depends on <previous review url>`.
 
 Without this rule the first bundle's merge closes the issue while most of the work is still open.
+
+That rule alone is not sufficient, because it only governs the forge's own keyword integration.
+The merge-closer GitHub Action closes an issue by matching the merged branch name against records under `.fathom/`, so it never reads the keyword at all, and every bundle's branch is recorded there.
+Under it, merging any bundle in any order closes the issue, and the next sweep then reads that issue as already complete and does nothing, making the early close permanent and silent.
+
+So a stacked issue suppresses the merge-closer entirely and leaves closure to the sweep, which already waits for every bundle to report `merged`.
+The run records a marker on the issue that tells the Action to take no action for it.
+
+One mechanism closes a stacked issue, not two that disagree.
+The cost is real and is stated at handoff: on a repository that relies on the Action for closure, a stacked issue now needs a later sweep run to reach `done`, where a single-review issue still closes on merge without one.
 
 ### 10. Forge contract change
 
