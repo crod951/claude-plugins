@@ -1,5 +1,17 @@
 # Fathom stacked reviews implementation plan
 
+## Status: completed historical record
+
+This document is a historical execution record of how the stacked-reviews change was implemented.
+Every task in it has been completed.
+It is a point-in-time record rather than current guidance, and it is deliberately left as it was written rather than rewritten to track later corrections.
+
+The skill files under `skills/` are authoritative wherever this document disagrees with them.
+Several skill files have been corrected past what this plan describes, so a difference between the two means the skill file is right and this record is simply older.
+
+The current specification is `docs/plans/2026-08-07-fathom-stacked-reviews-design.md`.
+Read that document, and the skill files themselves, for how the feature behaves today.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give the reserved `stackedReviews` forge capability real behavior, so one tracker issue can produce a short stack of dependent code reviews when its breakdown is large enough, with the split proposed at breakdown time.
