@@ -61,7 +61,8 @@ If any of these files cannot be found and read, stop immediately and report whic
    Treat any claim about a review's fate as a cleanup phrase, whether it says merged, closed, abandoned, landed, or shipped, and whether it names an issue or asks to clean up whatever is outstanding.
    Never act on the claim itself: confirm each referenced review's real state through `getReviewState` first, then apply the merged path or the closed-without-merging path accordingly, and say plainly when the confirmed state differs from what the user described.
    When the resolved forge declares `reviewLookup: none`, the claim cannot be confirmed at all. Say that plainly and act on nothing; do not close an issue on the strength of an unverifiable claim, since a wrong close is exactly what the confirmation step exists to prevent.
-   When the adapter declares `reviewLookup: none` the whole sweep is unavailable, exactly as it already is for single reviews, so say so once and act on nothing; this is checked before the cases below because it decides whether `getReviewState` can be called at all.
+   That same `reviewLookup: none` declaration makes the whole sweep unavailable, exactly as it already is for single reviews, so say so once and act on nothing.
+   Check it before the cases below rather than after them, since it decides whether `getReviewState` can be called at all.
    An issue split into a stack has one recorded review per bundle rather than one in total, so call `getReviewState` on every recorded id before deciding anything about the issue.
    A stack can satisfy more than one of the cases below at once, so check them in the order written and let the first one that applies decide the whole sweep.
    In particular a stack can hold a merged bundle, an open bundle, and an abandoned one simultaneously, and the abandoned bundle wins: restacking the bundles above it would force-push a rebase onto work the user may be about to discard, which is exactly the unattended destruction that stop exists to prevent.
@@ -85,7 +86,14 @@ If any of these files cannot be found and read, stop immediately and report whic
 5. Call `getIssue` for that ref and save its title, description, type, URL, and existing children for the rest of this run.
    When the issue is already in the `done` phase or marked complete, do not start work: say so, report what the sweep found for it, and ask whether to reopen it or pick a different issue.
 6. Search the codebase and read the files that look relevant to this issue, noting existing patterns to follow during implementation.
-7. Ensure a feature branch exists for this issue; when one must be created, prefix its name from the issue type (`feat/` for a feature, `fix/` for a bug, `chore/` for a chore, `docs/` for docs, `feat/` by default) followed by the issue ref and a short title slug; skip creation when a matching branch already exists.
+7. Ensure the branch this run implements on exists, and continue on that one branch until step 10 says to move to the next bundle.
+   Decide which branch that is before creating anything: read this issue's plan document when one already exists, since a resumed run recovers the stack from durable state and never from memory of an earlier run.
+   When that document carries a `Bundles` section, this issue was already split: recover every bundle's index, branch, sub-issue refs, and recorded review id from it, and carry that recovered stack through the rest of this run, including step 10's loop and step 11's per-bundle routine.
+   The bundle in progress is the first one with no recorded review, because a bundle's review is recorded as its last task closes, so this run continues on that bundle's branch rather than on bundle 1's.
+   Continuing on bundle 1's branch instead would land a later bundle's commits in a review that is already open and published, which is the failure this recovery exists to prevent.
+   The branch is bundle 1's whenever no plan document exists yet, which is a first run rather than a resumed one, and whenever the plan document carries no `Bundles` section, which is a single-review issue.
+
+   Name a branch that must be created from the issue type (`feat/` for a feature, `fix/` for a bug, `chore/` for a chore, `docs/` for docs, `feat/` by default) followed by the issue ref and a short title slug; skip creation when a matching branch already exists.
    Resolve the base branch per the base-branch rules in `../fathom-shared/forges.md`, then fetch it and create the new branch from the fetched remote copy rather than from a local copy that may be behind, since branching from a stale local copy is the usual cause of conflicts at merge time.
    When the branch already exists and the base branch has moved on since, bring it up to date before implementing, and report that you did.
    When that update conflicts, stop and hold exactly as an unfixable test failure would: keep the work, leave the task in progress, report which files conflict, and let the user decide how to resolve them; never resolve a conflict by discarding either side's changes.
@@ -93,12 +101,6 @@ If any of these files cannot be found and read, stop immediately and report whic
    When step 8 confirms a stack, later bundles take the same name with their index appended, so bundle 2 of `feat/ONC-5-add-webhooks` is `feat/ONC-5-add-webhooks-2`.
    Create each of those from the previous bundle's branch at the moment that bundle starts, not up front: creating them all at breakdown time would leave empty branches behind whenever a run stops early.
    Give every one of them the same already-exists guard bundle 1 has: check out a bundle branch that already exists rather than creating it, and create it only when it is genuinely absent, since creating a branch name that already carries that bundle's commits either fails outright or resets the branch and discards them.
-
-   Before deciding which branch this run continues on, read this issue's plan document when one already exists, since a resumed run recovers the stack from durable state and never from memory of an earlier run.
-   When that document carries a `Bundles` section, this issue was already split: recover every bundle's index, branch, sub-issue refs, and recorded review id from it, and carry that recovered stack through the rest of this run, including step 10's loop and step 11's per-bundle routine.
-   The bundle in progress is the first one with no recorded review, because a bundle's review is recorded as its last task closes; continue on that bundle's branch rather than on bundle 1's.
-   Continuing on bundle 1's branch instead would land a later bundle's commits in a review that is already open and published, which is the failure this recovery exists to prevent.
-   Fall back to bundle 1's branch only when no plan document exists yet, which is a first run rather than a resumed one.
 8. Ensure the breakdown exists.
    - Skip the rest of this step when a breakdown already exists for this issue, and let the stack recovered in step 7 govern the rest of this run.
      Every decision below is made once, at breakdown time, so a resumed run reads the split, the bundles, and their branches out of the plan document instead of deciding any of them again.
