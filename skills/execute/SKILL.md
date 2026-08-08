@@ -53,12 +53,26 @@ If any of these files cannot be found and read, stop immediately and report whic
    This keeps preflight, the sweep, and the run itself on one tracker; verifying whatever the profile names while the invocation clearly targets the other tracker would sweep and verify the wrong one.
    Stop here, following that section's instructions, when the tracker's MCP does not verify.
    A forge that does not verify is not a stop: it selects a capability tier per `../fathom-shared/forges.md`. State the resolved tier before continuing, so the user knows up front whether this run will end in an opened review or a manual handoff.
+   When a resumed run resolves the manual tier on an issue whose earlier bundles already have open reviews, leave those reviews alone and hand the remaining bundles off manually, saying that the tier changed between runs so the stack is now half automated and half manual.
 2. Run the done-on-merge sweep for the resolved tracker; the mechanics are described in `../fathom-shared/trackers.md` and are tracker-agnostic, with each adapter file defining only its own closure action for the merged path.
    This sweep is itself tracker work, so it only runs once preflight has verified the MCP.
    When the invocation itself was a cleanup phrase, run only this sweep, report what it found, then stop; do not continue into the rest of this procedure.
    Treat any claim about a review's fate as a cleanup phrase, whether it says merged, closed, abandoned, landed, or shipped, and whether it names an issue or asks to clean up whatever is outstanding.
    Never act on the claim itself: confirm each referenced review's real state through `getReviewState` first, then apply the merged path or the closed-without-merging path accordingly, and say plainly when the confirmed state differs from what the user described.
    When the resolved forge declares `reviewLookup: none`, the claim cannot be confirmed at all. Say that plainly and act on nothing; do not close an issue on the strength of an unverifiable claim, since a wrong close is exactly what the confirmation step exists to prevent.
+   An issue split into a stack has one recorded review per bundle rather than one in total, so call `getReviewState` on every recorded id before deciding anything about the issue.
+   Move the issue to `done` only when every bundle reports `merged`.
+   When some bundles are merged and others are still open, close nothing: report the partial progress, naming which bundles merged, then run the restack check below.
+   When any bundle reports `closed-unmerged`, apply the closed-without-merging path for that bundle, name which bundles above it in the stack are now orphaned by it, and neither close the issue nor restack anything; whether to retry, rescope, or drop the orphaned work is the user's judgment call.
+   When the adapter declares `reviewLookup: none` the whole sweep is unavailable here as it already is for single reviews, so say so once and act on nothing.
+
+   The restack check asks one forge-agnostic question: is the merged bundle's content an ancestor of each remaining stack branch?
+   Rebase a remaining branch onto its updated base only when the answer is no, and leave it alone when the answer is yes.
+   Ancestry is the right test rather than the adapter's `stackedReviews` value, because a squash-merge on a `retarget` forge leaves a dependent review redisplaying the merged bundle's changes exactly as an unretargeted `none` forge would, and one check covers both.
+   Rebase the remaining branches bottom-up, so each one lands on a base that is already correct.
+   Push a rebased branch with `--force-with-lease` and never with a bare force push.
+   When the lease is rejected, stop and hold: another commit reached that branch, and overwriting it discards someone's work, which is the hazard `../fathom-shared/approval.md` already refuses to take unattended.
+   When the rebase conflicts, stop and hold naming the conflicting files, exactly as a base-branch update conflict does in step 7.
 3. Resolve which tracker owns this issue and which memory backend owns its task state, following `trackers.md` and `memory.md`.
    When the repo already contains beads state but the beads tooling is unavailable on this machine, stop and say so as memory.md directs; never substitute a different backend for a repo whose state lives in another one.
    Load the existing `.fathom/config.md` tracker profile, or run first-run setup when none exists; either way, run the tracker adapter's profile-load checks and honor any one-time offers they define.
