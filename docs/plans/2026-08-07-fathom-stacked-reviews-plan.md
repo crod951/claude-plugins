@@ -365,7 +365,9 @@ Run:
 grep -n "stacking" skills/fathom-shared/approval.md
 ```
 
-Expected: at least 4 matching lines, all using only the values `propose` and `never`.
+Expected: exactly 3 matching lines, all using only the values `propose` and `never`.
+
+`grep -n` counts lines rather than occurrences, and the approved text carries the word on three of them: two in the skip-list entry and one in the profile-field paragraph. If you get a different number, report it rather than dropping the check.
 
 Run:
 
