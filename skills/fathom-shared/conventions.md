@@ -58,6 +58,10 @@ Include these sections:
 - **Codebase context** - the files, modules, and existing patterns this work touches, with paths.
 - **Implementation approach** - how the change will be made, including anything deliberately out of scope.
 - **Tasks** - the planned units of work with their sub-issue links.
+- **Bundles** - present only when this issue was split into a stack, and omitted entirely otherwise.
+  One line per bundle, in stack order, each reading `- Bundle <k>/<N>: <branch> - <sub-issue refs, comma separated>`.
+  Add a `- Review: <id> <url>` line beneath a bundle once its review exists.
+  This section is the durable record a resumed run reads to recover the stack, so write it when the split is confirmed rather than when the first review opens.
 - **Testing strategy** - which tests will prove the work, and which existing tests could regress.
 - **Notes** - open questions, risks, and decisions taken during the run.
 
@@ -82,6 +86,12 @@ Compare that count to the number of tasks closed for this issue.
 Check the recorded hashes as well: every hash recorded at close must name a commit inside that same range, and each closed task's hash must be distinct, which catches a mismatch that subject-line counting can misclassify.
 When the counts disagree, stop and report the discrepancy rather than opening a review: either a commit is missing, or tasks were combined into one commit, and both contradict the one-commit-per-task rule.
 
+When the issue was split into a stack, reconcile once per bundle rather than once per issue, and do it before that bundle's review opens rather than at the end of the run.
+Count over the range from that bundle's own base to that bundle's head: the resolved base branch for bundle 1, and branch k-1 for bundle k.
+Compare that count to the number of tasks closed for that bundle only.
+A stack-wide count over the whole range would pass even when one bundle carried another bundle's commits, which is exactly the mistake the check exists to catch.
+Stop on a mismatch the same way, and do not open that bundle's review.
+
 This check guards a hazard that is universal across forges rather than specific to any one of them: every forge reviews committed work only, so anything left staged or uncommitted is silently absent from the review, with no error raised anywhere.
 
 ## Review test plan
@@ -100,3 +110,18 @@ When the project cannot run tests at all, say that plainly here rather than leav
 
 After each task closes, print one line so a long autonomous run stays legible: the task position in the queue, its id, the commit subject, the test result, and how many tasks remain.
 Report the resolved tracker and memory backend once at the start of the run, and state the backend explicitly whenever it differs from what other open issues in this repository are using.
+
+## Review bodies in a stack
+
+When one issue produced a stack of reviews, the issue-closing reference goes in the last bundle's review body only.
+
+`execute` puts `Closes <ref>` in the body for a Linear issue, or the task's URL for an Asana task, and both are read by the forge's tracker integration on merge.
+Repeating either in every bundle means the first bundle's merge closes the issue while most of the work is still open and unreviewed.
+
+Every bundle's body carries two additional lines instead:
+
+- `Part <k> of <N>` so a reviewer knows this diff is a slice rather than the whole change.
+- `Depends on <previous review url>`, omitted for bundle 1, which depends on nothing.
+
+Earlier bundles still name the issue for context, as a plain link with no closing keyword.
+The distinction is between referencing an issue and instructing the forge to close it, and only the last bundle does the second one.
