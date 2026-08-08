@@ -119,7 +119,12 @@ If any of these files cannot be found and read, stop immediately and report whic
      Never consider a split when the resolved forge tier is the manual tier, whatever the breakdown looks like, since that tier cannot create a review at all.
      Read the profile's `stacking` field per `../fathom-shared/approval.md`; treat an absent field as `never`, and stop considering a split immediately when it reads `never`, whether it was written or absent.
      Otherwise propose a split only when both conditions hold: the breakdown has five or more units of work, and at least one valid cut point exists.
-     A cut point is valid only where the work up to it is independently mergeable, meaning the repository builds, that bundle's tests pass, and merging it alone would not break the base branch.
+     A cut point is valid only where the planned units up to it form a self-contained change: the units after it build on the units before it and not the reverse, and the earlier units together deliver something that stands on its own rather than half of one thing.
+     Judge that from the plan alone, because the plan is all there is to judge from at this moment: the decision is made at breakdown time, before any of the work is written, so there is no build to run and no tests to pass at a candidate boundary.
+     This is therefore a prediction about reviewability rather than a verified property of the repository, and two later steps catch a wrong prediction.
+     The confirmation stop below shows the proposed boundaries to the user before anything is built, which is the cheap correction.
+     The per-bundle finish routine in step 11 then reconciles that bundle and runs its tests for real, and its stop-and-hold fires when either disagrees, which is the expensive one.
+     A boundary that looked self-contained in the plan and turns out not to be is caught before that bundle's review opens rather than after it ships.
      When no valid cut point exists, proceed as a single review and say so rather than forcing a boundary.
      Both conditions are properties of the planned units rather than of anything on the tracker: the count comes from the plan, and a cut point's validity is a property of the work itself, which is what lets this whole decision run before a single sub-issue exists.
      When the manual-tier guard above fired, say the split was not offered because the tier cannot create reviews only if the breakdown would otherwise have crossed the five-unit threshold; below that threshold no split was available in any tier, so explaining its absence would report a decision that was never live.
