@@ -2,7 +2,7 @@
 
 [![SkillSpector](https://github.com/crod951/skills/actions/workflows/skillspector.yml/badge.svg)](https://github.com/crod951/skills/actions/workflows/skillspector.yml)
 
-Personal agent skills for issue-driven development workflow automation, installable as a Claude Code plugin or onto any agent via [skills.sh](https://www.skills.sh).
+Personal agent skills for issue-driven development workflow automation, installable as Claude Code plugins or onto any agent via [skills.sh](https://www.skills.sh).
 All skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/SkillSpector) on every change; the build fails on any non-suppressed security finding.
 
 ## Installation (30-second setup)
@@ -12,7 +12,11 @@ All skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/Skil
 ```text
 /plugin marketplace add crod951/skills
 /plugin install fathom@crod951
+/plugin install ship@crod951
 ```
+
+The two plugins are independent: install either one alone.
+Fathom needs a tracker MCP. Ship needs a git repository with a remote.
 
 **Kiro, Codex, and other agents** - use [skills.sh](https://www.skills.sh) for an editable copy on any agent:
 
@@ -20,7 +24,8 @@ All skills are scanned with [NVIDIA SkillSpector](https://github.com/NVIDIA/Skil
 npx skills@latest add crod951/skills
 ```
 
-When the installer asks which skills to take, take all of them; `fathom-shared` carries the contract files the other two read.
+The installer lists every skill in `skills/` regardless of which plugin owns it.
+Take `ship` on its own if that is all you want; take `execute`, `scaffold`, and `fathom-shared` together, since `fathom-shared` carries the contract files the other two read.
 
 > Individual plugins may have additional prerequisites that run in your **terminal** (e.g., `brew install`). See each plugin's README for details.
 
@@ -77,11 +82,58 @@ See the [full guide](./docs/fathom.md) for setup, task memory, and the security 
 
 ---
 
+### ship (v1.0.0)
+
+Ship takes the current branch from working tree to merged release in one pass: review and verification run in parallel with a batched fix loop until both are clean, then commit, push, pull request, automated-review loop, squash-merge, release watch, and post-merge cleanup.
+Everything from the pull request onward needs an installed and authenticated GitHub CLI; without one, ship stops after pushing the branch and printing the compare URL, and the review, merge, and release are yours to drive.
+
+#### Prerequisites
+
+- A git repository with a remote
+- [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh`) for the pull request, merge, and check-polling stages; without it ship pushes the branch, prints the compare URL, and hands the review off to you
+
+#### Install
+
+```bash
+/plugin install ship@crod951
+```
+
+#### Skills
+
+| Skill | Description |
+|-------|-------------|
+| `ship` | Resolves the project's own verification pipeline, then drives the branch through review, CI, pull request, merge, release, and cleanup without stopping between stages. |
+
+```bash
+ship
+ship it
+```
+
+#### Features
+
+- **Project-resolved pipeline** - the verify command comes from `.ship/config.md`, then the project's docs, then a declared aggregate task, then the pull-request CI job, then a composed fallback; the first tier that answers wins
+- **Asks once, remembers** - when detection is ambiguous ship asks a single question before touching the tree, then records the answer in `.ship/config.md` and commits it on its own, so the decision reaches the next branch, clone, and teammate without ever landing in the diff under review
+- **No config for free answers** - a pipeline detection resolved on its own gets no file, because a file that restates what is already discoverable only goes stale; `.ship/config.md` exists to preserve a human decision
+- **Parallel gates** - review and verification diagnose the same HEAD concurrently, with fixes batched between rounds so neither gate ever reads a stale tree
+- **Exit only on an untouched round** - the last round has to pass both gates with no fixes applied, so a green result always describes the code that actually merges
+- **A blocking bar, not a nit hunt** - stage 1 fixes verify failures and confirmed critical or major findings, records the disposition of everything else into the pull request body, and terminates; fixing every nit hands the next round fresh code to find fault with, which is how a review loop never converges
+- **The bot is the final bar, asked once** - the local CLI review still runs before the push, and the pull-request bot still has to settle green, but a finding the same reviewer already dispositioned against the same content carries its answer forward instead of reopening the loop
+- **Project-local override** - a repository that ships its own `.claude/skills/ship/SKILL.md` takes precedence, carrying its specialized pipeline
+
+---
+
 ## Workflow
 
 1. **Scaffold requirements**: talk to the scaffold skill, for example "scaffold these requirements"
 2. **Execute the issue**: talk to the execute skill, for example "execute ONC-5"
 3. **Resume if interrupted**: re-invoke execute on the same issue; it picks up where the last run left off
+4. **Ship the branch**: talk to the ship skill, for example "ship it", to carry the reviewed branch through merge and release
+
+## Repository Layout
+
+Every skill lives in a flat `skills/<name>/` directory, and `.claude-plugin/marketplace.json` decides which plugin owns which skill through a per-entry `skills` array.
+Both plugins therefore share one marketplace root (`source: "./"`), and there is deliberately no `.claude-plugin/plugin.json`: with that source a single root manifest would apply to every entry and its version would silently win over each entry's own.
+`bin/sync-versions.sh` syncs the versions into this README and fails when a skill directory is claimed by no plugin, by more than one, or is claimed but missing.
 
 ## Security Scanning
 

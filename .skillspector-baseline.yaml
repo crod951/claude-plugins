@@ -50,6 +50,24 @@ rules:
       human-in-the-loop prompt; "without asking" names the option offered,
       not behavior taken unilaterally.
 
+  - id: "AS3"
+    path: "SKILL.md"
+    message: "skills/ship/SKILL.md"
+    reason: >-
+      False positive: "Skill Enumeration" matched ship's precedence
+      paragraph, which checks the CURRENT REPOSITORY for a project-local ship
+      skill (`.claude/skills/ship/SKILL.md` and the Kiro and agents
+      equivalents) and defers to it. It reads one known path for a skill of
+      the same name inside the user's own project; it never lists the
+      installed-skills directory, never reads a peer skill's instructions,
+      and never reports what it found anywhere but to the user. The override
+      is the point of the skill being global: a repository with a specialized
+      pipeline keeps it instead of silently getting the generic one.
+      Caution: the message field matches the finding string, which for AS3 is
+      only the file path, so this rule suppresses ANY AS3 hit in
+      skills/ship/SKILL.md, including future ones this reason does not cover;
+      re-review it whenever that file gains new cross-skill wording.
+
   - id: "PE3"
     path: "conventions.md"
     message: "*credentials.yml*"
