@@ -87,17 +87,70 @@ When it declares `none`, there is no way to observe what happened to a review, s
 Find the outstanding issues by searching `.fathom/` for recorded reviews.
 Search the whole directory rather than only `tasks/`: depending on the resolved memory backend the per-issue record may be a plan document under `plans/` with no checklist file at all, and narrowing the search to `tasks/` silently skips those issues.
 
-For each issue the search finds, call `getReviewState` once with that issue's recorded review id and act on what it returns.
+For each issue the search finds, read every review id recorded for it and call `getReviewState` on each one before deciding anything about that issue.
+A single-review issue records one id; an issue split into a stack records one per bundle, in the plan document's `Bundles` section described in `conventions.md`.
+Read the records rather than assuming a count: acting on the first id found would decide a stacked issue's fate from one bundle's result while the rest of its work was still open, which is the early close the `Merge-closer: suppressed` marker exists to prevent.
+A stack's records are spread across its bundle branches rather than gathered in one place.
+Each bundle's `- Review:` line is committed on that bundle's own branch as that bundle's review publishes, so a checkout of the base branch carries the records of the bundles that have merged into it and none of the records above them.
+Collect the missing ones before judging anything: read the branch names from the plan document's `Bundles` section, fetch each of those branches, and read each fetched branch's own copy of the plan document, taking every `- Review:` line it carries rather than only the line for the bundle that branch belongs to.
+Take them all because a run recovering a bundle whose branch was deleted or reused records that bundle's outcome on the branch it is on, which is a write path that exists, so that bundle's line can sit on a branch other than its own.
+A bundle branch is created from the branch below it, so the highest one that still exists carries every record beneath it, and fetching all of them costs nothing beyond that.
+Prefer this to mirroring the ids into a store the base branch can read directly, such as a tracker comment or a second file: fetching is read-only git work that needs no write anywhere and cannot drift, whereas a second record of the same fact is a second thing that can disagree with the plan document.
+When no `- Review:` line for a bundle turns up on the current branch or on any branch this collection fetched, that bundle simply has no record, and case 2 below decides what happens then.
+
+An issue none of whose bundles have merged has no record on the base branch at all, since the plan document itself is committed on bundle 1's branch, so from a base checkout that issue is not found by the search above.
+That is exactly how an unmerged single-review issue behaves, and it is correct: nothing has merged, so there is nothing to close.
+
 Look each id up directly; never list a forge's reviews and match them locally.
 A listing has to be bounded, and any bound silently drops the oldest records once a repository has more reviews than the bound allows, which is a defect that grows quietly with the repository's age.
 
 Records written before review ids were recorded carry a branch name and no id.
-For those, fall back to the optional `findReviewByBranch` operation defined in `forges.md`, and rewrite the record with the id once one is known, so the fallback path drains over time rather than becoming permanent.
-When the resolved adapter does not implement that operation, the record cannot be swept: report that once, naming the record, rather than guessing or treating a branch name as a review id.
+For those, fall back to the optional `findReviewByBranch` operation defined in `forges.md`, which returns bounded candidate records carrying each review's id, its URL, and its base.
+Treat such a record as resolved only when exactly one candidate comes back, since a legacy record names a branch and nothing else and so carries nothing to tell two candidates apart; two or more candidates leave it unresolved rather than presenting a choice to make.
 
-When `getReviewState` returns `merged`, read the issue's current state before writing to the tracker.
+Resolution is not complete at the id.
+Add the resolved id to that issue's set of review ids and call `getReviewState` on it, and do both before any of the ordered cases below are evaluated for that issue, so every case judges the issue on its whole set rather than on the subset that already carried ids.
+Doing this after the cases, or not at all, would let the completeness requirement and the aggregate cases run against an incomplete set: an issue whose only unresolved record is the branch-only one would read as fully recorded, and case 3 would close it on the strength of the reviews that happened to have ids.
+Then rewrite the record with the id, so the fallback path drains over time rather than becoming permanent.
+
+When resolution fails, and when the resolved adapter does not implement that operation at all, that record yields no id and no state: report that once, naming the record, rather than guessing or treating a branch name as a review id.
+Leave the issue incomplete in that case, exactly as a missing `- Review:` record leaves it, so case 2 below blocks closure on it instead of the aggregate cases deciding the issue on partial data.
+
+Judge each issue on all of its results together, in the order below, letting the first case that applies decide that issue.
+An issue can satisfy more than one case at once, and a stack holding a merged bundle, an open bundle, and an abandoned one routinely does.
+
+1. Any recorded review reports `closed-unmerged`.
+   Apply the closed-without-merging path below for that review, and, when the issue is a stack, name which bundles above it are now orphaned by it.
+   Close nothing for that issue, and do not read its merged reviews as progress toward closure.
+   This case is checked first and is terminal, however many of the issue's other reviews merged or stayed open, because whether to retry, rescope, or drop the orphaned work is the user's decision and nothing should be built on top of work that may be about to be discarded.
+2. Any recorded review reports `unknown`, or some bundle between 1 and N has no `- Review:` record at all, or a branch-only record could not be resolved to a review id, and none reported `closed-unmerged`.
+   `getReviewState` returns `unknown` when it could not determine the review's fate, which is not a state the review is in but an answer the sweep did not get.
+   A missing record is the same kind of gap: the `Bundles` section says how many bundles the issue has, so N is known even when a record is not, and an issue judged on fewer records than N is judged on an incomplete set.
+   An unresolved branch-only record is that same gap in a third shape: the record is there, but nothing behind it can be looked up, so the review it stands for is exactly as unobserved as one whose record is missing.
+   With N of 3 and only two records collected, the cases below would read a partly recorded three-bundle stack as a complete two-bundle one, and case 3 would then close a half-merged issue.
+   So require a record for every bundle from 1 to N, and a `getReviewState` result for every one of those records, before evaluating cases 3, 4, and 5 at all, and take this case whenever that requirement is unmet.
+   Change nothing about the issue: close nothing, report nothing about its progress, and leave it exactly as it stands for a later sweep to decide.
+   Name the review ids that came back `unknown`, the bundles whose records are missing, and the branch-only records that could not be resolved, and say that this issue was left undecided because of them.
+   Never fold an `unknown` result, a missing record, or an unresolved branch-only record into `merged`, `open`, or "still entirely in review": each of those is a specific claim about work the sweep cannot actually see, and the later cases would otherwise absorb it and make that claim anyway.
+   This case sits below case 1 because a `closed-unmerged` result is a fact the sweep did observe, and its outcome does not depend on the undetermined or unrecorded ones: it closes nothing, restacks nothing, and hands the decision to the user, which is already the safest thing an incomplete picture could ask for.
+   It sits above every case below because those judge the issue on all of its results at once, and neither an undetermined result nor a missing one can carry its share of such a judgment.
+3. Every recorded review reports `merged`.
+   Apply the merged path below.
+   For a single-review issue that is its one review, and for a stack it is every bundle, which is what keeps a stack from being closed by its first merge.
+4. Some reviews merged and others still open.
+   Close nothing, and report the partial progress, naming which bundles merged.
+5. None merged and none closed without merging.
+   The work is still entirely in review, so close nothing and say so plainly rather than reporting nothing at all.
+   Every result reaching this case is `open`, since an `unknown` one was already decided by case 2.
+
+Cases 2, 4, and 5 leave the issue's phase exactly where it is.
+The branches a partially merged stack leaves behind may still need restacking, but that is git and forge work rather than tracker work, so it belongs to the skill running the sweep; this section decides only what is written to the tracker.
+
+On the merged path, read the issue's current state before writing to the tracker.
 When the issue is already complete, for example because a merge-closer Action or a native integration already closed it, do nothing further for that issue.
 Otherwise apply the mapped `done` state through `updateState`, plus any closure action the adapter defines for the merged path, before proceeding with the rest of the run.
+An issue whose record carries `- Merge-closer: suppressed`, which is how a stacked issue is recorded per `conventions.md`, was deliberately left for this sweep to close: the Action takes no action for it, so the sweep is its only closure mechanism and reaching `done` requires a run of this sweep.
+The state read above still applies to it unchanged, since a user may have closed such an issue by hand.
 
 That state read is the whole idempotency mechanism for the merged path.
 An issue that is already `done` produces no write on any later run, so nothing needs to be recorded anywhere and nothing needs to be pushed.
@@ -218,12 +271,17 @@ forge: github          # a bundled adapter name, "local" for .fathom/forge.md, o
 default-destination: Prototypes (1209000000000001)  # add "# auto-accepted" when auto mode chose it
 base-branch: main
 approval: ask
+stacking: propose      # write this to let the repository split an issue into a stack; "never" or absent keeps it on one review per issue
 merge-closer: native   # "none (forge has no hooks)" when the forge declares no ciHooks
 state-mapping:
   inProgress: section "In Progress"
   inReview: section "Review"
   done: section "Done" + completed
 ```
+
+The `stacking` line is optional and is not one of the six setup questions above, so first-run setup neither asks for it nor writes it.
+Write it only when the user asks for a repository-wide answer, and treat its absence as `never` exactly as `approval.md` states.
+Leaving it out of setup therefore means a freshly set up repository produces one review per issue and never proposes a split, which is the opt-in behavior stacking is meant to have; a repository that wants stacking adds the line itself.
 
 On every subsequent run, read the existing profile silently and use it without re-prompting.
 Re-run setup when a mapped state no longer exists in the tracker, or when the user explicitly asks to redo it.

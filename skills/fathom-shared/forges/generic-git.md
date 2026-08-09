@@ -19,6 +19,10 @@ Work still gets committed, pushed, and handed to a human in a usable form; what 
 | `reviewLookup` | `none` |
 | `stackedReviews` | `none` |
 
+`stackedReviews: none` is never exercised through this adapter.
+This adapter is what the manual tier runs on, and `../forges.md` states that the manual tier never proposes a stack, so `openReview` here is only ever called for a standalone review.
+The value is declared truthfully rather than left absent, because a repo-local adapter author reading this file as the minimum viable example needs to see every capability filled in.
+
 `reviewLookup: none` is the consequential one.
 It means the done-on-merge sweep cannot run in this repository, and every skill that would have swept must say so rather than reporting a clean sweep it never performed.
 
@@ -43,7 +47,7 @@ The tier-2 probe already ran and either found nothing or was declined; re-probin
 
 Confirm the branch exists on the remote with `git ls-remote --exit-code --heads origin <branch>`.
 
-## `openReview(branch, base, title, body)`
+## `openReview(branch, base, title, body, dependsOn?)`
 
 This operation does not push.
 `pushesForYou` is false, so the branch has already been pushed by the caller before this runs, exactly as on any other adapter that declares false.
@@ -57,6 +61,7 @@ Print what a human needs to open the review by hand:
 - The suggested body, in full, so it can be pasted rather than reconstructed.
 
 Return no review id.
+`dependsOn` is ignored here for the same reason the id is absent: there is no review object to attach a dependency to.
 
 Say plainly, at this point, all three of these, since a partial statement is what leaves the user guessing:
 

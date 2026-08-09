@@ -14,7 +14,7 @@ Adapter files implement each one against a specific forge's tools; treat the ope
 | --- | --- |
 | `verifyForge()` | Cheap read-only preflight check that the forge is reachable and authenticated; returns verified or unverified and nothing else. |
 | `resolveBase(branch)` | Confirm the named base branch exists on the remote and is a valid merge target. |
-| `openReview(branch, base, title, body)` | Create the review for a branch against a base. Return a stable review id and the review's URL - or, on a forge where no review can be created, the manual-handoff result defined below. |
+| `openReview(branch, base, title, body, dependsOn?)` | Create the review for a branch against a base. Return a stable review id and the review's URL - or, on a forge where no review can be created, the manual-handoff result defined below. `dependsOn` is optional and carries the review id this one is stacked on; it is absent for a standalone review and for the first bundle of a stack. |
 | `publishReview(id)` | Move a draft review to the notified-review state, where the forge distinguishes the two. A no-op everywhere else. |
 | `getReviewState(id)` | Return one of `open`, `merged`, `closed-unmerged`, or `unknown`, plus a merge timestamp when merged. |
 
@@ -35,9 +35,24 @@ A branch name is not a review id.
 An adapter that cannot create reviews (see `generic-git.md`) returns this instead of an id, and it is a typed outcome of the contract rather than a failure.
 A caller receiving it must not call `publishReview`, must not record a review id, and must say plainly that opening the review is now the user's step.
 
-One optional operation exists beyond the five, for legacy records only: `findReviewByBranch(branch)`, which resolves a review id from a head branch name where the forge can do that (`github.md` implements it with a bounded head-branch listing).
+One optional operation exists beyond the five, for repairing incomplete records: `findReviewByBranch(branch)`, which finds the reviews opened from a head branch where the forge can do that (`github.md` implements it with a bounded head-branch listing).
 Adapters that cannot implement it simply omit it.
-The sweep uses it solely to repair records written before review ids were recorded; when the resolved adapter omits it, such a record cannot be swept, and the sweep reports that once instead of guessing.
+
+**It returns a bounded list of candidate records, newest first, and each record carries three fields: the review id, the review's URL, and the base branch that review targets.**
+It returns an empty list when the branch has no reviews, and it never returns a bare id.
+A caller needs all three fields.
+The id is what `getReviewState` and every later record are written against, the URL is what a `- Review:` line needs in order to name the review to a human, and the base is the only thing that tells apart two reviews sharing one head branch.
+That last case is routine rather than exotic: bundle branches chain, so one head branch can carry a review opened against a base the caller no longer targets, and `getReviewState` reports a review's fate without reporting what it targets, so the base has to come from here or from nowhere.
+The list is bounded, so treat it as a set of candidates rather than an exhaustive answer, and match within it rather than trusting it to hold exactly one review.
+The bound cuts both ways, so a result carrying no matching candidate is not proof that no such review exists, and an empty list is not proof that the branch has no review at all: each says only that the operation saw none inside its window, which is a different claim from there being none.
+Adapters bound this differently and a caller cannot see how, so no caller may read absence out of this operation, however the result comes back.
+A caller may act on a match it finds here, since a returned record is a review that demonstrably exists.
+A caller that would create something on the strength of absence must not use this result for that: it has to establish absence from evidence outside the operation, or stop and hold, and each caller below states which of those it does.
+
+It is used only where a review may exist while nothing in the repository records its id: the sweep repairs records written before review ids were recorded, and `execute` recovers a bundle whose review opened before its `- Review:` line was committed.
+When the resolved adapter omits the operation entirely, no lookup is possible at all and such a record cannot be repaired.
+Each caller says that once, names the record, and then takes the path its own procedure defines for an unrepairable record rather than guessing: the sweep leaves that issue undecided and closes nothing, per `trackers.md`, and `execute` opens a review for a bundle only where its own plan document records no attempt for that bundle at all, which is evidence of absence that owes nothing to this operation, and otherwise holds rather than risk opening a second review, per `execute/SKILL.md`.
+Those two differ because the costs differ, and each file states its own; neither is licensed to invent the other's.
 
 ## Declared capabilities
 
@@ -51,13 +66,24 @@ An absent capability means false.
 | `draftState` | true / false | Whether `publishReview` is meaningful, and when the `inReview` phase is applied. |
 | `pushesForYou` | true / false | Whether `openReview` owns the push, or the calling skill pushes the branch first. |
 | `reviewLookup` | `by-id` / `none` | Whether the done-on-merge sweep can run at all. |
-| `stackedReviews` | `retarget` / `declared-dependency` / `none` | Reserved. No behavior depends on it yet. |
+| `stackedReviews` | `retarget` / `declared-dependency` / `none` | How this adapter expresses that one review is stacked on another, in `openReview`. |
 
 Forges differ in kind, not only in command names, which is the same lesson `agents.md:23-31` already records for tracker MCP builds whose tool coverage varies.
 A capability that is false is a fact to design around, not a gap to work around.
 
-`stackedReviews` is declared and unused.
-It is recorded now because the difference is real - `retarget` describes a forge where stacking is branch retargeting with automatic retarget when the upstream merges, and `declared-dependency` describes one where stacking is an explicit dependency plus a manually scoped commit range with no auto-rebase - and because adding a capability key later means revisiting every adapter file.
+`stackedReviews` decides what an adapter does with `openReview`'s optional `dependsOn` argument.
+
+| Value | What `openReview` does with `dependsOn` |
+| --- | --- |
+| `retarget` | Ignore it. Passing the previous bundle's branch as `base` is the whole mechanism, and the forge retargets the dependent review automatically when its upstream merges. |
+| `declared-dependency` | Pass it to the forge's own dependency mechanism, and scope the review's commit range to this bundle's commits only. Nothing is retargeted automatically. |
+| `none` | Ignore it. The `base` argument still chains the branches in git, and the calling skill writes the relationship into the review body in prose. |
+
+A `none` adapter is still stackable in the only sense that matters to a reader: the branches chain, each review shows one bundle's diff, and the body says what it depends on.
+What it lacks is any forge-side record of the relationship, so nothing retargets and nothing warns when the stack is merged out of order.
+
+Only a repo-local adapter reaches the `none` row in practice.
+The one bundled adapter that declares `none` is `generic-git.md`, which is what the manual tier runs on, and the manual tier never proposes a stack.
 
 ## Adapter resolution
 
@@ -124,6 +150,7 @@ The best outcome is the committed adapter, because it is reviewable by the team 
 No adapter, no candidate, the user declined the tier-2 offer, or the profile records `forge: none`.
 Push the branch, then print what a human needs in order to open the review by hand: the branch, the base, a suggested title, and a suggested body.
 `getReviewState` is unavailable, so the done-on-merge sweep does not run.
+A stack is never proposed in this tier: with no review object to create, a three-bundle stack would become three separate sets of open-this-by-hand instructions, which is worse for the user than one review.
 
 `forge: none` is not a fourth tier.
 It is the manual tier made permanent, so a repository that will never have an automatable forge stops being offered one on every invocation.

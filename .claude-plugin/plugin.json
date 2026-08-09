@@ -1,6 +1,6 @@
 {
   "name": "fathom",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Fathom provides the execute and scaffold skills for driving Asana or Linear tracker issues from requirements to an open code review, on GitHub or any other forge with an adapter. Agent-portable skills for Claude Code and Kiro with resumable, task-tracked implementation runs.",
   "author": {
     "name": "crod951",
