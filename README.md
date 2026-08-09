@@ -112,7 +112,7 @@ ship it
 #### Features
 
 - **Project-resolved pipeline** - the verify command comes from `.ship/config.md`, then the project's docs, then a declared aggregate task, then the pull-request CI job, then a composed fallback; the first tier that answers wins
-- **Asks once, remembers** - when detection is ambiguous ship asks a single question before touching the tree, then records the answer in `.ship/config.md` and commits it on its own, so the decision reaches the next branch, clone, and teammate without ever landing in the diff under review
+- **Asks once, remembers** - when detection is ambiguous ship asks a single question before touching the tree, then records the answer in `.ship/config.md` and commits it on its own, so the decision reaches the next branch, clone, and teammate; the commit keeps it separable from the change it rode in with, and it is still reviewed and merged as part of the pull request
 - **No config for free answers** - a pipeline detection resolved on its own gets no file, because a file that restates what is already discoverable only goes stale; `.ship/config.md` exists to preserve a human decision
 - **Parallel gates** - review and verification diagnose the same HEAD concurrently, with fixes batched between rounds so neither gate ever reads a stale tree
 - **Exit only on an untouched round** - the last round has to pass both gates with no fixes applied, so a green result always describes the code that actually merges

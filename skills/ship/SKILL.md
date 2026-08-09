@@ -49,9 +49,10 @@ Resolve all of it before touching the working tree, so the run never pauses mid-
 
 Resolve `pr-hook` here rather than at the moment a pull request is created: a routine that takes over review and merge decides how stage 3 behaves, and discovering it mid-run means stage 3 changes shape after the work is already pushed.
 Look for a hook the agent runs on pull-request creation in the project's and the user's agent configuration, and record what it injects.
-A hook substitutes for stage 3's review and merge steps only.
+A hook substitutes for stage 3's review and merge steps only, and it has to hand back what those steps produce: the merged pull request and the SHA of the merge commit.
 It never relaxes their conditions - the merge still waits on a settled review with no actionable findings and on fully green checks - and it never absorbs the steps after the merge.
 The release watch, the cleanup, and the final report always run as written here, whatever the hook claims to do, because a hook that says it handled the release gives you no way to tell a finished release from a failed one.
+Those steps key off the merge SHA, so a hook that merges without reporting one leaves the release watch with no run to follow; treat a missing SHA as a stop, and recover it from the pull request's merge commit before continuing.
 
 Resolve `base` before anything depends on it, and confirm the resolved value still exists on the remote.
 A `base` carried in from `.ship/config.md` is a deliberate answer that may well not be the remote's default branch, so do not overwrite it with the default; a base that has since disappeared from the remote is a stop-and-ask, not a cue to guess a replacement.
