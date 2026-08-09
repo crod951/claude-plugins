@@ -11,12 +11,20 @@
     {
       "name": "fathom",
       "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/execute",
+        "./skills/scaffold",
+        "./skills/fathom-shared"
+      ],
       "description": "Two agent skills, scaffold and execute, that carry a tracker issue from requirements to an open code review, on GitHub or any other forge with an adapter. Works with Asana or Linear, runs on Claude Code and Kiro, tracks tasks in beads or a committed markdown checklist, and resumes from repository state.",
       "version": "2.2.0",
       "author": {
         "name": "crod951"
       },
+      "homepage": "https://github.com/crod951/skills",
       "repository": "https://github.com/crod951/skills",
+      "license": "MIT",
       "keywords": [
         "asana",
         "linear",
@@ -26,6 +34,35 @@
         "issue-tracking",
         "conventional-commits",
         "pull-requests",
+        "workflow",
+        "automation",
+        "forge",
+        "code-review"
+      ]
+    },
+    {
+      "name": "ship",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/ship"
+      ],
+      "description": "One agent skill that carries the current branch from working tree to merged release: it resolves the project's own verification pipeline, runs review and verify in parallel until both are clean, then commits, pushes, opens a pull request, works the automated-review loop, squash-merges, watches the release, and cleans up. No tracker required.",
+      "version": "1.0.0",
+      "author": {
+        "name": "crod951"
+      },
+      "homepage": "https://github.com/crod951/skills",
+      "repository": "https://github.com/crod951/skills",
+      "license": "MIT",
+      "keywords": [
+        "ship",
+        "release",
+        "code-review",
+        "continuous-integration",
+        "pull-requests",
+        "conventional-commits",
+        "github",
         "workflow",
         "automation"
       ]

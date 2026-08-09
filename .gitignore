@@ -1,4 +1,3 @@
-
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db
@@ -6,3 +5,5 @@
 .beads/proxieddb/
 # Added by code-review-graph
 .code-review-graph/
+# Worktrees created by branch work
+worktrees/
