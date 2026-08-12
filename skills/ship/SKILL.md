@@ -185,7 +185,9 @@ Each round:
 
 1. Launch both against the current tree state, concurrently.
    Review dispatches a Code Reviewer subagent on the diff against `base`, told what changed and why; a subagent that returns nothing usable fails the round rather than passing silently.
-   Tell it what stage it is: findings feed a fix loop with a five-round cap, and severity is what sorts them in step 3, so ask for severity on every finding.
+   Tell it what stage it is: findings feed a fix loop with a five-round cap, and severity is what sorts them in step 3, so require exactly one severity per finding, drawn from critical, major, minor, nit, or informational.
+   A finding that comes back with no severity, or with one outside that set, is severity-assigned during triage from what it actually describes, and treated as major when triage cannot place it.
+   Step 3's non-blocking bucket is for findings judged minor, never for findings nobody labelled: an unlabelled major would otherwise fall straight through the gate as "everything else".
    Get this run's new files into the diff before launching, with `git add -N`, because a diff against `base` contains no untracked file.
    A brand-new file is the least reviewed code in the change and the most likely to need it.
    Verify runs the resolved `verify` command, and this round it only diagnoses: collect the failures rather than fixing them mid-run.
@@ -253,12 +255,14 @@ Otherwise:
    A "success" that is actually rate-limited or skipped does not count: wait and re-queue.
    Give the wait a deadline of roughly thirty minutes; past it, stop and report that the review never settled rather than polling on.
    Collect findings from every surface - inline comments, the summary comment, and full review bodies - because nitpicks hide in collapsed sections.
-2. Triage every finding fresh, because this reviewer is not the one stage 1 ran and none of its findings are duplicates of stage 1's.
-   The dispositions stage 1 recorded in the pull request body are context for that triage - they say what was already judged and why - and never a reason to set a finding aside unread.
+2. Triage every finding fresh, because this reviewer is not the one stage 1 ran and there is no dedupe to carry across from it.
+   Two independent reviewers can land on the same root cause, so a finding that looks like one stage 1 already judged is still read and judged here rather than assumed to be a repeat.
+   The dispositions stage 1 recorded in the pull request body are context for that triage - they say what was already judged and why - and are never a resolution, nor a reason to set a finding aside unread.
    Then fix or disposition it, applying the same blocking bar stage 1 uses.
    Commit and push only when fixes changed the tree, then re-poll.
    A disposition-only pass keeps its recorded dispositions and terminates on the actionable count alone.
-   Terminate on a settled pass with zero new actionable findings.
+   Terminate on a settled pass whose actionable findings are all fixed or dispositioned once triage is done, not on a pass that merely raised nothing NEW.
+   A finding the bot repeats because the last fix did not land is not new, and it is not resolved either; terminating on novelty would close the loop with it still open.
    Five passes is the cap, and it bounds pushes as well as polls: do not push a fresh batch of fixes on the last permitted pass, since that pushes work no pass will ever review.
    On reaching the cap, stop and report what is still open, leaving the pull request unmerged.
 3. Merge when the loop is clean AND `gh pr checks` is fully green.
