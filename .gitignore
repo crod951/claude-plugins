@@ -9,8 +9,8 @@
 # .claude/skills/ entries instruct agents to use MCP tools that only exist on a
 # machine running that server, and .mcp.json hardcodes an absolute cwd that is
 # wrong in every other clone and in every worktree under worktrees/.
-CLAUDE.md
-.mcp.json
+/CLAUDE.md
+/.mcp.json
 .claude/skills/
 # Personal Claude Code overrides; the shared config is .claude/settings.json
 .claude/settings.local.json
