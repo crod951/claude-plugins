@@ -48,7 +48,7 @@
         "./skills/ship"
       ],
       "description": "One agent skill that carries the current branch from working tree to merged release: it resolves the project's own verification pipeline, runs review and verify in parallel until both are clean, then commits, pushes, opens a pull request, works the automated-review loop, squash-merges, watches the release, and cleans up. No tracker required.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "crod951"
       },

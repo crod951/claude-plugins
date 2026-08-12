@@ -82,7 +82,7 @@ See the [full guide](./docs/fathom.md) for setup, task memory, and the security 
 
 ---
 
-### ship (v1.0.0)
+### ship (v1.1.0)
 
 Ship takes the current branch from working tree to merged release in one pass: review and verification run in parallel with a batched fix loop until both are clean, then commit, push, pull request, automated-review loop, squash-merge, release watch, and post-merge cleanup.
 Everything from the pull request onward needs an installed and authenticated GitHub CLI; without one, ship stops after pushing the branch and printing the compare URL, and the review, merge, and release are yours to drive.
@@ -117,7 +117,7 @@ ship it
 - **Parallel gates** - review and verification diagnose the same HEAD concurrently, with fixes batched between rounds so neither gate ever reads a stale tree
 - **Exit only on an untouched round** - the last round has to pass both gates with no fixes applied, so a green result always describes the code that actually merges
 - **A blocking bar, not a nit hunt** - stage 1 fixes verify failures and confirmed critical or major findings, records the disposition of everything else into the pull request body, and terminates; fixing every nit hands the next round fresh code to find fault with, which is how a review loop never converges
-- **The bot is the final bar, asked once** - the local CLI review still runs before the push, and the pull-request bot still has to settle green, but a finding the same reviewer already dispositioned against the same content carries its answer forward instead of reopening the loop
+- **Two reviewers, not one twice** - the pre-push review is a Code Reviewer subagent reading this run's intent, and the pull-request bot is the final bar that still has to settle green; ship never shells out to a review CLI, because the vendors that ship one also run the bot and the CLI would spend that quota on a judgment the bot reaches anyway
 - **Project-local override** - a repository that ships its own `.claude/skills/ship/SKILL.md` takes precedence, carrying its specialized pipeline
 
 ---
