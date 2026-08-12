@@ -231,9 +231,10 @@ Each round:
 
 ## Stage 2 - Commit, push, open the review
 
-1. Stage deliberately, never `git add -A`.
-   Include untracked files clearly produced by this change, and leave obvious strays alone.
-   List them with `git diff --name-only --diff-filter=A`, which reports every intent-to-add entry in the index, and stage by name the ones stage 1 marked with `git add -N`.
+1. Stage deliberately, never `git add -A`, and stage by explicit path in all three cases: the tracked files this run modified, the tracked files it deleted, and the new files it added.
+   Every stage 1 fix landed in one of those, so a commit that carries only the new files ships a change whose verified fixes are missing, and stage 1's whole loop goes with them.
+   Take modifications and deletions from `git status` and stage each path, leave obvious strays alone, and treat the rest of this step as the new-file case alone rather than as the list of what to stage.
+   List those with `git diff --name-only --diff-filter=A`, which reports every intent-to-add entry in the index, and stage by name the ones stage 1 marked with `git add -N`.
    It reports entries this run never created too - a user who ran `git add -N` before invoking ship still has theirs - so an added path stage 1 did not mark is judged against the bar above like any stray, never staged on the strength of appearing in that list.
    Do not hunt for THOSE files as `??`, which they stopped being the moment they were marked, and do not read `git status --short` as confirmation: an intent-to-add entry renders there one column away from a genuinely staged file and looks done.
    `git diff --cached` does not list them at all, so an empty staged diff is not evidence that nothing is missing.
