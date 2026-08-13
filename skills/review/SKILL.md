@@ -93,26 +93,32 @@ Never review in the user's working tree. It has their uncommitted work in it.
 **One PR needs two worktrees, not one:** the PR head, and the merge-base. You need the base one for stage 7's A/B and for the before half of every screenshot pair — and stage 8 destroys and rebuilds the PR worktree, so a single worktree cannot serve as your baseline.
 
 ```bash
-BASE=$(gh pr view <n> --json baseRefName --jq .baseRefName)
-HEAD_OID=$(gh pr view <n> --json headRefOid --jq .headRefOid)
+PR=<n>
+PR_REF=refs/review/pr-$PR                 # use this everywhere below, never a bare pr-$PR
+BASE_REF=refs/review/base-$PR
+
+BASE=$(gh pr view "$PR" --json baseRefName --jq .baseRefName)
+HEAD_OID=$(gh pr view "$PR" --json headRefOid --jq .headRefOid)
 
 # separate fetches — a multi-refspec fetch is where shell quoting bites
-git fetch --force origin "refs/pull/<n>/head:refs/review/pr-<n>"
-git fetch --force origin "refs/heads/${BASE}:refs/review/base-<n>"
+git fetch --force origin "refs/pull/${PR}/head:${PR_REF}"
+git fetch --force origin "refs/heads/${BASE}:${BASE_REF}"
 
 # fail closed: never review a ref that is not the head GitHub just reported
-[ "$(git rev-parse refs/review/pr-<n>)" = "$HEAD_OID" ] || { echo "head moved, re-fetch"; exit 1; }
+[ "$(git rev-parse "$PR_REF")" = "$HEAD_OID" ] || { echo "head moved, re-fetch"; exit 1; }
 
-MB=$(git merge-base refs/review/base-<n> refs/review/pr-<n>)
-git worktree add /path/to/scratch/wt-<n>   refs/review/pr-<n>
-git worktree add /path/to/scratch/wt-base  "$MB"
+MB=$(git merge-base "$BASE_REF" "$PR_REF")
+git worktree add /path/to/scratch/wt-$PR    "$PR_REF"
+git worktree add /path/to/scratch/wt-base   "$MB"
 ```
 
 **Write `${BASE}`, not `$BASE`, in a refspec.** In zsh, `$BASE:refs/...` parses the `:r` as a history modifier and silently eats it, leaving a corrupted refspec (`refs/heads/wip-phase-3efs/review/base-1`) and a confusing "couldn't find remote ref". Braces are not optional here. Do not build these refspecs with `eval` either — the branch name is remote-controlled data.
 
 **Fetch the base branch, do not assume `origin/<base>` is current.** A stale remote-tracking ref silently yields the wrong merge-base, which quietly corrupts every A/B comparison in stage 7 and every "this is pre-existing" claim you make from it. Pin the SHA once and reuse it for both the baseline worktree and the stage 8 revert.
 
-**Force-update a review-only ref, and verify it.** Without `--force`, fetching into a ref that already exists from an earlier review fails outright after the author rebases — or worse, you carry on against yesterday's head. Namespacing under `refs/review/` keeps these out of your branch list; pass the *full* ref to `git worktree add`, since a bare `pr-<n>` will not resolve to it. Comparing against `headRefOid` from the same metadata snapshot is what turns "the branch moved under me" from a silent wrong answer into a stop.
+**Force-update a review-only ref, and verify it.** Without `--force`, fetching into a ref that already exists from an earlier review fails outright after the author rebases — or worse, you carry on against yesterday's head. Comparing against `headRefOid` from the same metadata snapshot turns "the branch moved under me" from a silent wrong answer into a stop. Heads move mid-review more often than you would think: re-fetching a PR reviewed an hour earlier is how you find out the author pushed.
+
+**Carry `$PR_REF` through every later stage — the revert in stage 8, the diff in stage 11, all of it.** Namespacing under `refs/review/` keeps these out of your branch list, but git does not search that namespace when resolving a short name: with `refs/review/pr-107` present, `git rev-parse pr-107` still fails with *unknown revision*. A bare short name silently refers to nothing, or worse, to a same-named local branch from some other work.
 
 Give each worktree its own port.
 
@@ -279,7 +285,7 @@ A test that passes with and without the change pins nothing. Revert the changed 
 ```bash
 git checkout "$MB" -- <changed files>    # the merge-base SHA pinned in stage 2
 # REBUILD, re-assert identity, THEN re-run the new specs → expect failures
-git checkout pr-<n> -- <changed files>   # restore, then REBUILD and re-assert identity again
+git checkout "$PR_REF" -- <changed files>   # restore, then REBUILD and re-assert identity again
 ```
 
 **Rebuild after the revert, before running anything.** The tests exercise the served build, not the files on disk, so reverting source and immediately re-running just tests the previous build again — and it *passes*, which reads as "these tests aren't load-bearing" when in fact you never tested the reverted code at all. This is the same stale-`dist/` trap as stage 4, and it is at its most dangerous here, because the wrong answer is a plausible one you will believe.
@@ -364,7 +370,7 @@ Never inline a general finding just because a plausible line exists.
 
 ```bash
 # every line number you may anchor to on the RIGHT side of <file>
-git diff -U0 "$MB..pr-<n>" -- <file> \
+git diff -U0 "$MB..$PR_REF" -- <file> \
   | awk '/^@@/ { split($3, h, ","); start = substr(h[1], 2) + 0; len = (h[2] == "" ? 1 : h[2] + 0);
                  for (i = 0; i < len; i++) print start + i }'
 ```
