@@ -93,15 +93,24 @@ Never review in the user's working tree. It has their uncommitted work in it.
 **One PR needs two worktrees, not one:** the PR head, and the merge-base. You need the base one for stage 7's A/B and for the before half of every screenshot pair — and stage 8 destroys and rebuilds the PR worktree, so a single worktree cannot serve as your baseline.
 
 ```bash
-git fetch origin "refs/pull/<n>/head:pr-<n>"
-git worktree add /path/to/scratch/wt-<n> pr-<n>
-ln -s "$(git rev-parse --show-toplevel)/node_modules" /path/to/scratch/wt-<n>/node_modules
-cp "$(git rev-parse --show-toplevel)"/.env* /path/to/scratch/wt-<n>/
+BASE=$(gh pr view <n> --json baseRefName --jq .baseRefName)
+git fetch origin "refs/pull/<n>/head:pr-<n>" "$BASE"     # fetch the base too
+MB=$(git merge-base FETCH_HEAD pr-<n>)                   # or: git merge-base "origin/$BASE" pr-<n>
+git worktree add /path/to/scratch/wt-<n>   pr-<n>
+git worktree add /path/to/scratch/wt-base  "$MB"
 ```
 
-Do the same for the merge-base (`git worktree add ... "$(git merge-base origin/<base> pr-<n>)"`), and give each its own port.
+**Fetch the base branch, do not assume `origin/<base>` is current.** A stale remote-tracking ref silently yields the wrong merge-base, which quietly corrupts every A/B comparison in stage 7 and every "this is pre-existing" claim you make from it. Pin the SHA once and reuse it for both the baseline worktree and the stage 8 revert.
 
-Symlinking `node_modules` is usually safe and saves an install. Copy env files, or the build silently produces a broken app whose every test fails for reasons unrelated to the PR.
+Give each worktree its own port.
+
+**Do not copy real `.env` files into a PR worktree you do not control.** The branch you just fetched runs its own build and test scripts, so anything you place there is readable by code the PR author wrote, and can be exfiltrated or baked into an artifact. Use the repo's `.env.example`, or a fixture with dummy values — the app usually only needs the variables to be *present* and well-formed, not real. Copy real secrets only for a branch you trust (your own team's, on a private repo), and even then prefer the fixture. An app that boots against dummy values is fine for a review; leaked credentials are not.
+
+If the build genuinely needs environment variables to produce a working app, populate the worktree from the repo's own committed example file, or write one with dummy values — never from your real local one.
+
+Without any environment file at all, the build can silently produce a broken app whose every test fails for reasons unrelated to the PR, which reads exactly like the PR breaking everything. Diagnose a total-failure run before believing it.
+
+**Dependencies:** symlinking the root `node_modules` into both worktrees saves an install, but they then share one mutable tree. That is fine when the PR does not touch dependencies, and wrong when it does — a changed lockfile is silently ignored, and an install or postinstall script from one side mutates the other. Check first, and install per worktree when the PR touches `package.json` or the lockfile.
 
 ### 3. Take the gates
 
@@ -157,24 +166,45 @@ Collect everything in **one** pass over the already-running preview — all view
     const [r, g, b] = rgb.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) })
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
   }
-  const parse = (s) => s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number)
-  // Contrast against the surface the text ACTUALLY sits on — never against a token name,
-  // and never by comparing lightness, which inverts between themes.
-  const ratio = (fg, bg) => {
-    const [hi, lo] = [lum(parse(fg)), lum(parse(bg))].sort((a, b) => b - a)
+  // `transparent` parses to nothing, and rgba() alpha is not a colour channel —
+  // both silently produce a wrong ratio (or throw) if you just scrape digits.
+  const parse = (s) => {
+    const n = (s.match(/[\d.]+/g) || []).map(Number)
+    if (n.length < 3) return null                       // transparent / keyword / gradient
+    return { rgb: n.slice(0, 3), a: n.length > 3 ? n[3] : 1 }
+  }
+  // The surface the text ACTUALLY sits on: walk up until something opaque paints.
+  const surfaceOf = (el) => {
+    for (let e = el; e; e = e.parentElement) {
+      const c = parse(getComputedStyle(e).backgroundColor)
+      if (c && c.a === 1) return c.rgb
+      // a semi-transparent layer means the real colour is composited — sample pixels instead
+      if (c && c.a > 0) return null
+      if (getComputedStyle(e).backgroundImage !== 'none') return null   // gradient/image
+    }
+    return null
+  }
+  // Never compare lightness, which inverts between themes.
+  const ratio = (fgStr, bgRgb) => {
+    const fg = parse(fgStr)
+    if (!fg || !bgRgb) return null                      // caller must fall back to pixel sampling
+    const [hi, lo] = [lum(fg.rgb), lum(bgRgb)].sort((a, b) => b - a)
     return +((hi + 0.05) / (lo + 0.05)).toFixed(2)
   }
   const el = document.querySelector(SELECTOR)
+  if (!el) return { error: `no match for ${SELECTOR}` }   // a silent null here fakes a passing check
   const r = el.getBoundingClientRect()
   const c = getComputedStyle(el)
   return {
     box: { x: +r.x.toFixed(1), right: +r.right.toFixed(1), y: +r.y.toFixed(1), bottom: +r.bottom.toFixed(1) },
     type: { px: c.fontSize, weight: c.fontWeight, tracking: c.letterSpacing, transform: c.textTransform },
     surface: { bg: c.backgroundColor, radius: c.borderRadius, shadow: c.boxShadow, border: c.borderTopWidth },
-    contrast: ratio(c.color, getComputedStyle(el.closest(CARD_SELECTOR)).backgroundColor),
+    contrast: ratio(c.color, surfaceOf(el.parentElement)),   // null ⇒ sample pixels instead
   }
 }
 ```
+
+A `null` contrast is a result, not a failure: it means the surface is a gradient, an image, or a composited translucent stack, and the honest number can only come from sampled pixels. Never quote a ratio you got by treating `transparent` as black.
 
 Four measurement techniques worth reaching for by name:
 
@@ -209,6 +239,19 @@ new MutationObserver(() => log.push({
 })).observe(el, { attributes: true, attributeFilter: ['style'] })
 ```
 
+**This only sees animation driven by writing inline styles.** WAAPI and compositor-driven animations (CSS transitions, `element.animate()`, anything a library hands to the compositor) never touch the `style` attribute, so this log comes back empty or misleadingly sparse and you conclude "nothing animates" about something that plainly does. When the log looks too quiet for what you can see, sample every frame instead, reading *computed* values rather than inline ones:
+
+```js
+const sample = () => {
+  const c = getComputedStyle(el)
+  log.push({ t: Math.round(performance.now()), overflow: c.overflow, height: c.height, opacity: c.opacity, connected: el.isConnected })
+  if (el.isConnected) requestAnimationFrame(sample)
+}
+requestAnimationFrame(sample)
+```
+
+Sampling is the more general tool; the observer is cheaper and gives you exact write ordering, which is what catches "the wrong value was set one frame before unmount". Reach for the observer when you suspect an ordering bug, and for rAF sampling when you need to know what the user actually saw.
+
 **Scroll and measure are separate calls.** `scrollIntoView` and smooth scrolling have not settled when the same function reads `getBoundingClientRect()`. Scroll in one call, measure in the next, or every coordinate is stale. Use `behavior: 'instant'`.
 
 ### 7. A/B against the base build
@@ -222,10 +265,12 @@ This is what separates "you introduced this" from "this predates you", and it ch
 A test that passes with and without the change pins nothing. Revert the changed source, re-run the new tests, and confirm they fail.
 
 ```bash
-git checkout "$(git merge-base origin/<base> pr-<n>)" -- <changed files>
-# re-run the new specs → expect failures
-git checkout pr-<n> -- <changed files>   # restore, then REBUILD and re-assert identity
+git checkout "$MB" -- <changed files>    # the merge-base SHA pinned in stage 2
+# REBUILD, re-assert identity, THEN re-run the new specs → expect failures
+git checkout pr-<n> -- <changed files>   # restore, then REBUILD and re-assert identity again
 ```
+
+**Rebuild after the revert, before running anything.** The tests exercise the served build, not the files on disk, so reverting source and immediately re-running just tests the previous build again — and it *passes*, which reads as "these tests aren't load-bearing" when in fact you never tested the reverted code at all. This is the same stale-`dist/` trap as stage 4, and it is at its most dangerous here, because the wrong answer is a plausible one you will believe.
 
 Both `git checkout` calls stage into the **worktree's own index**, which is separate from the main clone's — safe, and worth knowing before you run it under a "don't stage anything" constraint.
 
@@ -250,9 +295,12 @@ Get this wrong and a good PR reads as riddled with defects, the author cannot te
 For each distinct finding ask, in order:
 
 1. Does the base build have it too? → pre-existing, say so explicitly
-2. Is it perceptible to a user? → if it needs a hit-test to detect, it is cosmetic
-3. Did the author already file or defer it with the requester's agreement? → do not re-raise
-4. Is it a regression **this PR introduces**, and is the fix cheap? → blocking
+2. Can it affect what a user can *do*? → if it changes what is clickable, reachable, readable or announced, it is functional however subtle it looked
+3. If not, is it perceptible? → a purely visual difference that took instrumentation to notice is cosmetic
+4. Did the author already file or defer it with the requester's agreement? → do not re-raise
+5. Is it a regression **this PR introduces**, and is the fix cheap? → blocking
+
+**Needing a hit-test to find something says nothing about its severity.** The technique is how you find *both* a 2px cosmetic notch and a control that cannot be clicked at all — in this skill's own corpus, a clipped dropdown that `toBeVisible()` reported as fine was found exactly this way, and it was the functional bug the PR existed to fix. Ask what the finding does to the user, never what it took you to detect it.
 
 | Marker | Meaning | Use for |
 |---|---|---|
@@ -296,11 +344,18 @@ One review per PR, carrying both halves:
 - **line-specific findings → inline comments**, anchored to the exact line. An inline comment points at its subject, so it needs no locating prose.
 - **general findings → the review summary body.** Keeping them in the same review lets the summary cross-reference the inline notes ("see note 2") and keeps one timeline entry per PR.
 
-Never inline a general finding just because a plausible line exists. Anchor lines must be part of the diff, so confirm the line is inside a hunk:
+Never inline a general finding just because a plausible line exists.
+
+**An anchor must be a line the diff actually offers**, or the API rejects the whole review — and a hunk header alone does not prove that. `@@ -126,2 +152,2 @@` tells you the hunk starts at 152 and spans 2 lines; anchoring at 160 because it "looks inside the file" fails. For `side: RIGHT` the line must be one the hunk added or kept. List the candidates rather than eyeballing ranges:
 
 ```bash
-git diff -U0 "$BASE..pr-<n>" -- <file> | grep -E '^(\+\+\+|@@)'
+# every line number you may anchor to on the RIGHT side of <file>
+git diff -U0 "$MB..pr-<n>" -- <file> \
+  | awk '/^@@/ { split($3, h, ","); start = substr(h[1], 2) + 0; len = (h[2] == "" ? 1 : h[2] + 0);
+                 for (i = 0; i < len; i++) print start + i }'
 ```
+
+Anchor only to a number in that list, and post one comment first if you are unsure — a rejected review costs the whole payload, not just the bad comment.
 
 Default the event to `COMMENT`. Approve only when the user asks.
 
