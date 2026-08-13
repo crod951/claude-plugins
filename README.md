@@ -25,7 +25,9 @@ npx skills@latest add crod951/skills
 ```
 
 The installer lists every skill in `skills/` regardless of which plugin owns it.
-Take `ship` on its own if that is all you want; take `execute`, `scaffold`, and `fathom-shared` together, since `fathom-shared` carries the contract files the other two read.
+Take `ship` or `review` on its own if that is all you want; take `execute`, `scaffold`, and `fathom-shared` together, since `fathom-shared` carries the contract files the other two read.
+
+`review` belongs to no plugin on purpose, so it installs through skills.sh and not through `/plugin install`.
 
 > Individual plugins may have additional prerequisites that run in your **terminal** (e.g., `brew install`). See each plugin's README for details.
 
@@ -122,16 +124,63 @@ ship it
 
 ---
 
+## Standalone Skills
+
+Skills here that no plugin claims. They install through [skills.sh](https://www.skills.sh) (`npx skills@latest add crod951/skills`) rather than `/plugin install`.
+
+### review (v1.0.0)
+
+Review verifies a pull request against the tracker issue it claims to close, on a build it actually runs, and posts one review with line-specific findings anchored inline and general findings in the summary body.
+
+Its premise is that a diff review cannot see the things worth catching. The findings it was built from were a border removal that read as correct in light mode and gutted the card edge in dark, two halves of one panel whose content sat 388px apart at wide viewports, a dropdown that `toBeVisible()` reported as visible while it was clipped, and an animation that un-clipped a zero-height node one frame before unmount. So it builds the branch and its merge-base side by side, measures both, and reports the difference.
+
+#### Prerequisites
+
+- A git repository with a remote
+- [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh`) for reading pull request metadata and posting the review
+- A browser driver for the visual stages, such as Playwright or a browser MCP; a purely behavioural pull request needs neither
+
+#### Install
+
+```bash
+npx skills@latest add crod951/skills
+```
+
+#### Skills
+
+| Skill | Description |
+|-------|-------------|
+| `review` | Builds the pull request and its merge-base, measures both, proves the new tests are load-bearing, then posts one review with severity-marked findings. |
+
+```bash
+review this PR
+review #107
+```
+
+#### Features
+
+- **Never concludes from the diff** - the branch and its merge-base are built and served side by side, so every claim comes from a running app rather than from reading a change
+- **A/B before blame** - a finding measured on the base build too is reported as pre-existing, which is the difference between telling an author they broke something and telling them they inherited it
+- **Pixels over computed styles** - for any claim that something is or is not visible, the screenshot is decoded and the painted colours compared; `border: 0` plus a 1.1:1 background step reads as conclusive and is routinely wrong
+- **Tests the tests** - reverts the changed source to confirm the new assertions fail without it, then adversarially checks the ones that pass either way by making the exact change they claim to catch
+- **Fails closed on a moved head** - the fetched ref is verified against the pull request's reported head before anything is measured, so a re-review never silently describes yesterday's commit
+- **Severity that means something** - 🔴 is reserved for a regression the pull request introduces with a cheap fix, and findings are deduped to root causes first, so a good pull request does not read as riddled with defects
+- **Costs what it should** - both builds stay warm, every measurement batches through one browser session, and the gates come from CI rather than being re-derived locally
+
+---
+
 ## Workflow
 
 1. **Scaffold requirements**: talk to the scaffold skill, for example "scaffold these requirements"
 2. **Execute the issue**: talk to the execute skill, for example "execute ONC-5"
 3. **Resume if interrupted**: re-invoke execute on the same issue; it picks up where the last run left off
-4. **Ship the branch**: talk to the ship skill, for example "ship it", to carry the reviewed branch through merge and release
+4. **Review the pull request**: talk to the review skill, for example "review #107", to verify it against its issue on a running build
+5. **Ship the branch**: talk to the ship skill, for example "ship it", to carry the reviewed branch through merge and release
 
 ## Repository Layout
 
 Every skill lives in a flat `skills/<name>/` directory, and `.claude-plugin/marketplace.json` decides which plugin owns which skill through a per-entry `skills` array.
+A skill claimed by no entry, such as `review`, is still published by skills.sh and is simply unreachable through `/plugin install`; `bin/sync-versions.sh` reports it so the omission stays deliberate rather than accidental.
 Both plugins therefore share one marketplace root (`source: "./"`), and there is deliberately no `.claude-plugin/plugin.json`: with that source a single root manifest would apply to every entry and its version would silently win over each entry's own.
 `bin/sync-versions.sh` syncs the versions into this README and fails when a skill directory is claimed by no plugin, by more than one, or is claimed but missing.
 
