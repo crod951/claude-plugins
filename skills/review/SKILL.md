@@ -94,13 +94,25 @@ Never review in the user's working tree. It has their uncommitted work in it.
 
 ```bash
 BASE=$(gh pr view <n> --json baseRefName --jq .baseRefName)
-git fetch origin "refs/pull/<n>/head:pr-<n>" "$BASE"     # fetch the base too
-MB=$(git merge-base FETCH_HEAD pr-<n>)                   # or: git merge-base "origin/$BASE" pr-<n>
-git worktree add /path/to/scratch/wt-<n>   pr-<n>
+HEAD_OID=$(gh pr view <n> --json headRefOid --jq .headRefOid)
+
+# separate fetches — a multi-refspec fetch is where shell quoting bites
+git fetch --force origin "refs/pull/<n>/head:refs/review/pr-<n>"
+git fetch --force origin "refs/heads/${BASE}:refs/review/base-<n>"
+
+# fail closed: never review a ref that is not the head GitHub just reported
+[ "$(git rev-parse refs/review/pr-<n>)" = "$HEAD_OID" ] || { echo "head moved, re-fetch"; exit 1; }
+
+MB=$(git merge-base refs/review/base-<n> refs/review/pr-<n>)
+git worktree add /path/to/scratch/wt-<n>   refs/review/pr-<n>
 git worktree add /path/to/scratch/wt-base  "$MB"
 ```
 
+**Write `${BASE}`, not `$BASE`, in a refspec.** In zsh, `$BASE:refs/...` parses the `:r` as a history modifier and silently eats it, leaving a corrupted refspec (`refs/heads/wip-phase-3efs/review/base-1`) and a confusing "couldn't find remote ref". Braces are not optional here. Do not build these refspecs with `eval` either — the branch name is remote-controlled data.
+
 **Fetch the base branch, do not assume `origin/<base>` is current.** A stale remote-tracking ref silently yields the wrong merge-base, which quietly corrupts every A/B comparison in stage 7 and every "this is pre-existing" claim you make from it. Pin the SHA once and reuse it for both the baseline worktree and the stage 8 revert.
+
+**Force-update a review-only ref, and verify it.** Without `--force`, fetching into a ref that already exists from an earlier review fails outright after the author rebases — or worse, you carry on against yesterday's head. Namespacing under `refs/review/` keeps these out of your branch list; pass the *full* ref to `git worktree add`, since a bare `pr-<n>` will not resolve to it. Comparing against `headRefOid` from the same metadata snapshot is what turns "the branch moved under me" from a silent wrong answer into a stop.
 
 Give each worktree its own port.
 
@@ -271,6 +283,8 @@ git checkout pr-<n> -- <changed files>   # restore, then REBUILD and re-assert i
 ```
 
 **Rebuild after the revert, before running anything.** The tests exercise the served build, not the files on disk, so reverting source and immediately re-running just tests the previous build again — and it *passes*, which reads as "these tests aren't load-bearing" when in fact you never tested the reverted code at all. This is the same stale-`dist/` trap as stage 4, and it is at its most dangerous here, because the wrong answer is a plausible one you will believe.
+
+**Reverting source does not revert `node_modules`.** If the PR touches dependencies, the reverted build still resolves against the PR's tree, so you are testing base source against PR dependencies — a state that exists nowhere. When the PR changes `package.json` or the lockfile, either reinstall from the reverted lockfile on each flip, or run the proof in the base worktree from stage 2, which already has the matching tree. Restricting the revert to source files the PR changed keeps this rare, but check rather than assume.
 
 Both `git checkout` calls stage into the **worktree's own index**, which is separate from the main clone's — safe, and worth knowing before you run it under a "don't stage anything" constraint.
 
