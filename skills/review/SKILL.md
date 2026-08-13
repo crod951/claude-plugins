@@ -271,24 +271,48 @@ function decodePng(buf) {
   return { w, h, bpp, data: out }
 }
 
+// Node-side contrast over RGB arrays. The in-page `ratio` from the block above
+// lives in the browser and takes a colour STRING — it is not in scope here, and
+// reusing its signature is a type mismatch waiting to happen. Keep them separate.
+const lumRgb = ([r, g, b]) => {
+  const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+}
+const ratioRgb = (p, q) => {
+  const [hi, lo] = [lumRgb(p), lumRgb(q)].sort((a, b) => b - a)
+  return +((hi + 0.05) / (lo + 0.05)).toFixed(3)
+}
+
 // Average the middle band of a row — the ends are rounded corners and neighbours.
 const rowAvg = ({ w, bpp, data }, y) => {
+  const x0 = Math.floor(w * 0.25), x1 = Math.max(x0 + 1, Math.floor(w * 0.75))
   let r = 0, g = 0, b = 0, n = 0
-  for (let x = Math.floor(w * 0.25); x < Math.floor(w * 0.75); x++) {
-    const i = (y * w + x) * bpp; r += data[i]; g += data[i + 1]; b += data[i + 2]; n++
-  }
+  for (let x = x0; x < x1; x++) { const i = (y * w + x) * bpp; r += data[i]; g += data[i + 1]; b += data[i + 2]; n++ }
   return [r / n, g / n, b / n]
 }
 
 // The painted edge is the strongest step between adjacent rows in the slice.
 const strongestStep = (img) => {
   let best = 1
-  for (let y = 1; y < img.h; y++) best = Math.max(best, ratio(rowAvg(img, y - 1), rowAvg(img, y)))
+  for (let y = 1; y < img.h; y++) best = Math.max(best, ratioRgb(rowAvg(img, y - 1), rowAvg(img, y)))
   return best
 }
 
-const box = await page.evaluate(() => { const b = document.querySelector(SEL).getBoundingClientRect(); return { x: b.x, w: b.width, bottom: b.bottom } })
-const png = await page.screenshot({ clip: { x: box.x, y: box.bottom - 12, width: box.w, height: 24 } })
+// `page.evaluate` does NOT close over Node variables — pass the selector in, and
+// return null rather than letting getBoundingClientRect() throw on a miss.
+const box = await page.evaluate((sel) => {
+  const el = document.querySelector(sel)
+  if (!el) return null
+  const b = el.getBoundingClientRect()
+  return { x: b.x, w: b.width, bottom: b.bottom }
+}, SEL)
+
+if (!box) throw new Error(`no element matched ${SEL}`)
+if (box.w < 1) throw new Error(`${SEL} has zero width — screenshot clip would be rejected`)
+
+const png = await page.screenshot({
+  clip: { x: Math.max(0, box.x), y: Math.max(0, box.bottom - 12), width: Math.round(box.w), height: 24 },
+})
 console.log(strongestStep(decodePng(png)))
 ```
 
