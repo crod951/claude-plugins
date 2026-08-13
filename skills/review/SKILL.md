@@ -228,16 +228,71 @@ Four measurement techniques worth reaching for by name:
 
 **Never conclude from computed styles alone that something is or is not visible.** This is the sibling of the one rule, and it fails the same way. `getComputedStyle` reporting `border: 0px` and a 1.095:1 background step reads as an open-and-shut "no edge left" — but a box-shadow still paints a halo the computed value cannot show you, and a neighbouring element's border may be delineating the edge coincidentally. Sample the rendered pixels: screenshot the region, read it back through a canvas, and compare the actual colours either side of the boundary.
 
+A page cannot screenshot itself, so this runs outside the browser: clip a screenshot to the boundary, decode it, and compare row averages. Projects rarely ship an image library, but Node's `zlib` is all a PNG needs — do not install one, and do not skip the measurement because none is present.
+
 ```js
-// contrast across a boundary, from painted pixels rather than from the stylesheet
-const img = await loadScreenshotCrop(box)         // the region spanning the edge
-const ctx = Object.assign(document.createElement('canvas'), { width: img.width, height: img.height }).getContext('2d')
-ctx.drawImage(img, 0, 0)
-const rowAt = (y) => ctx.getImageData(0, y, img.width, 1).data
-// walk rows across the boundary, keep the strongest step you find
+// node + playwright. Decodes RGBA8 PNG: signature, chunks, inflate, un-filter.
+import zlib from 'node:zlib'
+
+function decodePng(buf) {
+  let p = 8, w = 0, h = 0, ct = 0
+  const idat = []
+  while (p < buf.length) {
+    const len = buf.readUInt32BE(p)
+    const type = buf.toString('ascii', p + 4, p + 8)
+    const data = buf.subarray(p + 8, p + 8 + len)
+    if (type === 'IHDR') { w = data.readUInt32BE(0); h = data.readUInt32BE(4); ct = data[9] }
+    else if (type === 'IDAT') idat.push(data)
+    else if (type === 'IEND') break
+    p += 12 + len
+  }
+  const bpp = ct === 6 ? 4 : 3, stride = w * bpp
+  const raw = zlib.inflateSync(Buffer.concat(idat))
+  const out = Buffer.alloc(h * stride)
+  let q = 0
+  for (let y = 0; y < h; y++) {
+    const filter = raw[q++]
+    const line = raw.subarray(q, q + stride); q += stride
+    const prev = y > 0 ? out.subarray((y - 1) * stride, y * stride) : Buffer.alloc(stride)
+    const cur = out.subarray(y * stride, (y + 1) * stride)
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? cur[x - bpp] : 0, b = prev[x], c = x >= bpp ? prev[x - bpp] : 0
+      let v = line[x]
+      if (filter === 1) v += a
+      else if (filter === 2) v += b
+      else if (filter === 3) v += (a + b) >> 1
+      else if (filter === 4) {
+        const pp = a + b - c, pa = Math.abs(pp - a), pb = Math.abs(pp - b), pc = Math.abs(pp - c)
+        v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c)
+      }
+      cur[x] = v & 0xff
+    }
+  }
+  return { w, h, bpp, data: out }
+}
+
+// Average the middle band of a row — the ends are rounded corners and neighbours.
+const rowAvg = ({ w, bpp, data }, y) => {
+  let r = 0, g = 0, b = 0, n = 0
+  for (let x = Math.floor(w * 0.25); x < Math.floor(w * 0.75); x++) {
+    const i = (y * w + x) * bpp; r += data[i]; g += data[i + 1]; b += data[i + 2]; n++
+  }
+  return [r / n, g / n, b / n]
+}
+
+// The painted edge is the strongest step between adjacent rows in the slice.
+const strongestStep = (img) => {
+  let best = 1
+  for (let y = 1; y < img.h; y++) best = Math.max(best, ratio(rowAvg(img, y - 1), rowAvg(img, y)))
+  return best
+}
+
+const box = await page.evaluate(() => { const b = document.querySelector(SEL).getBoundingClientRect(); return { x: b.x, w: b.width, bottom: b.bottom } })
+const png = await page.screenshot({ clip: { x: box.x, y: box.bottom - 12, width: box.w, height: 24 } })
+console.log(strongestStep(decodePng(png)))
 ```
 
-For any claim of the form "you can/cannot see X", this is the evidence. Computed styles tell you what was *asked for*; pixels tell you what *landed*. Reporting an overstated blocker because a shadow was assumed dead is a worse error than missing it.
+For any claim of the form "you can/cannot see X", this is the evidence. Computed styles tell you what was *asked for*; pixels tell you what *landed*. Reporting an overstated blocker because a shadow was assumed dead is a worse error than missing it — and the same measurement is what proves a fix landed, rather than taking the author's word that it did.
 
 **Hit-testing beats bounding boxes.** `toBeVisible()` and a bounding-box comparison both pass on clipped content, because an out-of-flow child keeps its geometry while being painted nowhere. `document.elementFromPoint(x, y)` tells you what is *actually painted and clickable* there:
 
